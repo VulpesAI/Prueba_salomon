@@ -1,0 +1,73 @@
+# Reglas de alertas para SalomónAI
+groups:
+  - name: salomon_alerts
+    rules:
+      # Alerta por alta utilización de CPU
+      - alert: HighCpuUsage
+        expr: cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alto uso de CPU detectado"
+          description: "El uso de CPU ha estado por encima del 80% durante más de 5 minutos"
+
+      # Alerta por alta utilización de memoria
+      - alert: HighMemoryUsage
+        expr: memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alto uso de memoria detectado"
+          description: "El uso de memoria ha estado por encima del 85% durante más de 5 minutos"
+
+      # Alerta por servicio caído
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Servicio {{ $labels.instance }} está caído"
+          description: "El servicio {{ $labels.instance }} ha estado caído durante más de 1 minuto"
+
+      # Alerta por alta latencia en API
+      - alert: HighApiLatency
+        expr: http_request_duration_seconds{quantile="0.95"} > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alta latencia en API"
+          description: "El percentil 95 de latencia en API ha estado por encima de 2 segundos durante más de 3 minutos"
+
+      # Alerta por alta tasa de errores
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alta tasa de errores HTTP 5xx"
+          description: "La tasa de errores 5xx ha estado por encima del 10% durante más de 2 minutos"
+
+      # Alerta por espacio en disco bajo
+      - alert: LowDiskSpace
+        expr: disk_free_percent < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Espacio en disco bajo"
+          description: "El espacio libre en disco está por debajo del 20%"
+
+      # Alerta por fallos en el procesamiento de documentos
+      - alert: DocumentProcessingFailures
+        expr: rate(document_processing_failures_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fallos en procesamiento de documentos"
+          description: "La tasa de fallos en procesamiento de documentos ha estado por encima del 5% durante más de 3 minutos"

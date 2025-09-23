@@ -1,0 +1,171 @@
+services:
+  # --- Vector Database ---
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - salomon-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # --- Backend API ---
+  core-api:
+    build:
+      context: ./services/core-api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads_volume:/uploads # Volumen para compartir archivos con el parser
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - salomon-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # --- Frontend Application ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    command: npm run dev
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - PORT=3000
+    networks:
+      - salomon-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # --- Python Microservices ---
+  parsing-engine:
+    build:
+      context: ./services/parsing-engine
+      dockerfile: Dockerfile
+    volumes:
+      - ./services/parsing-engine:/app
+      - uploads_volume:/uploads
+      - models_volume:/models
+    env_file:
+      - .env
+    depends_on:
+      - kafka
+      - core-api
+    networks:
+      - salomon-net
+    command: python src/consumer.py
+
+  recommendation-engine:
+    build:
+      context: ./services/recommendation-engine
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./services/recommendation-engine:/app
+    env_file:
+      - .env
+    networks:
+      - salomon-net
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"] # Asume que tienes un endpoint /health
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # --- Infrastructure ---
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - salomon-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    networks:
+      - salomon-net
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    networks:
+      - salomon-net
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: "cub kafka-ready -b localhost:9092 1 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+networks:
+  salomon-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  qdrant_data:
+  uploads_volume:
+  models_volume:
