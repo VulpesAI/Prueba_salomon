@@ -25,7 +25,7 @@ services:
     volumes:
       - uploads_volume:/uploads # Volumen para compartir archivos con el parser
     env_file:
-      - .env
+      - .env.local
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,7 +84,7 @@ services:
       - uploads_volume:/uploads
       - models_volume:/models
     env_file:
-      - .env
+      - .env.local
     depends_on:
       - kafka
       - core-api
@@ -101,7 +101,7 @@ services:
     volumes:
       - ./services/recommendation-engine:/app
     env_file:
-      - .env
+      - .env.local
     networks:
       - salomon-net
     command: uvicorn main:app --host 0.0.0.0 --port 8000
@@ -119,7 +119,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     env_file:
-      - .env
+      - .env.local
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s

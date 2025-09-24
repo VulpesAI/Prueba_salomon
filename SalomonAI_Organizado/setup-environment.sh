@@ -33,7 +33,7 @@ print_error() {
 }
 
 # Directorio del proyecto
-PROJECT_DIR="/Users/felipebarros/Desktop/Prueba Salomon/SalomonAI_Organizado"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$PROJECT_DIR/services/core-api"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
 
@@ -63,6 +63,12 @@ print_step "Configurando backend..."
 
 cd "$BACKEND_DIR"
 
+# Generar plantillas locales adicionales
+if [ -x "$PROJECT_DIR/secrets/bootstrap-local-env.sh" ]; then
+    print_step "Generando archivos .env.local desde plantillas..."
+    (cd "$PROJECT_DIR" && ./secrets/bootstrap-local-env.sh >/dev/null || true)
+fi
+
 # Instalar dependencias del backend si no existen
 if [ ! -d "node_modules" ]; then
     print_step "Instalando dependencias del backend..."
@@ -72,15 +78,15 @@ else
     print_success "Dependencias del backend ya instaladas"
 fi
 
-# Crear archivo .env si no existe
-if [ ! -f ".env" ]; then
-    print_step "Creando archivo .env del backend..."
-    
+# Crear archivo .env.local si no existe
+if [ ! -f ".env.local" ]; then
+    print_step "Creando archivo .env.local del backend..."
+
     # Generar JWT secret
     JWT_SECRET=$(openssl rand -hex 32)
     API_KEY=$(openssl rand -hex 16)
-    
-    cat > .env << EOF
+
+    cat > .env.local << EOF
 # Configuración de Base de Datos
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
@@ -115,10 +121,10 @@ LOG_LEVEL=debug
 QDRANT_URL=http://localhost:6333
 EOF
 
-    print_success "Archivo .env creado con valores básicos"
-    print_warning "⚠️  IMPORTANTE: Debes configurar manualmente las variables de Firebase en .env"
+    print_success "Archivo .env.local creado con valores básicos"
+    print_warning "⚠️  IMPORTANTE: Debes configurar manualmente las variables de Firebase en .env.local o usarlas desde el gestor de secretos"
 else
-    print_success "Archivo .env del backend ya existe"
+    print_success "Archivo .env.local del backend ya existe"
 fi
 
 # Paso 3: Configurar frontend
@@ -164,9 +170,9 @@ echo "2. Crea un nuevo proyecto o usa uno existente"
 echo "3. Habilita Authentication > Sign-in method > Email/Password"
 echo "4. Ve a Project Settings > Service accounts"
 echo "5. Genera una nueva clave privada y descarga el JSON"
-echo "6. Copia los valores del JSON a los archivos .env"
+echo "6. Copia los valores del JSON a tus archivos .env.local o gestiona los secretos en la herramienta oficial"
 echo ""
-echo "Backend (.env):"
+echo "Backend (.env.local):"
 echo "   FIREBASE_PROJECT_ID=valor_del_json"
 echo "   FIREBASE_PRIVATE_KEY=\"-----BEGIN PRIVATE KEY-----\\nkey_content\\n-----END PRIVATE KEY-----\\n\""
 echo "   FIREBASE_CLIENT_EMAIL=email_del_json"

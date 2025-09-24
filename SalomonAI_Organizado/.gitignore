@@ -1,0 +1,43 @@
+# Global ignores
+.DS_Store
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+ENV/
+env/
+venv/
+
+# Docker artifacts
+*.pid
+
+# Environment files (keep only sanitized templates)
+.env
+.env.local
+.env.*
+*.env
+*.env.local
+*.env.*
+!.env.example
+!**/.env.example
+!*.env.development
+!**/.env.development
+
+# Local secret bundles
+secrets/*.env
+secrets/*.env.local
+
+# ML artifacts
+*.joblib
+services/recommendation-engine/artifacts/*.json
+services/training-engine/artifacts/*.json

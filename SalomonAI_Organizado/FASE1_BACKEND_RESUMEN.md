@@ -62,13 +62,13 @@
 
 ## 🔧 Configuración Requerida
 
-### Variables de Entorno (.env)
+### Variables de Entorno (`.env.local`)
 ```bash
 # Firebase
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
-# ... (ver .env.example para lista completa)
+# ... (ver .env.example para lista completa y ejecuta ./secrets/bootstrap-local-env.sh)
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-here
@@ -109,11 +109,12 @@ DATABASE_NAME=salomonai_db
   - `/belvo/connections/:id/accounts` - Cuentas bancarias
   - `/belvo/sync-all` - Sincronización masiva
 
-### 3. Motor de IA/Clasificación (Siguiente en roadmap)
-- Servicio de clasificación inteligente
-- Training con datos históricos
-- Categorización automática
-- Detección de patrones de gasto
+### 3. Motor de IA/Clasificación
+- Servicio de clasificación inteligente integrado con embeddings + Qdrant (requiere dependencias activas).
+- Nuevo pipeline de ingesta (`parsing-engine`) que normaliza CSV y consolida datasets entrenables.
+- Training con datos históricos mediante `services/training-engine/train.py` (TF-IDF + regresión logística).
+- Categorización automática expuesta al recommendation engine con fallback heurístico.
+- Detección de patrones y recomendaciones personalizadas en iteración (se requiere ampliar dataset real).
 
 ### 4. Testing
 - Tests unitarios para servicios
