@@ -65,7 +65,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef...
 ```
 
-#### Backend (.env):
+#### Backend (`.env.local` o gestor de secretos):
 ```bash
 # Extraer del JSON descargado:
 FIREBASE_PROJECT_ID=tu-proyecto
@@ -129,7 +129,7 @@ curl -X POST http://localhost:3001/auth/firebase/verify \
 ## 🚨 Troubleshooting
 
 ### Error: "Firebase Admin SDK not initialized"
-- Verificar que todas las variables FIREBASE_* están en .env
+- Verificar que todas las variables FIREBASE_* están en tu `.env.local` o exportadas en el entorno
 - Verificar que el private key no tiene espacios extra
 
 ### Error: "Invalid private key"
@@ -147,7 +147,7 @@ curl -X POST http://localhost:3001/auth/firebase/verify \
 - [ ] App web registrada en Firebase
 - [ ] Service Account JSON descargado
 - [ ] Variables frontend configuradas en .env.local
-- [ ] Variables backend configuradas en .env
+- [ ] Variables backend configuradas en `.env.local` (o cargadas desde el gestor de secretos)
 - [ ] Backend inicia sin errores
 - [ ] Frontend puede hacer login/registro
 
