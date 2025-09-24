@@ -5,6 +5,23 @@ from typing import List, Optional
 import uvicorn
 import os
 
+
+def _get_allowed_origins() -> list[str]:
+    """Resolve allowed origins for CORS based on environment configuration."""
+    raw_origins = os.getenv("RECOMMENDATION_ENGINE_ALLOWED_ORIGINS")
+    if not raw_origins:
+        raw_origins = os.getenv("CORS_ORIGIN")
+
+    if raw_origins:
+        origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+        if origins:
+            return origins
+
+    return [
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ]
+
 app = FastAPI(
     title="SalomónAI - Recommendation Engine",
     description="Motor de recomendaciones financieras inteligentes",
@@ -14,7 +31,7 @@ app = FastAPI(
 # CORS middleware para permitir conexiones desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios exactos
+    allow_origins=_get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
