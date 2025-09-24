@@ -19,7 +19,7 @@
 
 ### 3. Configurar Variables de Entorno
 
-#### Backend (.env):
+#### Backend (`.env.local` o gestor de secretos):
 ```bash
 # Belvo Configuration
 BELVO_SECRET_ID=tu-belvo-secret-id-de-sandbox
@@ -207,7 +207,7 @@ Belvo Category → SalomonAI Category
 
 ### 15. Próximos Pasos
 
-1. **Configurar credenciales de Belvo** en archivo .env
+1. **Configurar credenciales de Belvo** en archivo `.env.local` (o cargar desde el gestor de secretos)
 2. **Probar conexiones con cuentas sandbox**
 3. **Implementar notificaciones** de errores de sincronización
 4. **Optimizar frecuencia** de sincronización según uso
@@ -224,7 +224,7 @@ Belvo Category → SalomonAI Category
 
 - [ ] Cuenta Belvo creada y verificada
 - [ ] Credenciales de sandbox obtenidas
-- [ ] Variables BELVO_* configuradas en .env
+- [ ] Variables BELVO_* configuradas en `.env.local` (o cargadas desde el gestor de secretos)
 - [ ] Backend inicia sin errores de Belvo
 - [ ] Test de conexión con cuenta sandbox exitoso
 - [ ] Sincronización de transacciones funcionando

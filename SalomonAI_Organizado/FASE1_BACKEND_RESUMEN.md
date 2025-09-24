@@ -62,13 +62,13 @@
 
 ## 🔧 Configuración Requerida
 
-### Variables de Entorno (.env)
+### Variables de Entorno (`.env.local`)
 ```bash
 # Firebase
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
-# ... (ver .env.example para lista completa)
+# ... (ver .env.example para lista completa y ejecuta ./secrets/bootstrap-local-env.sh)
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-here
