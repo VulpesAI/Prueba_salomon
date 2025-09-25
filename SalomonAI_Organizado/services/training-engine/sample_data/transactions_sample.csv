@@ -1,0 +1,21 @@
+transaction_id,user_id,description,amount,category
+1,u-001,Compra supermercado Lider,-45000,alimentacion
+2,u-001,Pago arriendo departamento,350000,vivienda
+3,u-002,Cuenta luz electrica,-32000,servicios
+4,u-003,Vuelta en Uber aeropuerto,-18000,transporte
+5,u-004,Consulta medica particular,-60000,salud
+6,u-003,Salida a restaurante italiano,-55000,alimentacion
+7,u-005,Recarga tarjeta BIP,-2000,transporte
+8,u-005,Plan internet fibra hogar,-25990,servicios
+9,u-006,Compra farmacia cruz verde,-15000,salud
+10,u-006,Curso online programacion,120000,educacion
+11,u-002,Streaming mensual,-6990,entretenimiento
+12,u-007,Seguro automotriz,-85000,transporte
+13,u-007,Deposito sueldo empresa,950000,ingresos
+14,u-008,Compra ropa temporada,-90000,vestuario
+15,u-009,Gasto en cine premium,-14000,entretenimiento
+16,u-010,Aporte ahorro mensual,150000,ahorro
+17,u-010,Compra herramientas hogar,-48000,vivienda
+18,u-011,Mensualidad gimnasio,-25000,ocio
+19,u-011,Taxi ejecutivo reunion,-26000,transporte
+20,u-012,Pago colegio hijos,-280000,educacion

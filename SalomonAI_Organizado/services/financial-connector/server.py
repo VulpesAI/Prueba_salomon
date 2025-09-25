@@ -6,6 +6,24 @@ import uvicorn
 import os
 import json
 
+
+def _get_allowed_origins() -> list[str]:
+    """Resolve allowed origins for CORS based on environment configuration."""
+    raw_origins = os.getenv("FINANCIAL_CONNECTOR_ALLOWED_ORIGINS")
+    if not raw_origins:
+        raw_origins = os.getenv("CORS_ORIGIN")
+
+    if raw_origins:
+        origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+        if origins:
+            return origins
+
+    # Valores seguros por defecto para desarrollo local.
+    return [
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ]
+
 app = FastAPI(
     title="SalomónAI - Financial Connector",
     description="Conector para instituciones financieras y procesamiento de datos",
@@ -15,7 +33,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

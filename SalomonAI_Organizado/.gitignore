@@ -1,0 +1,46 @@
+# Global ignores
+.DS_Store
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+ENV/
+env/
+venv/
+
+# Docker artifacts
+*.pid
+
+# Environment files (default to ignored)
+*.env
+*.env.local
+.env
+.env.local
+
+# Keep committed demo envs so the investor demo boots out of the box
+!/.env
+!/services/core-api/.env
+!/services/core-api/.env.local
+!/services/core-api/.env.development
+
+# Keep the reference templates under version control
+!**/.env.example
+!**/.env.development
+
+# Local secret bundles remain untracked
+secrets/*.env
+secrets/*.env.local
+
+# ML artifacts
+*.joblib
+services/recommendation-engine/artifacts/*.json
+services/training-engine/artifacts/*.json
