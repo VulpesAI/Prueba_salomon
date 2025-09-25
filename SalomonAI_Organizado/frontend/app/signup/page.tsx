@@ -2,54 +2,87 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Brain, Eye, EyeOff, UserPlus, Check } from 'lucide-react';
+
 import { Navigation } from '../../components/Navigation';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Brain, Eye, EyeOff, UserPlus, Check } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest, ApiError } from '@/lib/api-client';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
-      alert('Las contraseñas no coinciden');
+      setFormError('Las contraseñas no coinciden');
       return;
     }
 
     if (!acceptTerms) {
-      alert('Debes aceptar los términos y condiciones');
+      setFormError('Debes aceptar los términos y condiciones');
       return;
     }
 
     setIsLoading(true);
-    
-    // TODO: Implementar registro con Firebase
-    console.log('Signup attempt:', formData);
-    
-    // Simular registro por ahora
-    setTimeout(() => {
+    setFormError(null);
+
+    try {
+      await apiRequest('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.name,
+        }),
+      });
+
+      toast({
+        title: 'Cuenta creada con éxito',
+        description: 'Ya puedes comenzar a utilizar SalomonAI.',
+      });
+
+      await login(formData.email, formData.password);
+      router.push('/dashboard');
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : 'No pudimos crear tu cuenta. Intenta nuevamente.';
+      setFormError(message);
+      toast({
+        title: 'Error al crear la cuenta',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
       setIsLoading(false);
-      // Redirigir al dashboard
-      window.location.href = '/dashboard';
-    }, 1500);
+    }
   };
 
   const passwordStrength = (password: string) => {
@@ -66,7 +99,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <div className="min-h-screen flex items-center justify-center px-6 py-20">
         <div className="max-w-md w-full">
           {/* Header */}
@@ -76,13 +109,16 @@ export default function SignupPage() {
                 <Brain className="w-8 h-8 text-primary-foreground" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold mb-2" style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              color: 'transparent'
-            }}>
+            <h1
+              className="text-3xl font-bold mb-2"
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                color: 'transparent',
+              }}
+            >
               Crear Cuenta
             </h1>
             <p className="text-muted-foreground">
@@ -103,7 +139,7 @@ export default function SignupPage() {
                   type="text"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm 
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm
                            focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   placeholder="Juan Pérez"
                   required
@@ -120,7 +156,7 @@ export default function SignupPage() {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm 
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm
                            focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   placeholder="juan@email.com"
                   required
@@ -138,7 +174,7 @@ export default function SignupPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm 
+                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm
                              focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     placeholder="••••••••"
                     required
@@ -151,12 +187,12 @@ export default function SignupPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                
+
                 {/* Password Strength Indicator */}
                 {formData.password && (
                   <div className="mt-2">
                     <div className="flex space-x-1 mb-1">
-                      {[1, 2, 3, 4].map(level => (
+                      {[1, 2, 3, 4].map((level) => (
                         <div
                           key={level}
                           className={`h-2 w-full rounded ${
@@ -192,7 +228,7 @@ export default function SignupPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm 
+                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm
                              focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     placeholder="••••••••"
                     required
@@ -205,22 +241,16 @@ export default function SignupPage() {
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="text-xs text-red-400 mt-1">Las contraseñas no coinciden</p>
-                )}
               </div>
 
-              {/* Terms and Conditions */}
-              <div className="flex items-start space-x-2">
+              <label className="flex items-center space-x-2 text-sm">
                 <input
-                  id="terms"
                   type="checkbox"
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="mt-1 rounded border-input"
-                  required
+                  className="rounded border-input"
                 />
-                <label htmlFor="terms" className="text-sm text-muted-foreground">
+                <span>
                   Acepto los{' '}
                   <Link href="/terminos" className="text-primary hover:underline">
                     términos y condiciones
@@ -229,13 +259,19 @@ export default function SignupPage() {
                   <Link href="/privacidad" className="text-primary hover:underline">
                     política de privacidad
                   </Link>
-                </label>
-              </div>
+                </span>
+              </label>
+
+              {formError && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/40 rounded-md px-3 py-2">
+                  {formError}
+                </p>
+              )}
 
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
-                disabled={isLoading || !acceptTerms}
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="flex items-center space-x-2">
@@ -245,57 +281,28 @@ export default function SignupPage() {
                 ) : (
                   <div className="flex items-center space-x-2">
                     <UserPlus className="w-4 h-4" />
-                    <span>Crear Cuenta Gratis</span>
+                    <span>Crear Cuenta</span>
                   </div>
                 )}
               </Button>
             </form>
 
-            {/* Divider */}
-            <div className="my-6 relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">O regístrate con</span>
-              </div>
-            </div>
-
-            {/* Social Signup */}
-            <Button
-              variant="outline"
-              className="w-full border-primary/30 hover:bg-primary/10"
-              onClick={() => console.log('Google signup')}
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Continuar con Google
-            </Button>
-          </Card>
-
-          {/* Benefits */}
-          <Card className="mt-6 p-4 bg-gradient-card border-primary/20">
-            <h3 className="font-semibold mb-3 text-center">🎉 Al crear tu cuenta obtienes:</h3>
-            <div className="space-y-2 text-sm">
+            <div className="mt-6 grid grid-cols-2 gap-3 text-xs text-muted-foreground">
               <div className="flex items-center space-x-2">
-                <Check className="w-4 h-4 text-green-400" />
-                <span>Conecta hasta 3 cuentas bancarias</span>
+                <Check className="w-4 h-4 text-primary" />
+                <span>Recomendaciones personalizadas</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Check className="w-4 h-4 text-green-400" />
-                <span>Análisis de gastos con IA</span>
+                <Check className="w-4 h-4 text-primary" />
+                <span>Panel financiero inteligente</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Check className="w-4 h-4 text-green-400" />
-                <span>Reportes financieros mensuales</span>
+                <Check className="w-4 h-4 text-primary" />
+                <span>Integración con bancos chilenos</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Check className="w-4 h-4 text-green-400" />
-                <span>Alertas inteligentes de gastos</span>
+                <Check className="w-4 h-4 text-primary" />
+                <span>Alertas de oportunidades</span>
               </div>
             </div>
           </Card>
@@ -305,7 +312,7 @@ export default function SignupPage() {
             <p className="text-sm text-muted-foreground">
               ¿Ya tienes cuenta?{' '}
               <Link href="/login" className="text-primary hover:underline font-medium">
-                Iniciar sesión
+                Inicia sesión aquí
               </Link>
             </p>
           </div>

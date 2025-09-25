@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { 
-  Brain, 
-  CreditCard, 
-  TrendingUp, 
-  DollarSign, 
-  PieChart, 
+import { useRouter } from 'next/navigation';
+import {
+  Brain,
+  CreditCard,
+  TrendingUp,
+  DollarSign,
+  PieChart,
   Settings,
   LogOut,
   Plus,
@@ -16,48 +17,180 @@ import {
   Bell,
   Search,
   Filter,
-  Download
+  Download,
+  RefreshCw,
 } from 'lucide-react';
+
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { useAuth } from '@/context/AuthContext';
+import { apiRequest, ApiError } from '@/lib/api-client';
+import { getAuthToken } from '@/lib/auth-storage';
+
+interface DashboardSummaryResponse {
+  summary: {
+    totalIncome: number;
+    totalExpenses: number;
+    balance: number;
+    transactionCount: number;
+    period: {
+      from: string;
+      to: string;
+    };
+  };
+  categories: Record<
+    string,
+    {
+      total: number;
+      count: number;
+      type: 'income' | 'expense';
+    }
+  >;
+  trends: {
+    week: string;
+    income: number;
+    expenses: number;
+    transactions: number;
+  }[];
+  recentTransactions: {
+    id: string;
+    description: string;
+    amount: number;
+    category?: string;
+    date: string;
+    currency: string;
+  }[];
+}
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: 0,
+  }).format(Math.round(amount));
+
+const formatDate = (isoDate: string) =>
+  new Date(isoDate).toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+const weeklyLabel = (isoDate: string) =>
+  new Date(isoDate).toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: 'short',
+  });
 
 export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
-  const [user] = useState({ name: 'Juan Pérez', email: 'juan@email.com' });
+  const [dashboardData, setDashboardData] = useState<DashboardSummaryResponse | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Datos simulados - en producción vendrán del backend
-  const [financialData] = useState({
-    totalBalance: 2847650,
-    monthlyIncome: 1500000,
-    monthlyExpenses: 980000,
-    savings: 520000,
-    accounts: [
-      { id: 1, name: 'Cuenta Corriente Santander', balance: 1200000, type: 'checking' },
-      { id: 2, name: 'Cuenta de Ahorros BCI', balance: 1647650, type: 'savings' }
-    ],
-    recentTransactions: [
-      { id: 1, description: 'Supermercado Jumbo', amount: -45000, date: '2025-08-01', category: 'Alimentación' },
-      { id: 2, description: 'Sueldo', amount: 1500000, date: '2025-07-30', category: 'Ingresos' },
-      { id: 3, description: 'Netflix', amount: -12000, date: '2025-07-28', category: 'Entretenimiento' },
-      { id: 4, description: 'Farmacia Cruz Verde', amount: -23000, date: '2025-07-27', category: 'Salud' },
-      { id: 5, description: 'Uber', amount: -8500, date: '2025-07-26', category: 'Transporte' }
-    ],
-    monthlyCategories: [
-      { name: 'Alimentación', amount: 280000, percentage: 28.6, color: '#ef4444' },
-      { name: 'Vivienda', amount: 350000, percentage: 35.7, color: '#3b82f6' },
-      { name: 'Transporte', amount: 120000, percentage: 12.2, color: '#10b981' },
-      { name: 'Entretenimiento', amount: 80000, percentage: 8.2, color: '#f59e0b' },
-      { name: 'Otros', amount: 150000, percentage: 15.3, color: '#8b5cf6' }
-    ]
-  });
+  const { user, isLoading: authLoading, logout } = useAuth();
+  const router = useRouter();
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0
-    }).format(amount);
+  const loadDashboard = useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setDashboardData(null);
+      setIsLoadingData(false);
+      setFetchError('Tu sesión ha expirado. Vuelve a iniciar sesión.');
+      return;
+    }
+
+    setIsLoadingData(true);
+    setFetchError(null);
+
+    try {
+      const data = await apiRequest<DashboardSummaryResponse>('/dashboard/summary', { token });
+      setDashboardData(data);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        logout();
+        router.push('/login');
+        return;
+      }
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : 'No pudimos cargar los datos del dashboard. Intenta nuevamente.';
+      setFetchError(message);
+      setDashboardData(null);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [logout, router]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      void loadDashboard();
+    }
+  }, [authLoading, user, loadDashboard, router]);
+
+  const expenseCategories = useMemo(() => {
+    if (!dashboardData) return [] as { name: string; amount: number; percentage: number; color: string }[];
+    const entries = Object.entries(dashboardData.categories).filter(([, value]) => value.type === 'expense');
+    const totalExpenses = entries.reduce((acc, [, value]) => acc + value.total, 0);
+    const palette = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+
+    return entries.map(([name, value], index) => ({
+      name,
+      amount: value.total,
+      percentage: totalExpenses ? Math.round((value.total / totalExpenses) * 1000) / 10 : 0,
+      color: palette[index % palette.length],
+    }));
+  }, [dashboardData]);
+
+  const weeklySummaries = useMemo(() => {
+    if (!dashboardData) return [] as DashboardSummaryResponse['trends'];
+    return [...dashboardData.trends].slice(-4).reverse();
+  }, [dashboardData]);
+
+  const handleLogout = () => {
+    logout();
+    router.push('/');
   };
+
+  if (authLoading || isLoadingData) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center px-6">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6" />
+        <p className="text-lg text-muted-foreground">Cargando tu panel financiero...</p>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center px-6 space-y-6">
+        <div className="max-w-md space-y-3">
+          <h1 className="text-2xl font-semibold">No pudimos cargar tu información</h1>
+          <p className="text-muted-foreground">{fetchError}</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Button onClick={loadDashboard} className="bg-gradient-primary hover:opacity-90">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reintentar
+          </Button>
+          <Button variant="outline" onClick={handleLogout}>
+            Regresar al inicio
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData || !user) {
+    return null;
+  }
+
+  const firstName = (user.fullName ?? user.displayName ?? user.email)?.split(' ')[0] ?? 'Usuario';
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,12 +204,15 @@ export default function DashboardPage() {
                 <Brain className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold" style={{
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}>
+                <h1
+                  className="text-xl font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
                   SalomonAI
                 </h1>
               </div>
@@ -89,8 +225,9 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   placeholder="Buscar transacciones..."
-                  className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-md text-sm 
+                  className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-md text-sm
                            focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  disabled
                 />
               </div>
             </div>
@@ -103,18 +240,23 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-primary rounded-full flex items-center justify-center">
                   <span className="text-primary-foreground text-sm font-medium">
-                    {user.name.split(' ').map(n => n[0]).join('')}
+                    {(user.fullName ?? user.displayName ?? user.email)
+                      .split(' ')
+                      .filter(Boolean)
+                      .map((part) => part[0]?.toUpperCase())
+                      .slice(0, 2)
+                      .join('')}
                   </span>
                 </div>
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-sm font-medium">{user.fullName ?? user.displayName ?? user.email}</p>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm">
                 <Settings className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => window.location.href = '/'}>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -125,8 +267,11 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">¡Hola, {user.name.split(' ')[0]}! 👋</h1>
-          <p className="text-muted-foreground">Aquí tienes un resumen de tu situación financiera</p>
+          <h1 className="text-3xl font-bold mb-2">¡Hola, {firstName}! 👋</h1>
+          <p className="text-muted-foreground">
+            Resumen de tu actividad financiera entre {formatDate(dashboardData.summary.period.from)} y{' '}
+            {formatDate(dashboardData.summary.period.to)}
+          </p>
         </div>
 
         {/* Balance Cards */}
@@ -147,84 +292,86 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-2xl font-bold text-primary">
-              {showBalance ? formatCurrency(financialData.totalBalance) : '••••••••'}
+              {showBalance ? formatCurrency(dashboardData.summary.balance) : '••••••••'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-green-500">+12.5%</span> desde el mes pasado
+              Neto entre ingresos y gastos del período seleccionado
             </p>
           </Card>
 
           <Card className="p-6 bg-gradient-card border-primary/20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Ingresos del Mes</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Ingresos del Período</h3>
               <TrendingUp className="w-5 h-5 text-green-500" />
             </div>
             <div className="text-2xl font-bold text-green-500">
-              {showBalance ? formatCurrency(financialData.monthlyIncome) : '••••••••'}
+              {showBalance ? formatCurrency(dashboardData.summary.totalIncome) : '••••••••'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-green-500">+5.2%</span> vs mes anterior
+              Total de ingresos registrados en tus cuentas conectadas
             </p>
           </Card>
 
           <Card className="p-6 bg-gradient-card border-primary/20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Gastos del Mes</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Gastos del Período</h3>
               <CreditCard className="w-5 h-5 text-red-500" />
             </div>
             <div className="text-2xl font-bold text-red-500">
-              {showBalance ? formatCurrency(financialData.monthlyExpenses) : '••••••••'}
+              {showBalance ? formatCurrency(dashboardData.summary.totalExpenses) : '••••••••'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-red-500">+3.1%</span> vs mes anterior
+              Incluye todos los egresos clasificados automáticamente
             </p>
           </Card>
 
           <Card className="p-6 bg-gradient-card border-primary/20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Ahorros</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Transacciones Analizadas</h3>
               <PieChart className="w-5 h-5 text-blue-500" />
             </div>
             <div className="text-2xl font-bold text-blue-500">
-              {showBalance ? formatCurrency(financialData.savings) : '••••••••'}
+              {dashboardData.summary.transactionCount}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-blue-500">+8.7%</span> este mes
+              Movimientos procesados por nuestros modelos de IA
             </p>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Accounts */}
+          {/* Weekly Overview and Recent Transactions */}
           <div className="lg:col-span-2">
             <Card className="p-6 bg-gradient-card border-primary/20">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Mis Cuentas</h2>
-                <Button size="sm" className="bg-gradient-primary hover:opacity-90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Conectar Cuenta
-                </Button>
+                <h2 className="text-xl font-semibold">Resumen Semanal</h2>
+                <span className="text-sm text-muted-foreground">Últimas {weeklySummaries.length} semanas</span>
               </div>
-              
+
               <div className="space-y-4">
-                {financialData.accounts.map(account => (
-                  <div key={account.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                {weeklySummaries.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Aún no tenemos suficientes movimientos para mostrar tendencias.</p>
+                )}
+
+                {weeklySummaries.map((week) => (
+                  <div
+                    key={week.week}
+                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-secondary/30 transition-colors"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
-                        <CreditCard className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 bg-primary/15 rounded-lg flex items-center justify-center">
+                        <Brain className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-medium">{account.name}</h3>
+                        <h3 className="font-medium">Semana del {weeklyLabel(week.week)}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {account.type === 'checking' ? 'Cuenta Corriente' : 'Cuenta de Ahorros'}
+                          {week.transactions} transacciones analizadas
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
-                        {showBalance ? formatCurrency(account.balance) : '••••••••'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Disponible</p>
+                    <div className="text-right space-y-1 text-sm">
+                      <p className="text-green-500">+ {formatCurrency(week.income)}</p>
+                      <p className="text-red-500">- {formatCurrency(week.expenses)}</p>
                     </div>
                   </div>
                 ))}
@@ -236,43 +383,59 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold">Transacciones Recientes</h2>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" disabled>
                     <Filter className="w-4 h-4 mr-2" />
                     Filtrar
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" disabled>
                     <Download className="w-4 h-4 mr-2" />
                     Exportar
                   </Button>
                 </div>
               </div>
-              
-              <div className="space-y-3">
-                {financialData.recentTransactions.map(transaction => (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        transaction.amount > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                      }`}>
-                        {transaction.amount > 0 ? '↗' : '↙'}
+
+              {dashboardData.recentTransactions.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Aún no registras movimientos. Conecta una cuenta para comenzar.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {dashboardData.recentTransactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/30 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            transaction.amount > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                          }`}
+                        >
+                          {transaction.amount > 0 ? '↗' : '↙'}
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{transaction.description}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.category ?? 'Sin categoría asignada'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-medium">{transaction.description}</h3>
-                        <p className="text-sm text-muted-foreground">{transaction.category}</p>
+                      <div className="text-right">
+                        <p className={`font-semibold ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {transaction.amount > 0 ? '+' : '-'}
+                          {formatCurrency(Math.abs(transaction.amount))}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{formatDate(transaction.date)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`font-semibold ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{transaction.date}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
+                  ))}
+                </div>
+              )}
+
               <div className="mt-4 text-center">
-                <Button variant="outline">Ver todas las transacciones</Button>
+                <Button variant="outline" disabled>
+                  Ver todas las transacciones
+                </Button>
               </div>
             </Card>
           </div>
@@ -283,7 +446,12 @@ export default function DashboardPage() {
             <Card className="p-6 bg-gradient-card border-primary/20">
               <h2 className="text-xl font-semibold mb-6">Gastos por Categoría</h2>
               <div className="space-y-4">
-                {financialData.monthlyCategories.map((category, index) => (
+                {expenseCategories.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Una vez que registres transacciones, verás cómo se distribuyen tus gastos.
+                  </p>
+                )}
+                {expenseCategories.map((category, index) => (
                   <div key={index}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">{category.name}</span>
@@ -294,7 +462,7 @@ export default function DashboardPage() {
                         className="h-2 rounded-full"
                         style={{
                           width: `${category.percentage}%`,
-                          backgroundColor: category.color
+                          backgroundColor: category.color,
                         }}
                       />
                     </div>
@@ -312,19 +480,19 @@ export default function DashboardPage() {
             <Card className="p-6 bg-gradient-card border-primary/20">
               <h2 className="text-xl font-semibold mb-6">Acciones Rápidas</h2>
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" disabled>
                   <Plus className="w-4 h-4 mr-2" />
                   Agregar Transacción
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" disabled>
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Ver Análisis IA
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" disabled>
                   <Download className="w-4 h-4 mr-2" />
                   Generar Reporte
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" disabled>
                   <Settings className="w-4 h-4 mr-2" />
                   Configuración
                 </Button>
@@ -336,16 +504,22 @@ export default function DashboardPage() {
               <h2 className="text-xl font-semibold mb-4">💡 Insights de IA</h2>
               <div className="space-y-3 text-sm">
                 <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                  <p className="font-medium text-blue-800">Oportunidad de Ahorro</p>
-                  <p className="text-blue-600">Podrías ahorrar $45,000 reduciendo gastos en entretenimiento este mes.</p>
+                  <p className="font-medium text-blue-800">Seguimiento automático</p>
+                  <p className="text-blue-600">
+                    Nuestros modelos clasifican tus gastos por categoría para detectar oportunidades de ahorro.
+                  </p>
                 </div>
                 <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
-                  <p className="font-medium text-green-800">Buen Progreso</p>
-                  <p className="text-green-600">Tus ahorros han aumentado 8.7% este mes. ¡Excelente trabajo!</p>
+                  <p className="font-medium text-green-800">Control de ingresos</p>
+                  <p className="text-green-600">
+                    Revisa si tus ingresos cubren los gastos mensuales para mantener un balance saludable.
+                  </p>
                 </div>
                 <div className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
-                  <p className="font-medium text-yellow-800">Patrón Detectado</p>
-                  <p className="text-yellow-600">Gastas más los viernes. Considera planificar un presupuesto.</p>
+                  <p className="font-medium text-yellow-800">Próximas integraciones</p>
+                  <p className="text-yellow-600">
+                    Muy pronto podrás recibir recomendaciones personalizadas según tus hábitos financieros.
+                  </p>
                 </div>
               </div>
             </Card>
