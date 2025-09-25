@@ -61,6 +61,8 @@ services:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3000
       - PORT=3000
+    depends_on:
+      - core-api
     networks:
       - salomon-net
     deploy:
