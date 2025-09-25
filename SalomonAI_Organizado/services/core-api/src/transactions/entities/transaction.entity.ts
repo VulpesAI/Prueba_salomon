@@ -36,11 +36,23 @@ export class Transaction {
   @ManyToOne(() => FinancialAccount, account => account.transactions)
   account: FinancialAccount;
 
+  @Column({ type: 'uuid', nullable: true })
+  documentId?: string;
+
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   externalId: string;
+
+  @Column({ type: 'varchar', length: 10, default: 'CLP' })
+  currency: string;
+
+  @Column({ type: 'char', length: 64, nullable: true })
+  checksum?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  rawData?: Record<string, any>;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';

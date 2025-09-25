@@ -3,18 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, FindOptionsWhere } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { FinancialAccount } from './entities/financial-account.entity';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { ClassificationService } from '../classification/classification.service';
-
-interface CreateTransactionDto {
-  amount: number;
-  description: string;
-  date: Date;
-  type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
-  accountId: string;
-  userId: string;
-  metadata?: Record<string, any>;
-  externalId?: string;
-}
 
 interface UpdateTransactionDto {
   amount?: number;
@@ -46,6 +36,15 @@ export class TransactionsService {
   ) {}
 
   async create(createTransactionDto: CreateTransactionDto): Promise<Transaction> {
+    const amount = Number(createTransactionDto.amount);
+    if (Number.isNaN(amount)) {
+      throw new BadRequestException('Invalid amount value');
+    }
+    const occurredAt = new Date(createTransactionDto.occurredAt);
+    if (Number.isNaN(occurredAt.getTime())) {
+      throw new BadRequestException('Invalid occurredAt value');
+    }
+
     const account = await this.accountRepository.findOne({
       where: { id: createTransactionDto.accountId },
     });
@@ -64,7 +63,17 @@ export class TransactionsService {
     });
 
     const transaction = this.transactionRepository.create({
-      ...createTransactionDto,
+      amount,
+      description: createTransactionDto.description,
+      date: occurredAt,
+      type: createTransactionDto.type,
+      accountId: createTransactionDto.accountId,
+      userId: createTransactionDto.userId,
+      metadata: createTransactionDto.metadata ?? {},
+      externalId: createTransactionDto.externalId,
+      documentId: createTransactionDto.documentId,
+      currency: createTransactionDto.currency,
+      checksum: createTransactionDto.checksum,
       category: classificationResult.category,
       status: 'COMPLETED',
     });
@@ -72,7 +81,7 @@ export class TransactionsService {
     await this.transactionRepository.save(transaction);
 
     // Actualizar el balance de la cuenta
-    const amountChange = createTransactionDto.type === 'EXPENSE' ? -createTransactionDto.amount : createTransactionDto.amount;
+    const amountChange = createTransactionDto.type === 'EXPENSE' ? -amount : amount;
     await this.accountRepository.update(account.id, {
       balance: account.balance + amountChange,
     });
