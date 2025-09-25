@@ -1,0 +1,44 @@
+name: security-scans
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  detect-secrets:
+    name: Detect Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install detect-secrets
+        run: pip install detect-secrets==1.4.0
+
+      - name: Run detect-secrets against baseline
+        run: |
+          detect-secrets scan --all-files --baseline .secrets.baseline
+          git diff --exit-code .secrets.baseline
+
+  trufflehog:
+    name: TruffleHog Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@v3.75.4
+        with:
+          scanArguments: --fail --only-verified --no-update --github-actions

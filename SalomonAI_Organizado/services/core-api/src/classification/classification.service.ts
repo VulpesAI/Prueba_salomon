@@ -9,6 +9,7 @@ import {
 } from './dto/transaction.dto';
 import { NlpService } from '../nlp/nlp.service';
 import { QdrantService } from '../qdrant/qdrant.service';
+import { MetricsService } from '../monitoring/metrics.service';
 import { TransactionCategory } from '../transactions/enums/transaction-category.enum';
 import { TransactionClassification } from '../nlp/interfaces/transaction-classification.interface';
 
@@ -58,6 +59,7 @@ export class ClassificationService implements OnModuleInit {
     private readonly nlpService: NlpService,
     private readonly qdrantService: QdrantService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -135,6 +137,7 @@ export class ClassificationService implements OnModuleInit {
       const cacheKey = this.generateCacheKey(dto);
       if (this.classificationCache.has(cacheKey)) {
         this.logger.debug('Clasificación recuperada del cache');
+        this.metricsService.recordModelCacheHit('transaction_classifier');
         return this.classificationCache.get(cacheKey)!;
       }
 
@@ -176,13 +179,15 @@ export class ClassificationService implements OnModuleInit {
       }
 
       // 6. Construir respuesta completa
+      const processingTime = Date.now() - startTime;
+
       const result: ClassificationResultDto = {
         category: classification.category,
         confidence: classification.confidence,
         keywords,
         alternatives: alternatives.slice(0, 3), // Top 3 alternativas
         metadata: {
-          processingTime: Date.now() - startTime,
+          processingTime,
           modelVersion: '3.0',
           tokensProcessed: keywords.length,
           similarDocuments: similarPoints.length,
@@ -196,23 +201,25 @@ export class ClassificationService implements OnModuleInit {
       // 7. Guardar en cache y métricas
       this.saveToCache(cacheKey, result);
       this.recordClassification(dto.description, classification.category, classification.confidence);
-      
+      this.metricsService.recordModelInference('transaction_classifier', 'success', processingTime, classification.confidence);
+
       // 8. Emitir evento para monitoreo
       this.eventEmitter.emit('classification.completed', {
         input: dto.description,
         result: classification,
-        processingTime: Date.now() - startTime,
+        processingTime,
       });
 
       this.logger.debug(
-        `✅ Clasificado como ${classification.category} (${(classification.confidence * 100).toFixed(1)}%) en ${Date.now() - startTime}ms`
+        `✅ Clasificado como ${classification.category} (${(classification.confidence * 100).toFixed(1)}%) en ${processingTime}ms`
       );
 
       return result;
 
     } catch (error) {
       this.logger.error('Error en clasificación:', error);
-      
+      this.metricsService.recordModelInference('transaction_classifier', 'error', Date.now() - startTime);
+
       // Clasificación de emergencia
       const fallback = this.determineFallbackClassification(dto.description, []);
       return {

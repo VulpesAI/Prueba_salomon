@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { INestApplication, ValidationPipe, Logger } from '@nestjs/common';
+import { INestApplication, ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 export const createDatabaseConfig = (configService: ConfigService) => ({
@@ -73,13 +73,39 @@ export const setupGlobalPipes = (app: INestApplication) => {
 };
 
 export const setupGlobalPrefix = (app: INestApplication, configService: ConfigService) => {
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'metrics', method: RequestMethod.GET }],
+  });
 };
 
 export const setupCors = (app: INestApplication, configService: ConfigService) => {
   const corsOrigins = configService.get<string>('CORS_ORIGIN', 'http://localhost:3001');
+  const logger = new Logger('CorsConfig');
+
+  const allowedOrigins = corsOrigins
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(origin => origin.length > 0 && origin !== '*');
+
+  if (allowedOrigins.length === 0) {
+    allowedOrigins.push('http://localhost:3001');
+  }
+
+  if (corsOrigins.includes('*')) {
+    logger.warn('CORS origin wildcard detected. Falling back to explicit allowlist.');
+  }
+
+  const originAllowList = new Set(allowedOrigins);
+
   app.enableCors({
-    origin: corsOrigins.split(','),
+    origin: (origin, callback) => {
+      if (!origin || originAllowList.has(origin)) {
+        return callback(null, true);
+      }
+
+      logger.warn(`Blocked CORS request from untrusted origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'), false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

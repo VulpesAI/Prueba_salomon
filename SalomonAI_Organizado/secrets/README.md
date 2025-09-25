@@ -10,6 +10,9 @@ sensibles y entregarlos a los servicios en tiempo de despliegue.
 - `database.env.example`: Variables esperadas para la base de datos.
 - `jwt.env.example`: Claves y configuración de JWT.
 - `api-keys.env.example`: API keys para integraciones externas (Belvo, OpenAI, etc.).
+- Variables de CORS (`FINANCIAL_CONNECTOR_ALLOWED_ORIGINS`,
+  `RECOMMENDATION_ENGINE_ALLOWED_ORIGINS`) deben definirse acorde a los dominios
+  autorizados por cada despliegue.
 
 Para crear archivos locales a partir de los ejemplos:
 

@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { setupGlobalPipes, setupGlobalPrefix, setupSwagger, setupCors } from './config/app.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MetricsInterceptor } from './monitoring/metrics.interceptor';
+import { MetricsService } from './monitoring/metrics.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -14,6 +16,8 @@ async function bootstrap() {
   
   const configService = app.get(ConfigService);
   const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  const metricsService = app.get(MetricsService);
+  const metricsInterceptor = app.get(MetricsInterceptor);
   app.useLogger(logger);
 
   // Configuración de seguridad y rendimiento
@@ -35,6 +39,10 @@ async function bootstrap() {
   setupGlobalPipes(app);
   setupGlobalPrefix(app, configService);
   setupCors(app, configService);
+
+  if (metricsService.isEnabled()) {
+    app.useGlobalInterceptors(metricsInterceptor);
+  }
   
   // Swagger solo en desarrollo y staging
   const nodeEnv = configService.get('NODE_ENV', 'development');

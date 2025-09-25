@@ -28,6 +28,20 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 30s
 
+  # Financial Connector API metrics
+  - job_name: 'financial-connector'
+    static_configs:
+      - targets: ['financial-connector:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Recommendation Engine metrics
+  - job_name: 'recommendation-engine'
+    static_configs:
+      - targets: ['recommendation-engine:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
   # Frontend monitoring (si tiene métricas)
   - job_name: 'frontend'
     static_configs:

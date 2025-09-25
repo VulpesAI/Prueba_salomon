@@ -1,9 +1,14 @@
+import logging
+import os
+import time
+from typing import List
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
-from typing import List, Optional
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 import uvicorn
-import os
 
 app = FastAPI(
     title="SalomónAI - Recommendation Engine",
@@ -11,14 +16,98 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware para permitir conexiones desde el frontend
+logger = logging.getLogger("recommendation-engine")
+
+
+def _parse_allowed_origins() -> List[str]:
+    raw_value = (
+        os.getenv("RECOMMENDATION_ENGINE_ALLOWED_ORIGINS")
+        or os.getenv("ALLOWED_ORIGINS")
+        or os.getenv("CORS_ORIGIN")
+        or "http://localhost:3001"
+    )
+
+    origins = [origin.strip() for origin in raw_value.split(",") if origin.strip() and origin.strip() != "*"]
+
+    if not origins:
+        origins = ["http://localhost:3001"]
+
+    if "*" in raw_value:
+        logger.warning("Origen CORS comodín detectado. Se usará la lista permitida explícita: %s", origins)
+
+    return origins
+
+
+allowed_origins = _parse_allowed_origins()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios exactos
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
+
+
+METRICS_ENABLED = (os.getenv("METRICS_ENABLED", "true").strip().lower() not in {"0", "false", "off", "no"})
+
+REQUEST_COUNTER = Counter(
+    "recommendation_engine_requests_total",
+    "Total de solicitudes HTTP gestionadas por el motor de recomendaciones.",
+    ["method", "endpoint", "status"],
+)
+REQUEST_DURATION = Histogram(
+    "recommendation_engine_request_duration_seconds",
+    "Duración de las solicitudes HTTP del motor de recomendaciones.",
+    ["method", "endpoint"],
+)
+MODEL_INFERENCE_COUNTER = Counter(
+    "recommendation_engine_inference_total",
+    "Inferencias ejecutadas por el motor de recomendaciones.",
+    ["outcome", "category"],
+)
+MODEL_INFERENCE_DURATION = Histogram(
+    "recommendation_engine_inference_duration_seconds",
+    "Duración de las inferencias del motor de recomendaciones.",
+    ["outcome"],
+)
+MODEL_LAST_CONFIDENCE = Gauge(
+    "recommendation_engine_last_confidence",
+    "Confianza de la última inferencia exitosa.",
+)
+
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    if not METRICS_ENABLED or request.url.path == "/metrics":
+        return await call_next(request)
+
+    start_time = time.perf_counter()
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+    except Exception as exc:
+        status_code = getattr(exc, "status_code", 500)
+        duration = time.perf_counter() - start_time
+        endpoint = request.url.path
+        REQUEST_DURATION.labels(request.method, endpoint).observe(duration)
+        REQUEST_COUNTER.labels(request.method, endpoint, str(status_code)).inc()
+        raise
+
+    duration = time.perf_counter() - start_time
+    endpoint = request.url.path
+    REQUEST_DURATION.labels(request.method, endpoint).observe(duration)
+    REQUEST_COUNTER.labels(request.method, endpoint, str(status_code)).inc()
+
+    return response
+
+
+@app.get("/metrics")
+async def metrics():
+    if not METRICS_ENABLED:
+        return Response(content="# Metrics disabled\n", media_type="text/plain")
+
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 # --- Modelos de datos ---
 class TransactionData(BaseModel):
@@ -60,6 +149,7 @@ async def generate_recommendation(transaction: TransactionData):
     """
     Genera recomendaciones basadas en datos de transacciones
     """
+    start_time = time.perf_counter()
     try:
         # Lógica básica de recomendaciones (expandir más tarde)
         if transaction.amount > 1000:
@@ -75,14 +165,27 @@ async def generate_recommendation(transaction: TransactionData):
             confidence = 0.6
             reasoning = "Patrón de gasto estándar"
         
-        return RecommendationResponse(
+        response = RecommendationResponse(
             recommendation=recommendation,
             confidence=confidence,
             category=transaction.category,
             reasoning=reasoning
         )
-    
+
+        if METRICS_ENABLED:
+            duration = time.perf_counter() - start_time
+            MODEL_INFERENCE_COUNTER.labels(outcome="success", category=transaction.category).inc()
+            MODEL_INFERENCE_DURATION.labels(outcome="success").observe(duration)
+            MODEL_LAST_CONFIDENCE.set(confidence)
+
+        return response
+
     except Exception as e:
+        if METRICS_ENABLED:
+            duration = time.perf_counter() - start_time
+            MODEL_INFERENCE_COUNTER.labels(outcome="error", category=transaction.category).inc()
+            MODEL_INFERENCE_DURATION.labels(outcome="error").observe(duration)
+
         raise HTTPException(status_code=500, detail=f"Error generando recomendación: {str(e)}")
 
 @app.get("/recommendations/categories", response_model=List[str])
