@@ -1,0 +1,39 @@
+# Etapa de construcción
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Instalar dependencias
+COPY package*.json ./
+RUN npm ci
+
+# Copiar código fuente
+COPY . .
+
+# Construir la aplicación
+ENV NEXT_TELEMETRY_DISABLED 1
+RUN npm run build
+
+# Etapa de producción
+FROM node:18-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Copiar dependencias y archivos de construcción
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Configurar el usuario no root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
