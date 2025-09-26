@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +11,15 @@ const Hero = () => {
     <section className="relative min-h-screen flex items-center justify-center bg-gradient-hero overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
-        <img 
-          src={heroImage} 
-          alt="Financial Intelligence" 
-          className="w-full h-full object-cover opacity-20"
-        />
+        <div className="relative h-full w-full">
+          <Image
+            src={heroImage}
+            alt="Financial Intelligence"
+            fill
+            className="object-cover opacity-20"
+            priority
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-hero opacity-80" />
       </div>
 
