@@ -1,31 +1,60 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Brain, Eye, EyeOff, LogIn, ArrowRight } from 'lucide-react';
+
 import { Navigation } from '../../components/Navigation';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Brain, Eye, EyeOff, LogIn, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const router = useRouter();
+  const { login, loginWithGoogle, user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [isLoading, router, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // TODO: Implementar autenticación con Firebase
-    console.log('Login attempt:', { email, password });
-    
-    // Simular login por ahora
-    setTimeout(() => {
-      setIsLoading(false);
-      // Redirigir al dashboard
-      window.location.href = '/dashboard';
-    }, 1500);
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await login(email, password);
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Firebase login error:', err);
+      setError('No pudimos iniciar sesión con esas credenciales. Intenta nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await loginWithGoogle();
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Google login error:', err);
+      setError('No pudimos iniciar sesión con Google. Intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -109,12 +138,18 @@ export default function LoginPage() {
                 </Link>
               </div>
 
+              {error && (
+                <p className="text-sm text-red-500" role="alert">
+                  {error}
+                </p>
+              )}
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
-                disabled={isLoading}
+                disabled={isSubmitting || isLoading}
               >
-                {isLoading ? (
+                {isSubmitting ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Iniciando sesión...</span>
@@ -142,7 +177,9 @@ export default function LoginPage() {
             <Button
               variant="outline"
               className="w-full border-primary/30 hover:bg-primary/10"
-              onClick={() => console.log('Google login')}
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isSubmitting || isLoading}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

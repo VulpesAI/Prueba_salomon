@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { 
-  Brain, 
-  CreditCard, 
-  TrendingUp, 
-  DollarSign, 
-  PieChart, 
+import { useRouter } from 'next/navigation';
+import {
+  Brain,
+  CreditCard,
+  TrendingUp,
+  DollarSign,
+  PieChart,
   Settings,
   LogOut,
   Plus,
@@ -18,12 +19,59 @@ import {
   Filter,
   Download
 } from 'lucide-react';
+
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 
 export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
-  const [user] = useState({ name: 'Juan Pérez', email: 'juan@email.com' });
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const router = useRouter();
+  const { user, isLoading, logout } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/login');
+    }
+  }, [isLoading, router, user]);
+
+  const displayName = useMemo(() => {
+    if (!user) return 'Usuario';
+    if (user.displayName && user.displayName.trim().length > 0) {
+      return user.displayName;
+    }
+    if (user.email) {
+      const [name] = user.email.split('@');
+      return name;
+    }
+    return 'Usuario';
+  }, [user]);
+
+  const initials = useMemo(() => {
+    return displayName
+      .split(' ')
+      .filter(Boolean)
+      .map((word) => word[0]?.toUpperCase())
+      .slice(0, 2)
+      .join('') || 'U';
+  }, [displayName]);
+
+  const greetingName = useMemo(() => {
+    const [first] = displayName.split(' ');
+    return first || displayName;
+  }, [displayName]);
+
+  const handleLogout = async () => {
+    setIsSigningOut(true);
+    try {
+      await logout();
+      router.push('/');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   // Datos simulados - en producción vendrán del backend
   const [financialData] = useState({
@@ -103,18 +151,23 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-primary rounded-full flex items-center justify-center">
                   <span className="text-primary-foreground text-sm font-medium">
-                    {user.name.split(' ').map(n => n[0]).join('')}
+                    {initials}
                   </span>
                 </div>
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email ?? 'Cuenta sin correo'}</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm">
                 <Settings className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => window.location.href = '/'}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                disabled={isSigningOut}
+              >
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -125,7 +178,7 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">¡Hola, {user.name.split(' ')[0]}! 👋</h1>
+          <h1 className="text-3xl font-bold mb-2">¡Hola, {greetingName}! 👋</h1>
           <p className="text-muted-foreground">Aquí tienes un resumen de tu situación financiera</p>
         </div>
 
