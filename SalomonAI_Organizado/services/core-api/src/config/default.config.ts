@@ -20,6 +20,10 @@ export const DEFAULT_CONFIG = {
     url: 'http://qdrant:6333',
     collectionName: 'transactions',
   },
+  forecasting: {
+    engineUrl: 'http://forecasting-engine:8003',
+    horizonDays: 30,
+  },
   api: {
     globalPrefix: 'api/v1',
     corsOrigin: 'http://localhost:3001',

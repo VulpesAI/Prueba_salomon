@@ -1,6 +1,8 @@
 # Global ignores
 .DS_Store
 node_modules/
+.next/
+**/.next/
 .env
 .env.*
 *.env

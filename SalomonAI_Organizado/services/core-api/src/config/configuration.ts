@@ -23,6 +23,10 @@ export default registerAs('app', () => ({
     url: process.env.QDRANT_URL || DEFAULT_CONFIG.qdrant.url,
     collectionName: process.env.QDRANT_COLLECTION || DEFAULT_CONFIG.qdrant.collectionName,
   },
+  forecasting: {
+    engineUrl: process.env.FORECASTING_ENGINE_URL || DEFAULT_CONFIG.forecasting.engineUrl,
+    horizonDays: parseInt(process.env.FORECASTING_DEFAULT_HORIZON_DAYS ?? '', 10) || DEFAULT_CONFIG.forecasting.horizonDays,
+  },
   api: {
     globalPrefix: DEFAULT_CONFIG.api.globalPrefix,
     corsOrigin: process.env.FRONTEND_URL || DEFAULT_CONFIG.api.corsOrigin,

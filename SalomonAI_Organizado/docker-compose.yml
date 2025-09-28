@@ -134,6 +134,29 @@ services:
       timeout: 10s
       retries: 3
 
+  forecasting-engine:
+    build:
+      context: ./services/forecasting-engine
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env
+    environment:
+      - FORECASTING_DATABASE_URL=${FORECASTING_DATABASE_URL:-postgresql+psycopg://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@postgres:5432/$${POSTGRES_DB}}
+      - FORECASTING_DEFAULT_MODEL=${FORECASTING_DEFAULT_MODEL:-auto}
+      - FORECASTING_DEFAULT_HORIZON_DAYS=${FORECASTING_DEFAULT_HORIZON_DAYS:-30}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - salomon-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   voice-gateway:
     build:
       context: ./services/voice-gateway

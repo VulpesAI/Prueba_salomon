@@ -78,6 +78,26 @@ services:
       restart_policy:
         condition: on-failure
 
+  forecasting-engine:
+    image: ${REGISTRY:-localhost}/salomon/forecasting-engine:prod
+    build:
+      context: ./services/forecasting-engine
+      dockerfile: Dockerfile.prod
+    env_file:
+      - .env.prod
+    environment:
+      - FORECASTING_DATABASE_URL=${FORECASTING_DATABASE_URL}
+      - FORECASTING_DEFAULT_MODEL=${FORECASTING_DEFAULT_MODEL:-auto}
+      - FORECASTING_DEFAULT_HORIZON_DAYS=${FORECASTING_DEFAULT_HORIZON_DAYS:-30}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - salomon-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+
   voice-gateway:
     image: ${REGISTRY:-localhost}/salomon/voice-gateway:prod
     build:
