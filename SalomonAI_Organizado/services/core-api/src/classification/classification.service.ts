@@ -1,6 +1,10 @@
+import { randomUUID } from 'crypto';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { Repository } from 'typeorm';
 import { 
   ClassifyTransactionDto, 
   TrainTransactionDto, 
@@ -9,8 +13,11 @@ import {
 } from './dto/transaction.dto';
 import { NlpService } from '../nlp/nlp.service';
 import { QdrantService } from '../qdrant/qdrant.service';
+import { KafkaService } from '../kafka/kafka.service';
 import { TransactionCategory } from '../transactions/enums/transaction-category.enum';
 import { TransactionClassification } from '../nlp/interfaces/transaction-classification.interface';
+import { ClassificationLabel, ClassificationLabelSource, ClassificationLabelStatus } from './entities/classification-label.entity';
+import { FinancialMovement } from '../financial-movements/entities/financial-movement.entity';
 
 /**
  * Servicio avanzado de clasificación de transacciones con IA
@@ -26,7 +33,12 @@ export class ClassificationService implements OnModuleInit {
   private readonly SIMILARITY_THRESHOLD = 0.75;
   private readonly MIN_CONFIDENCE_THRESHOLD = 0.3;
   private readonly BATCH_SIZE = 100;
-  
+  private readonly MODEL_VERSION = '3.0';
+  private readonly targetAccuracy: number;
+  private readonly minLabelsForRetraining: number;
+  private readonly retrainingTopic: string;
+  private readonly correctionTopic: string;
+
   // Métricas y monitoreo
   private totalClassifications = 0;
   private correctPredictions = 0;
@@ -58,7 +70,24 @@ export class ClassificationService implements OnModuleInit {
     private readonly nlpService: NlpService,
     private readonly qdrantService: QdrantService,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+    private readonly kafkaService: KafkaService,
+    private readonly configService: ConfigService,
+    @InjectRepository(ClassificationLabel)
+    private readonly labelRepository: Repository<ClassificationLabel>,
+    @InjectRepository(FinancialMovement)
+    private readonly movementRepository: Repository<FinancialMovement>,
+  ) {
+    this.retrainingTopic = this.configService.get<string>('KAFKA_CLASSIFICATION_RETRAIN_TOPIC', 'classification.retraining');
+    this.correctionTopic = this.configService.get<string>('KAFKA_CLASSIFICATION_CORRECTIONS_TOPIC', 'classification.corrections');
+    this.targetAccuracy = this.getNumberConfig('CLASSIFICATION_TARGET_ACCURACY', 0.9);
+    this.minLabelsForRetraining = Math.max(1, Math.floor(this.getNumberConfig('CLASSIFICATION_RETRAIN_MIN_LABELS', 10)));
+  }
+
+  private getNumberConfig(key: string, fallback: number): number {
+    const rawValue = this.configService.get<string>(key);
+    const parsed = rawValue !== undefined ? Number(rawValue) : Number.NaN;
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
 
   async onModuleInit(): Promise<void> {
     await this.initializeModel();
@@ -183,7 +212,7 @@ export class ClassificationService implements OnModuleInit {
         alternatives: alternatives.slice(0, 3), // Top 3 alternativas
         metadata: {
           processingTime: Date.now() - startTime,
-          modelVersion: '3.0',
+          modelVersion: this.MODEL_VERSION,
           tokensProcessed: keywords.length,
           similarDocuments: similarPoints.length,
           sentiment: sentiment.sentiment,
@@ -221,7 +250,7 @@ export class ClassificationService implements OnModuleInit {
         keywords: [],
         metadata: {
           processingTime: Date.now() - startTime,
-          modelVersion: '3.0',
+          modelVersion: this.MODEL_VERSION,
           error: error.message,
           usedEmergencyFallback: true,
         }
@@ -389,7 +418,7 @@ export class ClassificationService implements OnModuleInit {
         amount: dto.amount,
         confidence: dto.confidence || 1.0,
         timestamp: new Date().toISOString(),
-        version: '3.0',
+        version: this.MODEL_VERSION,
       };
 
       await this.qdrantService.upsertPoint(
@@ -414,30 +443,60 @@ export class ClassificationService implements OnModuleInit {
   }
 
   /**
-   * Corrige una clasificación y retrna el modelo
+   * Corrige una clasificación, persiste la etiqueta y programa reentrenamiento.
    */
-  async correctClassification(dto: CorrectClassificationDto): Promise<void> {
+  async correctClassification(
+    dto: CorrectClassificationDto,
+    context: { userId?: string } = {},
+  ): Promise<{ label: ClassificationLabel; retrainingQueued: boolean; kafkaTopic: string; modelVersion: string }> {
     try {
-      // Entrenar con la corrección
+      const label = this.labelRepository.create({
+        description: dto.description,
+        finalCategory: dto.correctCategory,
+        previousCategory: dto.incorrectCategory,
+        notes: dto.notes,
+        movementId: dto.movementId,
+        source: ClassificationLabelSource.USER_CORRECTION,
+        status: ClassificationLabelStatus.PENDING,
+        submittedBy: context.userId,
+        metadata: {
+          incorrectCategory: dto.incorrectCategory,
+          notes: dto.notes,
+        },
+        acceptedAt: new Date(),
+      });
+
+      const savedLabel = await this.labelRepository.save(label);
+
+      await this.updateMovementFromCorrection(dto, context.userId);
+
       await this.trainModel({
         text: dto.description,
         category: dto.correctCategory,
-        confidence: 1.0, // Alta confianza para correcciones manuales
+        confidence: 1.0,
       });
 
-      // Registrar la corrección en métricas
       this.recordCorrection(dto.description, dto.correctCategory, dto.incorrectCategory);
 
       this.logger.log(`🔧 Corrección aplicada: "${dto.description}" -> ${dto.correctCategory}`);
-      
-      // Emitir evento de corrección
+
       this.eventEmitter.emit('classification.corrected', {
         description: dto.description,
         correctCategory: dto.correctCategory,
         incorrectCategory: dto.incorrectCategory,
         notes: dto.notes,
+        movementId: dto.movementId,
         timestamp: new Date(),
       });
+
+      const queueResult = await this.enqueueCorrectionEvent(savedLabel);
+
+      return {
+        label: queueResult.label,
+        retrainingQueued: queueResult.queued,
+        kafkaTopic: this.correctionTopic,
+        modelVersion: this.MODEL_VERSION,
+      };
 
     } catch (error) {
       this.logger.error('Error aplicando corrección:', error);
@@ -510,6 +569,137 @@ export class ClassificationService implements OnModuleInit {
     }
   }
 
+  private async updateMovementFromCorrection(dto: CorrectClassificationDto, userId?: string): Promise<void> {
+    if (!dto.movementId) {
+      return;
+    }
+
+    try {
+      const movement = await this.movementRepository.findOne({ where: { id: dto.movementId } });
+
+      if (!movement) {
+        this.logger.warn(`No se encontró movimiento con ID ${dto.movementId} para aplicar la corrección.`);
+        return;
+      }
+
+      movement.category = dto.correctCategory;
+      movement.classificationConfidence = 1;
+      movement.classificationModelVersion = this.MODEL_VERSION;
+      movement.classificationReviewedAt = new Date();
+      movement.classificationMetadata = {
+        ...(movement.classificationMetadata || {}),
+        incorrectCategory: dto.incorrectCategory,
+        reviewer: userId,
+        notes: dto.notes,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await this.movementRepository.save(movement);
+    } catch (error) {
+      this.logger.error(`Error actualizando movimiento ${dto.movementId} con la corrección`, error);
+    }
+  }
+
+  private async enqueueCorrectionEvent(label: ClassificationLabel): Promise<{ queued: boolean; label: ClassificationLabel }> {
+    const payload = {
+      labelId: label.id,
+      description: label.description,
+      category: label.finalCategory,
+      previousCategory: label.previousCategory,
+      movementId: label.movementId,
+      source: label.source,
+      submittedBy: label.submittedBy,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      await this.kafkaService.produceWithRetry({
+        topic: this.correctionTopic,
+        messages: [
+          {
+            key: label.id,
+            value: JSON.stringify(payload),
+          }
+        ],
+      });
+
+      const metadata = {
+        ...(label.metadata || {}),
+        correctionQueuedAt: new Date().toISOString(),
+      };
+
+      await this.labelRepository.update({ id: label.id }, { metadata });
+
+      return { queued: true, label: { ...label, metadata } };
+    } catch (error) {
+      this.logger.error('Error encolando corrección para reentrenamiento', error);
+      return { queued: false, label };
+    }
+  }
+
+  private async enqueueRetrainingBatch(
+    labels: ClassificationLabel[],
+    metricsSnapshot: {
+      totalClassifications: number;
+      accuracy: number;
+      cacheSize: number;
+      modelVersion: string;
+      collectionName: string;
+      recentClassifications: number;
+    },
+  ): Promise<boolean> {
+    if (!labels.length) {
+      return false;
+    }
+
+    const batchId = randomUUID();
+    const message = {
+      batchId,
+      requestedAt: new Date().toISOString(),
+      modelVersion: this.MODEL_VERSION,
+      labels: labels.map((item) => ({
+        id: item.id,
+        description: item.description,
+        category: item.finalCategory,
+        previousCategory: item.previousCategory,
+        movementId: item.movementId,
+      })),
+      metrics: metricsSnapshot,
+    };
+
+    try {
+      await this.kafkaService.produceWithRetry({
+        topic: this.retrainingTopic,
+        messages: [
+          {
+            key: batchId,
+            value: JSON.stringify(message),
+          }
+        ],
+      });
+
+      const queuedAt = new Date().toISOString();
+
+      await Promise.all(labels.map(label => {
+        const metadata = {
+          ...(label.metadata || {}),
+          retrainingBatchId: batchId,
+          retrainingQueuedAt: queuedAt,
+        };
+
+        return this.labelRepository.update({ id: label.id }, {
+          status: ClassificationLabelStatus.QUEUED,
+          metadata,
+        });
+      }));
+
+      return true;
+    } catch (error) {
+      this.logger.error('Error encolando lote de reentrenamiento', error);
+      return false;
+    }
+  }
+
   /**
    * Tarea programada para limpiar cache y optimizar modelo
    */
@@ -540,6 +730,41 @@ export class ClassificationService implements OnModuleInit {
     }
   }
 
+  @Cron(CronExpression.EVERY_6_HOURS)
+  async orchestrateScheduledRetraining(): Promise<void> {
+    try {
+      const metrics = this.getModelMetrics();
+      const pendingLabels = await this.labelRepository.find({
+        where: { status: ClassificationLabelStatus.PENDING },
+        order: { createdAt: 'ASC' },
+        take: this.BATCH_SIZE,
+      });
+
+      if (!pendingLabels.length) {
+        if (metrics.accuracy < this.targetAccuracy) {
+          this.logger.warn(`Precisión actual ${(metrics.accuracy * 100).toFixed(2)}% por debajo del objetivo ${(this.targetAccuracy * 100).toFixed(2)}%, sin etiquetas disponibles para reentrenar.`);
+        } else {
+          this.logger.debug('Sin etiquetas pendientes para reentrenamiento programado.');
+        }
+        return;
+      }
+
+      if (pendingLabels.length < this.minLabelsForRetraining && metrics.accuracy >= this.targetAccuracy) {
+        this.logger.debug(`Esperando más ejemplos etiquetados para reentrenar (actual=${pendingLabels.length}, requerido=${this.minLabelsForRetraining}).`);
+        return;
+      }
+
+      const queued = await this.enqueueRetrainingBatch(pendingLabels, metrics);
+
+      if (queued) {
+        this.logger.log(`🚀 Lote de reentrenamiento encolado con ${pendingLabels.length} ejemplos.`);
+      }
+
+    } catch (error) {
+      this.logger.error('Error orquestando reentrenamiento programado', error);
+    }
+  }
+
   /**
    * Obtiene métricas del modelo
    */
@@ -563,7 +788,7 @@ export class ClassificationService implements OnModuleInit {
       totalClassifications: this.totalClassifications,
       accuracy,
       cacheSize: this.classificationCache.size,
-      modelVersion: '3.0',
+      modelVersion: this.MODEL_VERSION,
       collectionName: this.COLLECTION_NAME,
       recentClassifications,
     };

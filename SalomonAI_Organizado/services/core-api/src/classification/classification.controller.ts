@@ -11,6 +11,7 @@ import {
   ValidationPipe,
   HttpException,
   HttpCode,
+  Req,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { 
@@ -23,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Throttle } from '@nestjs/throttler';
+import { Request } from 'express';
 import { ClassificationService } from './classification.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { 
@@ -302,7 +304,14 @@ export class ClassificationController {
           description: 'Compra ropa en mall',
           correctCategory: 'VESTUARIO',
           previousCategory: 'ENTRETENIMIENTO',
-          modelVersion: '3.0'
+          modelVersion: '3.0',
+          movementId: '8dd43a82-ffef-4b6b-92b7-62f3d899a4d2'
+        },
+        retraining: {
+          queued: true,
+          topic: 'classification.corrections',
+          labelId: '0cbe3b3e-7a11-4eb0-8acd-27c665c4e7ab',
+          movementId: '8dd43a82-ffef-4b6b-92b7-62f3d899a4d2'
         }
       }
     }
@@ -312,7 +321,8 @@ export class ClassificationController {
     description: 'Datos de corrección inválidos',
   })
   async correctClassification(
-    @Body() dto: CorrectClassificationDto
+    @Body() dto: CorrectClassificationDto,
+    @Req() req: Request,
   ): Promise<{
     success: boolean;
     message: string;
@@ -322,23 +332,32 @@ export class ClassificationController {
       previousCategory?: string;
       modelVersion: string;
       notes?: string;
+      movementId?: string;
+    };
+    retraining: {
+      queued: boolean;
+      topic: string;
+      labelId: string;
+      movementId?: string;
     };
   }> {
     try {
       this.logger.debug(
         `🔧 Corrigiendo: "${dto.description}" -> ${dto.correctCategory}`
       );
-      
-      await this.classificationService.correctClassification(dto);
-      
+
+      const userId = (req as any)?.user?.id as string | undefined;
+      const correctionResult = await this.classificationService.correctClassification(dto, { userId });
+
       this.logger.debug(`✅ Corrección aplicada exitosamente`);
 
-      // Emitir evento para analytics y MLOps
       this.eventEmitter.emit('api.correction.success', {
         description: dto.description,
         correctCategory: dto.correctCategory,
         incorrectCategory: dto.incorrectCategory,
         notes: dto.notes,
+        movementId: dto.movementId,
+        labelId: correctionResult.label.id,
         timestamp: new Date(),
       });
 
@@ -349,14 +368,21 @@ export class ClassificationController {
           description: dto.description,
           correctCategory: dto.correctCategory,
           previousCategory: dto.incorrectCategory,
-          modelVersion: '3.0',
+          modelVersion: correctionResult.modelVersion,
           notes: dto.notes,
+          movementId: dto.movementId,
+        },
+        retraining: {
+          queued: correctionResult.retrainingQueued,
+          topic: correctionResult.kafkaTopic,
+          labelId: correctionResult.label.id,
+          movementId: correctionResult.label.movementId,
         }
       };
 
     } catch (error) {
       this.logger.error(`❌ Error corrigiendo clasificación:`, error);
-      
+
       this.eventEmitter.emit('api.correction.error', {
         description: dto.description,
         correctCategory: dto.correctCategory,

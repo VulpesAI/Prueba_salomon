@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsNumber, Min, Max, Length } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsNumber, Min, Max, Length, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { TransactionCategory } from '../../transactions/enums/transaction-category.enum';
@@ -135,6 +135,14 @@ export class CorrectClassificationDto {
   })
   readonly incorrectCategory?: TransactionCategory;
 
+
+  @ApiPropertyOptional({
+    description: 'Identificador del movimiento financiero asociado a la corrección',
+    example: '8dd43a82-ffef-4b6b-92b7-62f3d899a4d2',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'El identificador del movimiento debe ser un UUID válido' })
+  readonly movementId?: string;
   @ApiPropertyOptional({
     description: 'Notas adicionales sobre la corrección',
     example: 'Era ropa, no entretenimiento',
