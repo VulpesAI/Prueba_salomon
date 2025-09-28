@@ -22,6 +22,7 @@ export interface FirebaseUser {
   email: string | null;
   displayName: string | null;
   updateProfile: (profile: { displayName?: string | null }) => Promise<void>;
+  getIdToken: (forceRefresh?: boolean) => Promise<string>;
 }
 
 export interface FirebaseUserCredential {
