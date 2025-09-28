@@ -1,0 +1,93 @@
+description,amount,category
+Pago mensual de arriendo departamento en Providencia,550000,VIVIENDA
+Gastos comunes edificio y administración mensual,85000,VIVIENDA
+Cuota hipotecaria banco estado vivienda,420000,VIVIENDA
+Compra supermercado Lider fin de semana,95000,ALIMENTACION
+Almuerzo en restaurant peruano con clientes,42000,ALIMENTACION
+Pedido de comida rápida a domicilio,18000,ALIMENTACION
+Viaje Uber desde oficina a aeropuerto,12500,TRANSPORTE
+Carga de bencina en estación Shell autopista,35000,TRANSPORTE
+Renovación tarjeta bip transporte público,5000,TRANSPORTE
+Consulta médica general en clínica alemana,68000,SALUD
+Compra de medicamentos crónicos en farmacia Cruz Verde,45000,SALUD
+Pago de seguro complementario de salud mensual,28000,SALUD
+Plan de internet fibra óptica hogar,35000,SERVICIOS
+Cuenta de luz mensual empresa Enel,42000,SERVICIOS
+Pago de servicio de agua potable Aguas Andinas,28000,SERVICIOS
+Suscripción Netflix plan familiar mensual,10800,ENTRETENIMIENTO
+Entradas para concierto en Movistar Arena,78000,ENTRETENIMIENTO
+Compra de videojuegos digitales en Steam,25000,ENTRETENIMIENTO
+Pago mensual colegio particular hijo,380000,EDUCACION
+Curso online de data analytics en plataforma internacional,120000,EDUCACION
+Compra de libros universitarios semestre,65000,EDUCACION
+Compra de ropa invierno en retail nacional,90000,VESTUARIO
+Zapatos formales de cuero tienda Paris,65000,VESTUARIO
+Accesorios de moda tienda independiente,25000,VESTUARIO
+Depósito a cuenta de ahorro automática,100000,AHORRO
+Aporte mensual APV administradora fondos,150000,AHORRO
+Transferencia a fondo mutuo conservador,200000,INVERSIONES
+Pago mensual crédito consumo banco,180000,DEUDAS
+Cuota tarjeta de crédito internacional,220000,DEUDAS
+Abono préstamo automotriz mensual,210000,DEUDAS
+Donación fundación niños primero campaña anual,35000,DONACIONES
+Aporte parroquia domingo en línea,10000,DONACIONES
+Transferencia solidaria campaña emergencia,25000,DONACIONES
+Pago impuesto contribuciones primer semestre,320000,IMPUESTOS
+Pago declaración renta anual,450000,IMPUESTOS
+Pago IVA mensual servicios profesionales,210000,IMPUESTOS
+Depósito sueldo mensual empresa,1500000,INGRESOS
+Pago boleta honorarios consultoría,680000,INGRESOS
+Ventas tienda ecommerce propia,420000,INGRESOS
+Recarga celular prepago,5000,SERVICIOS
+Pago plataforma software contable SaaS,28000,SERVICIOS
+Compra de snacks minimarket oficina,12000,ALIMENTACION
+Taxi corporativo reunión clientes,18500,TRANSPORTE
+Lavado y encerado automóvil,28000,TRANSPORTE
+Compra vitaminas farmacia naturista,22000,SALUD
+Atención dental control limpieza,52000,SALUD
+Pago gimnasio mensual,28000,SALUD
+Electricidad local comercial,68000,SERVICIOS
+Seguro hogar contra incendios anual,95000,VIVIENDA
+Arriendo bodega para guardar inventario,120000,VIVIENDA
+Compra carnes carnicería barrio,38000,ALIMENTACION
+Café y pastelería reunión trabajo,16000,ALIMENTACION
+Pasajes bus interurbano vacaciones,45000,TRANSPORTE
+Peaje autopista ruta 68 ida y vuelta,6400,TRANSPORTE
+Seguro obligatorio SOAP renovación,8900,TRANSPORTE
+Licencia software diseño anual,125000,SERVICIOS
+Servicio streaming Spotify familiar,10400,ENTRETENIMIENTO
+Entradas cine fin de semana,18000,ENTRETENIMIENTO
+Clases particulares matemáticas hijo,60000,EDUCACION
+Suscripción plataforma inglés,45000,EDUCACION
+Uniforme escolar colegio,55000,VESTUARIO
+Compra zapatillas deportivas entrenamiento,72000,VESTUARIO
+Inversión criptomonedas compra mensual,150000,INVERSIONES
+Compra acciones empresa IPSA,220000,INVERSIONES
+Abono cuenta ahorro vacaciones,80000,AHORRO
+Transferencia cuenta ahorro hijo,60000,AHORRO
+Pago mínimo tarjeta banco,95000,DEUDAS
+Refinanciamiento crédito hipotecario comisión,240000,DEUDAS
+Campaña crowdfunding emprendimiento local,40000,DONACIONES
+Aporte fundación medio ambiente,28000,DONACIONES
+Trámite patente comercial municipal,68000,IMPUESTOS
+Pago permiso circulación vehículo,99000,IMPUESTOS
+Horas extras liquidadas mes actual,185000,INGRESOS
+Reembolso gastos viaje empresa,125000,INGRESOS
+Compra materiales oficina papelería,32000,SERVICIOS
+Servicio hosting sitio web anual,56000,SERVICIOS
+Compra frutas feria libre semanal,22000,ALIMENTACION
+Cena aniversario restaurant gourmet,98000,ALIMENTACION
+Servicio de valet parking evento,15000,TRANSPORTE
+Mantención cambio aceite taller,65000,TRANSPORTE
+Consulta psicológica online,45000,SALUD
+Compra lentes óptica especialista,95000,SALUD
+Pago plan medicina complementaria,68000,SALUD
+Reparación calefón gas domicilio,75000,SERVICIOS
+Cambio cerradura departamento,45000,VIVIENDA
+Pintura interior hogar materiales,130000,VIVIENDA
+Pago curso certificación Scrum,180000,EDUCACION
+Seminario profesional finanzas,145000,EDUCACION
+Traje formal ceremonia,165000,VESTUARIO
+Accesorios electrónicos gaming,85000,ENTRETENIMIENTO
+Actualización consola videojuegos,320000,ENTRETENIMIENTO
+Coctelería evento social,45000,ENTRETENIMIENTO

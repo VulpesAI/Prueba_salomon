@@ -1,0 +1,53 @@
+{
+  "version": "heuristic-1.0",
+  "trained_at": "2024-05-08T00:00:00Z",
+  "labels": [
+    "ALIMENTACION",
+    "TRANSPORTE",
+    "ENTRETENIMIENTO",
+    "SALUD",
+    "EDUCACION",
+    "VIVIENDA",
+    "SERVICIOS",
+    "AHORRO",
+    "INVERSIONES",
+    "DEUDAS",
+    "DONACIONES",
+    "IMPUESTOS",
+    "VESTUARIO",
+    "INGRESOS",
+    "VARIOS"
+  ],
+  "keyword_weights": {
+    "ALIMENTACION": ["super", "market", "restaurant", "restaurante", "comida", "almuerzo", "cena", "delivery", "caf", "snack", "feria", "fruta", "panader"],
+    "TRANSPORTE": ["uber", "taxi", "bencina", "combustible", "bip", "peaje", "pasaje", "bus", "transporte", "taller", "parking", "mantenci"],
+    "ENTRETENIMIENTO": ["concierto", "cine", "spotify", "netflix", "evento", "videojuego", "gaming", "ocio", "teatro", "club"],
+    "SALUD": ["clinica", "médic", "medic", "farmacia", "consulta", "seguro", "salud", "psicol", "dental", "examen", "vitamin"],
+    "EDUCACION": ["colegio", "universidad", "curso", "clase", "certific", "seminario", "libro", "matric", "educa"],
+    "VIVIENDA": ["arriendo", "alquiler", "hipotec", "hogar", "casa", "depart", "condominio", "gasto comun", "bodega", "cerradura", "pintura"],
+    "SERVICIOS": ["internet", "luz", "agua", "hosting", "software", "suscrip", "servicio", "cuenta", "telefono", "energi"],
+    "AHORRO": ["ahorro", "apv", "deposito", "fondo", "vacacion", "reserva"],
+    "INVERSIONES": ["accion", "inversion", "cripto", "fondo", "mutuo", "portafolio"],
+    "DEUDAS": ["credito", "tarjeta", "cuota", "prestamo", "deuda", "hipotecario"],
+    "DONACIONES": ["donacion", "fundacion", "aporte", "solidari", "crowdfunding"],
+    "IMPUESTOS": ["impuesto", "iva", "renta", "contribucion", "patente", "permiso"],
+    "VESTUARIO": ["ropa", "vest", "zapato", "zapatilla", "traje", "uniforme", "accesorio"],
+    "INGRESOS": ["sueldo", "honorario", "venta", "reembolso", "ingreso", "bono", "extra"]
+  },
+  "amount_rules": {
+    "ALIMENTACION": {"threshold": 60000, "high_bonus": 0.12, "base_bonus": 0.05},
+    "TRANSPORTE": {"threshold": 40000, "high_bonus": 0.1, "base_bonus": 0.04},
+    "ENTRETENIMIENTO": {"threshold": 70000, "high_bonus": 0.14, "base_bonus": 0.05},
+    "SALUD": {"threshold": 50000, "high_bonus": 0.12, "base_bonus": 0.05},
+    "EDUCACION": {"threshold": 80000, "high_bonus": 0.12, "base_bonus": 0.05},
+    "VIVIENDA": {"threshold": 200000, "high_bonus": 0.2, "base_bonus": 0.08},
+    "SERVICIOS": {"threshold": 50000, "high_bonus": 0.1, "base_bonus": 0.05},
+    "AHORRO": {"threshold": 50000, "high_bonus": 0.1, "base_bonus": 0.05},
+    "INVERSIONES": {"threshold": 100000, "high_bonus": 0.15, "base_bonus": 0.06},
+    "DEUDAS": {"threshold": 90000, "high_bonus": 0.15, "base_bonus": 0.06},
+    "DONACIONES": {"threshold": 20000, "high_bonus": 0.08, "base_bonus": 0.05},
+    "IMPUESTOS": {"threshold": 80000, "high_bonus": 0.18, "base_bonus": 0.06},
+    "VESTUARIO": {"threshold": 60000, "high_bonus": 0.1, "base_bonus": 0.05},
+    "INGRESOS": {"threshold": 150000, "high_bonus": 0.18, "base_bonus": 0.08}
+  }
+}
