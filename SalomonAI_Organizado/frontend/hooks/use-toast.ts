@@ -76,3 +76,5 @@ export function useToast() {
 
   return { toast, toasts, dismiss }
 }
+
+export { showToast as toast }
