@@ -196,93 +196,159 @@ const InteractiveDemo = () => {
 
           <div className="space-y-6">
             <Card className="bg-gradient-card border-primary/20">
-              <CardHeader>
-                <CardTitle>Dashboard en Tiempo Real</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {showResponse ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-secondary/30 rounded-lg">
-                        <CreditCard className="w-6 h-6 text-destructive mx-auto mb-2" />
-                        <p className="text-lg font-bold text-destructive">$658.420</p>
-                        <p className="text-xs text-muted-foreground">Gastos mes</p>
+              {showResponse ? (
+                <>
+                  <CardHeader>
+                    <CardTitle>Dashboard en Tiempo Real</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-secondary/30 rounded-lg">
+                          <CreditCard className="w-6 h-6 text-destructive mx-auto mb-2" />
+                          <p className="text-lg font-bold text-destructive">$658.420</p>
+                          <p className="text-xs text-muted-foreground">Gastos mes</p>
+                        </div>
+                        <div className="text-center p-4 bg-secondary/30 rounded-lg">
+                          <PiggyBank className="w-6 h-6 text-primary mx-auto mb-2" />
+                          <p className="text-lg font-bold text-primary">$340.000</p>
+                          <p className="text-xs text-muted-foreground">Ahorrado</p>
+                        </div>
                       </div>
-                      <div className="text-center p-4 bg-secondary/30 rounded-lg">
-                        <PiggyBank className="w-6 h-6 text-primary mx-auto mb-2" />
-                        <p className="text-lg font-bold text-primary">$340.000</p>
-                        <p className="text-xs text-muted-foreground">Ahorrado</p>
+
+                      {currentStep === 0 && demoResponses[0].data && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm">Gastos en Restaurantes:</h4>
+                          {demoResponses[0].data.map((item, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span className="text-sm">{item.restaurant}</span>
+                              <span className="font-bold">${item.amount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {currentStep === 1 && demoResponses[1].savings && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm">Plan de Ahorro:</h4>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm">Meta mensual:</span>
+                              <span className="font-bold">${demoResponses[1].savings.monthly.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm">Tiempo estimado:</span>
+                              <span className="font-bold">{demoResponses[1].savings.timeFrame} meses</span>
+                            </div>
+                            <Progress value={65} className="h-2" />
+                          </div>
+                        </div>
+                      )}
+
+                      {currentStep === 2 && demoResponses[2].categories && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm">Top Categorías:</h4>
+                          {demoResponses[2].categories.map((cat, index) => (
+                            <div key={index} className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span>{cat.name}</span>
+                                <span className="font-bold">${cat.amount.toLocaleString()}</span>
+                              </div>
+                              <Progress value={cat.percentage} className="h-2" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {currentStep === 3 && demoResponses[3].goal && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm">Progreso de Meta:</h4>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-primary">
+                              {demoResponses[3].goal.percentage}%
+                            </p>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              ${demoResponses[3].goal.current.toLocaleString()} de ${demoResponses[3].goal.target.toLocaleString()}
+                            </p>
+                            <Progress value={demoResponses[3].goal.percentage} className="h-3" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </>
+              ) : (
+                <>
+                  <CardHeader className="flex flex-col space-y-1.5 p-6">
+                    <CardTitle className="text-2xl font-semibold leading-none tracking-tight">
+                      Dashboard en tiempo real
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Observa cómo el asistente alimenta el panel con tus movimientos más recientes
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0">
+                    <div className="space-y-6">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Progreso del análisis</span>
+                          <span className="text-xs text-primary font-medium">Esperando consulta</span>
+                        </div>
+                        <div
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          data-state="indeterminate"
+                          data-max="100"
+                          className="relative w-full overflow-hidden rounded-full h-2 bg-primary/10"
+                        >
+                          <div
+                            className="h-full w-full flex-1 bg-primary transition-all"
+                            data-state="indeterminate"
+                            data-max="100"
+                            style={{ transform: "translateX(-90%)" }}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="rounded-lg border text-card-foreground shadow-sm border-primary/10 bg-primary/5">
+                          <div className="p-4 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <PiggyBank className="w-4 h-4 text-primary" aria-hidden="true" />
+                              <span className="text-sm font-medium">Ahorro sugerido</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Haz una pregunta para recibir recomendaciones personalizadas.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border text-card-foreground shadow-sm border-primary/10 bg-primary/5">
+                          <div className="p-4 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="w-4 h-4 text-primary" aria-hidden="true" />
+                              <span className="text-sm font-medium">Patrones detectados</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              El asistente identifica variaciones en tus gastos en tiempo real.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border text-card-foreground shadow-sm border-primary/10 bg-primary/5">
+                        <div className="p-4 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Smartphone className="w-4 h-4 text-primary" aria-hidden="true" />
+                            <span className="text-sm font-medium">Recomendaciones accionables</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Cuando realices una consulta, verás aquí las sugerencias priorizadas.
+                          </p>
+                        </div>
                       </div>
                     </div>
-
-                    {currentStep === 0 && demoResponses[0].data && (
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Gastos en Restaurantes:</h4>
-                        {demoResponses[0].data.map((item, index) => (
-                          <div key={index} className="flex justify-between items-center">
-                            <span className="text-sm">{item.restaurant}</span>
-                            <span className="font-bold">${item.amount.toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {currentStep === 1 && demoResponses[1].savings && (
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Plan de Ahorro:</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm">Meta mensual:</span>
-                            <span className="font-bold">${demoResponses[1].savings.monthly.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm">Tiempo estimado:</span>
-                            <span className="font-bold">{demoResponses[1].savings.timeFrame} meses</span>
-                          </div>
-                          <Progress value={65} className="h-2" />
-                        </div>
-                      </div>
-                    )}
-
-                    {currentStep === 2 && demoResponses[2].categories && (
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Top Categorías:</h4>
-                        {demoResponses[2].categories.map((cat, index) => (
-                          <div key={index} className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span>{cat.name}</span>
-                              <span className="font-bold">${cat.amount.toLocaleString()}</span>
-                            </div>
-                            <Progress value={cat.percentage} className="h-2" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {currentStep === 3 && demoResponses[3].goal && (
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Progreso de Meta:</h4>
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-primary">
-                            {demoResponses[3].goal.percentage}%
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            ${demoResponses[3].goal.current.toLocaleString()} de ${demoResponses[3].goal.target.toLocaleString()}
-                          </p>
-                          <Progress value={demoResponses[3].goal.percentage} className="h-3" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Smartphone className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                    <p className="text-muted-foreground">
-                      Haz una pregunta para ver la respuesta aquí
-                    </p>
-                  </div>
-                )}
-              </CardContent>
+                  </CardContent>
+                </>
+              )}
             </Card>
           </div>
         </div>
