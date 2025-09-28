@@ -14,7 +14,7 @@ import {
   type UserCredential,
 } from "firebase/auth"
 
-import { auth } from "@/lib/firebase"
+import { getFirebaseAuth } from "@/lib/firebase"
 
 type AuthContextType = {
   user: User | null
@@ -33,19 +33,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser)
-      setIsLoading(false)
-    })
+    if (typeof window === "undefined") {
+      return
+    }
 
-    return () => unsubscribe()
+    try {
+      const auth = getFirebaseAuth()
+
+      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        setUser(firebaseUser)
+        setIsLoading(false)
+      })
+
+      return () => unsubscribe()
+    } catch (error) {
+      console.error("Firebase auth failed to initialize", error)
+      setIsLoading(false)
+    }
   }, [])
 
   const login = (email: string, password: string) => {
+    const auth = getFirebaseAuth()
     return signInWithEmailAndPassword(auth, email, password)
   }
 
   const signup = async (email: string, password: string, displayName?: string) => {
+    const auth = getFirebaseAuth()
     const credential = await createUserWithEmailAndPassword(auth, email, password)
 
     if (displayName) {
@@ -56,16 +69,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const loginWithGoogle = () => {
+    const auth = getFirebaseAuth()
     const provider = new GoogleAuthProvider()
     provider.setCustomParameters({ prompt: "select_account" })
     return signInWithPopup(auth, provider)
   }
 
   const resetPassword = (email: string) => {
+    const auth = getFirebaseAuth()
     return sendPasswordResetEmail(auth, email)
   }
 
   const logout = () => {
+    const auth = getFirebaseAuth()
     return signOut(auth)
   }
 

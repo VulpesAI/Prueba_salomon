@@ -1,8 +1,14 @@
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import {
+  initializeApp,
+  getApps,
+  getApp,
+  type FirebaseApp,
+  type FirebaseOptions,
+} from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 
-const firebaseConfig = {
+const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -11,26 +17,75 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-if (Object.values(firebaseConfig).some((value) => !value)) {
-  console.warn("Firebase configuration is incomplete. Check your environment variables.");
-}
+const isBrowser = typeof window !== "undefined";
 
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const hasValidConfig = Object.values(firebaseConfig).every(
+  (value) => typeof value === "string" && value.length > 0,
+);
 
-const auth: Auth = getAuth(app);
+const warnIfConfigMissing = () => {
+  if (!hasValidConfig) {
+    console.warn("Firebase configuration is incomplete. Check your environment variables.");
+  }
+};
 
-let analytics: Analytics | null = null;
+let firebaseApp: FirebaseApp | null = null;
+let firebaseAuth: Auth | null = null;
+let firebaseAnalytics: Analytics | null = null;
 
-if (typeof window !== "undefined") {
-  void isSupported()
-    .then((supported) => {
-      if (supported) {
-        analytics = getAnalytics(app);
-      }
-    })
-    .catch((error) => {
-      console.warn("Firebase analytics could not be initialized:", error);
-    });
-}
+const ensureFirebaseApp = (): FirebaseApp => {
+  if (!firebaseApp) {
+    warnIfConfigMissing();
 
-export { app, auth, analytics };
+    if (!hasValidConfig) {
+      throw new Error("Firebase configuration is incomplete. Check your environment variables.");
+    }
+
+    firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  }
+
+  return firebaseApp;
+};
+
+export const getFirebaseApp = (): FirebaseApp => {
+  if (!isBrowser) {
+    throw new Error("Firebase app can only be initialized in the browser environment.");
+  }
+
+  return ensureFirebaseApp();
+};
+
+export const getFirebaseAuth = (): Auth => {
+  if (!isBrowser) {
+    throw new Error("Firebase auth can only be used in the browser environment.");
+  }
+
+  if (!firebaseAuth) {
+    firebaseAuth = getAuth(ensureFirebaseApp());
+  }
+
+  return firebaseAuth;
+};
+
+export const getFirebaseAnalytics = async (): Promise<Analytics | null> => {
+  if (!isBrowser) {
+    return null;
+  }
+
+  if (firebaseAnalytics) {
+    return firebaseAnalytics;
+  }
+
+  try {
+    const supported = await isSupported();
+    if (!supported) {
+      return null;
+    }
+
+    firebaseAnalytics = getAnalytics(ensureFirebaseApp());
+  } catch (error) {
+    console.warn("Firebase analytics could not be initialized:", error);
+  }
+
+  return firebaseAnalytics;
+};
