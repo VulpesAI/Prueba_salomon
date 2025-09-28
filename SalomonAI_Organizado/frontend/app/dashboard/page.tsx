@@ -17,16 +17,54 @@ import {
   Bell,
   Search,
   Filter,
-  Download
+  Download,
+  AlertTriangle,
+  Loader2,
+  CalendarDays
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 
+type ForecastDirection = 'upward' | 'downward' | 'stable';
+
+type ForecastPoint = {
+  date: string;
+  amount: number;
+};
+
+type ForecastSummary = {
+  modelType: string;
+  generatedAt: string | null;
+  horizonDays: number;
+  historyDays: number;
+  forecasts: ForecastPoint[];
+  trend: {
+    direction: ForecastDirection;
+    change: number;
+    changePercentage: number;
+  };
+};
+
+type PredictiveAlert = {
+  id: string;
+  type: 'cashflow' | 'spending' | 'savings';
+  severity: 'low' | 'medium' | 'high';
+  message: string;
+  forecastDate: string;
+  details?: Record<string, unknown>;
+};
+
 export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [forecastSummary, setForecastSummary] = useState<ForecastSummary | null>(null);
+  const [predictiveAlerts, setPredictiveAlerts] = useState<PredictiveAlert[]>([]);
+  const [isLoadingForecasts, setIsLoadingForecasts] = useState(false);
+  const [isLoadingAlerts, setIsLoadingAlerts] = useState(false);
+  const [forecastError, setForecastError] = useState<string | null>(null);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
 
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
@@ -36,6 +74,97 @@ export default function DashboardPage() {
       router.replace('/login');
     }
   }, [isLoading, router, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPredictiveInsights = async () => {
+      if (!user) {
+        setForecastSummary(null);
+        setPredictiveAlerts([]);
+        return;
+      }
+
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+      let token: string;
+      try {
+        token = await user.getIdToken();
+      } catch (error) {
+        console.error('No fue posible obtener el token de autenticación', error);
+        setForecastError('Sesión expirada, inicia nuevamente.');
+        setAlertsError('Sesión expirada, inicia nuevamente.');
+        setForecastSummary(null);
+        setPredictiveAlerts([]);
+        return;
+      }
+
+      try {
+        setIsLoadingForecasts(true);
+        setForecastError(null);
+        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/forecasts`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener proyecciones (${response.status})`);
+        }
+
+        const data: ForecastSummary = await response.json();
+        if (!cancelled) {
+          setForecastSummary(data);
+        }
+      } catch (error) {
+        console.error('No fue posible cargar las proyecciones', error);
+        if (!cancelled) {
+          setForecastSummary(null);
+          setForecastError('No fue posible cargar las proyecciones.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingForecasts(false);
+        }
+      }
+
+      try {
+        setIsLoadingAlerts(true);
+        setAlertsError(null);
+        const response = await fetch(`${apiBaseUrl}/api/v1/alerts/predictive`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener alertas (${response.status})`);
+        }
+
+        const data: { alerts: PredictiveAlert[] } = await response.json();
+        if (!cancelled) {
+          setPredictiveAlerts(data.alerts);
+        }
+      } catch (error) {
+        console.error('No fue posible cargar las alertas predictivas', error);
+        if (!cancelled) {
+          setPredictiveAlerts([]);
+          setAlertsError('No fue posible cargar las alertas predictivas.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAlerts(false);
+        }
+      }
+    };
+
+    if (!isLoading) {
+      void fetchPredictiveInsights();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isLoading]);
 
   const displayName = useMemo(() => {
     if (!user) return 'Usuario';
@@ -106,6 +235,42 @@ export default function DashboardPage() {
       minimumFractionDigits: 0
     }).format(amount);
   };
+
+  const formatPercentage = (value: number) => {
+    const rounded = Number(value.toFixed(1));
+    const sign = rounded > 0 ? '+' : '';
+    return `${sign}${rounded}%`;
+  };
+
+  const formatDate = (value: string) => {
+    return new Intl.DateTimeFormat('es-CL', {
+      month: 'short',
+      day: 'numeric'
+    }).format(new Date(value));
+  };
+
+  const getSeverityStyles = (severity: PredictiveAlert['severity']) => {
+    switch (severity) {
+      case 'high':
+        return 'bg-red-500/10 text-red-500 border border-red-500/30';
+      case 'medium':
+        return 'bg-amber-500/10 text-amber-500 border border-amber-500/30';
+      default:
+        return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30';
+    }
+  };
+
+  const forecastTrendLabel = useMemo(() => {
+    if (!forecastSummary) return 'Tendencia estable';
+    if (forecastSummary.trend.direction === 'upward') return 'Tendencia positiva';
+    if (forecastSummary.trend.direction === 'downward') return 'Tendencia a la baja';
+    return 'Tendencia estable';
+  }, [forecastSummary]);
+
+  const upcomingForecasts = useMemo(() => {
+    if (!forecastSummary) return [] as ForecastPoint[];
+    return forecastSummary.forecasts.slice(0, 7);
+  }, [forecastSummary]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -403,6 +568,140 @@ export default function DashboardPage() {
               </div>
             </Card>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-10">
+          <Card className="p-6 bg-gradient-card border-primary/20">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-semibold">Proyección de flujo</h2>
+                <p className="text-sm text-muted-foreground">Tendencias generadas por el motor predictivo</p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <CalendarDays className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+
+            {isLoadingForecasts ? (
+              <div className="flex items-center space-x-3 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Cargando proyecciones...</span>
+              </div>
+            ) : forecastError ? (
+              <p className="text-sm text-red-500">{forecastError}</p>
+            ) : forecastSummary && forecastSummary.forecasts.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{forecastTrendLabel}</p>
+                    <p
+                      className={`text-2xl font-semibold ${
+                        forecastSummary.trend.direction === 'downward'
+                          ? 'text-red-500'
+                          : forecastSummary.trend.direction === 'upward'
+                            ? 'text-emerald-500'
+                            : 'text-primary'
+                      }`}
+                    >
+                      {formatCurrency(
+                        forecastSummary.forecasts[forecastSummary.forecasts.length - 1]?.amount ?? 0
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Cambio {formatCurrency(forecastSummary.trend.change)} ({
+                        formatPercentage(forecastSummary.trend.changePercentage)
+                      }) en {forecastSummary.horizonDays} días
+                    </p>
+                  </div>
+                  <div className="text-xs text-muted-foreground text-right">
+                    <p>Modelo: {forecastSummary.modelType.toUpperCase()}</p>
+                    {forecastSummary.generatedAt ? (
+                      <p>
+                        Actualizado:{' '}
+                        {new Date(forecastSummary.generatedAt).toLocaleString('es-CL', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {upcomingForecasts.map(point => (
+                    <div key={point.date} className="p-3 bg-background/70 border border-border/60 rounded-lg">
+                      <p className="text-xs text-muted-foreground">{formatDate(point.date)}</p>
+                      <p className="font-semibold">{formatCurrency(point.amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Aún no hay datos suficientes para proyectar tu flujo de caja. Conecta tus cuentas para comenzar.
+              </p>
+            )}
+          </Card>
+
+          <Card className="p-6 bg-gradient-card border-primary/20">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-semibold">Alertas predictivas</h2>
+                <p className="text-sm text-muted-foreground">
+                  Anticipa eventos financieros relevantes antes de que ocurran
+                </p>
+              </div>
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+            </div>
+
+            {isLoadingAlerts ? (
+              <div className="flex items-center space-x-3 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Analizando tendencias...</span>
+              </div>
+            ) : alertsError ? (
+              <p className="text-sm text-red-500">{alertsError}</p>
+            ) : predictiveAlerts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No se detectaron alertas críticas en las próximas semanas. ¡Sigue así!
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {predictiveAlerts.map(alert => (
+                  <div key={alert.id} className="p-4 bg-background/70 border border-border/60 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityStyles(alert.severity)}`}>
+                        {alert.severity === 'high'
+                          ? 'Alta prioridad'
+                          : alert.severity === 'medium'
+                            ? 'Prioridad media'
+                            : 'Recomendación'}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <CalendarDays className="w-3 h-3" />
+                        {formatDate(alert.forecastDate)}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium mb-1">{alert.message}</p>
+                    {alert.details ? (
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        {Object.entries(alert.details).map(([key, value]) => (
+                          <p key={key}>
+                            <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>{' '}
+                            {typeof value === 'number' ? formatCurrency(value) : String(value)}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       </div>
     </div>

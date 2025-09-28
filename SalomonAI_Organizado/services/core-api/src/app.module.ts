@@ -25,6 +25,8 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { HealthModule } from './health/health.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { BelvoModule } from './belvo/belvo.module';
+import { FinancialForecastsModule } from './financial-forecasts/financial-forecasts.module';
+import { AlertsModule } from './alerts/alerts.module';
 
 @Module({
   imports: [
@@ -79,6 +81,8 @@ import { BelvoModule } from './belvo/belvo.module';
     FirebaseModule,
     DashboardModule,
     BelvoModule,
+    FinancialForecastsModule,
+    AlertsModule,
     TransactionsModule,
     ClassificationModule,
     ClassificationRulesModule,

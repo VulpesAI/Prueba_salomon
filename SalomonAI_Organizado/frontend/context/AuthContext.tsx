@@ -1,27 +1,32 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import {
-  GoogleAuthProvider,
-  type User,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  updateProfile,
-  type UserCredential,
-} from "firebase/auth"
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
-import { getFirebaseAuth } from "@/lib/firebase"
+import {
+  getFirebaseAuth,
+  getGoogleAuthProvider,
+  type FirebaseAuth,
+  type FirebaseUser,
+  type FirebaseUserCredential,
+} from "@/lib/firebase"
 
 type AuthContextType = {
-  user: User | null
+  user: FirebaseUser | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<UserCredential>
-  signup: (email: string, password: string, displayName?: string) => Promise<UserCredential>
-  loginWithGoogle: () => Promise<UserCredential>
+  login: (email: string, password: string) => Promise<FirebaseUserCredential>
+  signup: (
+    email: string,
+    password: string,
+    displayName?: string
+  ) => Promise<FirebaseUserCredential>
+  loginWithGoogle: () => Promise<FirebaseUserCredential>
   resetPassword: (email: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -29,7 +34,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<FirebaseUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -37,57 +42,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    try {
-      const auth = getFirebaseAuth()
+    let isMounted = true
+    let unsubscribe: ReturnType<FirebaseAuth["onAuthStateChanged"]> | undefined
 
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        setUser(firebaseUser)
-        setIsLoading(false)
-      })
+    ;(async () => {
+      try {
+        const auth = await getFirebaseAuth()
+        if (!isMounted) {
+          return
+        }
 
-      return () => unsubscribe()
-    } catch (error) {
-      console.error("Firebase auth failed to initialize", error)
-      setIsLoading(false)
+        unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+          if (!isMounted) {
+            return
+          }
+
+          setUser(firebaseUser)
+          setIsLoading(false)
+        })
+
+        if (auth.currentUser === null) {
+          setIsLoading(false)
+        }
+      } catch (error) {
+        console.error("Firebase auth failed to initialize", error)
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      isMounted = false
+      unsubscribe?.()
     }
   }, [])
 
-  const login = (email: string, password: string) => {
-    const auth = getFirebaseAuth()
-    return signInWithEmailAndPassword(auth, email, password)
-  }
+  const login = useCallback(async (email: string, password: string) => {
+    const auth = await getFirebaseAuth()
+    return auth.signInWithEmailAndPassword(email, password)
+  }, [])
 
-  const signup = async (email: string, password: string, displayName?: string) => {
-    const auth = getFirebaseAuth()
-    const credential = await createUserWithEmailAndPassword(auth, email, password)
+  const signup = useCallback(
+    async (email: string, password: string, displayName?: string) => {
+      const auth = await getFirebaseAuth()
+      const credential = await auth.createUserWithEmailAndPassword(email, password)
 
-    if (displayName) {
-      await updateProfile(credential.user, { displayName })
-    }
+      if (displayName && credential.user) {
+        await credential.user.updateProfile({ displayName })
+      }
 
-    return credential
-  }
+      return credential
+    },
+    []
+  )
 
-  const loginWithGoogle = () => {
-    const auth = getFirebaseAuth()
-    const provider = new GoogleAuthProvider()
+  const loginWithGoogle = useCallback(async () => {
+    const auth = await getFirebaseAuth()
+    const provider = await getGoogleAuthProvider()
     provider.setCustomParameters({ prompt: "select_account" })
-    return signInWithPopup(auth, provider)
-  }
+    return auth.signInWithPopup(provider)
+  }, [])
 
-  const resetPassword = (email: string) => {
-    const auth = getFirebaseAuth()
-    return sendPasswordResetEmail(auth, email)
-  }
+  const resetPassword = useCallback(async (email: string) => {
+    const auth = await getFirebaseAuth()
+    await auth.sendPasswordResetEmail(email)
+  }, [])
 
-  const logout = () => {
-    const auth = getFirebaseAuth()
-    return signOut(auth)
-  }
+  const logout = useCallback(async () => {
+    const auth = await getFirebaseAuth()
+    await auth.signOut()
+  }, [])
 
   const value = useMemo(
     () => ({ user, isLoading, login, signup, loginWithGoogle, resetPassword, logout }),
-    [user, isLoading]
+    [user, isLoading, login, signup, loginWithGoogle, resetPassword, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

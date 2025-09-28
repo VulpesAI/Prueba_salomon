@@ -9,11 +9,13 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FinancialMovementsService } from '../financial-movements/financial-movements.service';
+import { FinancialForecastsService } from '../financial-forecasts/financial-forecasts.service';
 
 @Controller('dashboard')
 export class DashboardController {
   constructor(
     private readonly financialMovementsService: FinancialMovementsService,
+    private readonly financialForecastsService: FinancialForecastsService,
   ) {}
 
   /**
@@ -133,6 +135,30 @@ export class DashboardController {
       })),
       pagination: result.meta,
     };
+  }
+
+  @Get('forecasts')
+  @UseGuards(JwtAuthGuard)
+  async getForecasts(@Request() req) {
+    const userId = req.user.id;
+    const summary = await this.financialForecastsService.getForecastSummary(userId);
+
+    if (!summary) {
+      return {
+        modelType: 'none',
+        generatedAt: null,
+        horizonDays: 0,
+        historyDays: 0,
+        forecasts: [],
+        trend: {
+          direction: 'stable',
+          change: 0,
+          changePercentage: 0,
+        },
+      };
+    }
+
+    return summary;
   }
 
   /**
