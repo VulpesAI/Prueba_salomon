@@ -1,13 +1,23 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Brain, Menu, X } from "lucide-react";
-import { useState } from "react";
-import Link from "next/link";
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Brain, Menu, User, X } from "lucide-react"
+import { useState } from "react"
+import Link from "next/link"
+import { useAuth } from "@/context/AuthContext"
+import { useRouter } from "next/navigation"
 
 export const Navigation = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    logout()
+    setIsMenuOpen(false)
+    router.push("/")
+  }
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-primary/20">
@@ -49,21 +59,37 @@ export const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link href="/login">
-              <Button 
-                variant="ghost" 
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Iniciar Sesión
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button 
-                className="bg-gradient-primary hover:opacity-90"
-              >
-                Probar Gratis
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+                    Panel
+                  </Button>
+                </Link>
+                <div className="flex items-center space-x-2 border border-primary/20 rounded-full px-3 py-1">
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    {user.fullName || user.email}
+                  </span>
+                </div>
+                <Button variant="outline" onClick={handleLogout}>
+                  Cerrar sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button className="bg-gradient-primary hover:opacity-90">
+                    Probar Gratis
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -89,23 +115,42 @@ export const Navigation = () => {
                 Integraciones
               </Link>
               <div className="pt-4 space-y-2">
-                <Link href="/login" className="block">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Iniciar Sesión
-                  </Button>
-                </Link>
-                <Link href="/signup" className="block">
-                  <Button 
-                    className="w-full bg-gradient-primary hover:opacity-90"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Probar Gratis
-                  </Button>
-                </Link>
+                {user ? (
+                  <>
+                    <Link href="/dashboard" className="block" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="ghost" className="w-full justify-start">
+                        Panel
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleLogout}
+                    >
+                      Cerrar sesión
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="block">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Iniciar Sesión
+                      </Button>
+                    </Link>
+                    <Link href="/signup" className="block">
+                      <Button
+                        className="w-full bg-gradient-primary hover:opacity-90"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Probar Gratis
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

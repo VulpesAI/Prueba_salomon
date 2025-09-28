@@ -28,7 +28,7 @@ export function useToast() {
   const toast = React.useCallback(
     ({ title = "", description, variant, action, duration = 5000, ...props }: ToastOptions) => {
       const id = crypto.randomUUID?.() || Math.random().toString(36).substring(2, 9)
-      
+
       const toastData: ToastData = {
         id,
         title,
@@ -38,24 +38,23 @@ export function useToast() {
         open: true,
         ...props,
       }
-      
+
       setToasts((prev) => [...prev, toastData])
-      
-      // Mostrar toast con Sonner
+
       const sonnerId = showToast(title, {
         description,
         action,
-        ...(variant === "destructive" && { style: { background: 'hsl(0 100% 97%)', color: 'hsl(0 100% 40%)' } }),
+        ...(variant === "destructive" && {
+          style: { background: "hsl(0 100% 97%)", color: "hsl(0 100% 40%)" },
+        }),
         duration,
         ...props,
       })
 
-      // Auto dismiss
       const timer = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id))
       }, duration)
 
-      // Devolver función para dismiss manual
       return () => {
         clearTimeout(timer)
         showToast.dismiss(sonnerId)
@@ -76,3 +75,5 @@ export function useToast() {
 
   return { toast, toasts, dismiss }
 }
+
+export const toast = showToast
