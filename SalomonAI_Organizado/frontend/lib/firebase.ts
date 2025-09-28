@@ -8,20 +8,42 @@ import {
 import { getAuth, type Auth } from "firebase/auth";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 
+const fallbackConfig: FirebaseOptions = {
+  apiKey: "AIzaSyBPIgdQ9kZFyUEDfCyPsDgRyzyabvuLkmo",
+  authDomain: "prueba-salomon.firebaseapp.com",
+  projectId: "prueba-salomon",
+  storageBucket: "prueba-salomon.firebasestorage.app",
+  messagingSenderId: "933892716551",
+  appId: "1:933892716551:web:cb3872e02fa775ad3b12a2",
+  measurementId: "G-KXWWZP4CMF",
+};
+
 const firebaseConfig: FirebaseOptions = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? fallbackConfig.apiKey,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? fallbackConfig.authDomain,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? fallbackConfig.projectId,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? fallbackConfig.storageBucket,
+  messagingSenderId:
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? fallbackConfig.messagingSenderId,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? fallbackConfig.appId,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? fallbackConfig.measurementId,
 };
 
 const isBrowser = typeof window !== "undefined";
 
-const hasValidConfig = Object.values(firebaseConfig).every(
-  (value) => typeof value === "string" && value.length > 0,
-);
+const requiredKeys: (keyof FirebaseOptions)[] = [
+  "apiKey",
+  "authDomain",
+  "projectId",
+  "storageBucket",
+  "messagingSenderId",
+  "appId",
+];
+
+const hasValidConfig = requiredKeys.every((key) => {
+  const value = firebaseConfig[key];
+  return typeof value === "string" && value.length > 0;
+});
 
 const warnIfConfigMissing = () => {
   if (!hasValidConfig) {
