@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile.prod
     environment:
       - NODE_ENV=production
+      - NEXT_PUBLIC_CONVERSATION_ENGINE_URL=${CONVERSATION_ENGINE_URL:-http://conversation-engine:8002}
+      - NEXT_PUBLIC_VOICE_GATEWAY_URL=${VOICE_GATEWAY_URL:-http://voice-gateway:8100}
     networks:
       - salomon-net
     healthcheck:
@@ -59,6 +61,38 @@ services:
         reservations:
           cpus: '0.25'
           memory: 512M
+
+  conversation-engine:
+    image: ${REGISTRY:-localhost}/salomon/conversation-engine:prod
+    build:
+      context: ./services/conversation-engine
+      dockerfile: Dockerfile
+    environment:
+      - CORE_API_BASE_URL=http://core-api:3000
+    depends_on:
+      core-api:
+        condition: service_started
+    networks:
+      - salomon-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  voice-gateway:
+    image: ${REGISTRY:-localhost}/salomon/voice-gateway:prod
+    build:
+      context: ./services/voice-gateway
+      dockerfile: Dockerfile
+    environment:
+      - VOICE_STT_PROVIDER=${VOICE_STT_PROVIDER:-mock}
+      - VOICE_TTS_PROVIDER=${VOICE_TTS_PROVIDER:-mock}
+    depends_on:
+      - conversation-engine
+    networks:
+      - salomon-net
+    deploy:
+      restart_policy:
+        condition: on-failure
 
   # Nginx como API Gateway y servidor estático
   nginx:
