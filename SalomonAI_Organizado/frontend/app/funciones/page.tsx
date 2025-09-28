@@ -123,9 +123,9 @@ export default function FuncionesPage() {
     },
     {
       icon: FileText,
-      title: "Reportes Tributarios",
-      description: "Automatización para declaración de impuestos",
-      capabilities: ["Categorización tributaria", "Exportación Formato 22", "Gastos deducibles", "Integración SII"]
+      title: "Reportes de Gastos Personales",
+      description: "Visualiza y exporta resúmenes claros para tus finanzas diarias",
+      capabilities: ["Resumen mensual por categoría", "Seguimiento de presupuesto", "Comparativo con meses previos", "Exportación PDF y Excel"]
     },
     {
       icon: Calendar,
