@@ -32,6 +32,18 @@ export class FinancialMovement {
   @Column({ type: 'jsonb', nullable: true })
   embedding: number[];
 
+  @Column({ name: 'classification_confidence', type: 'decimal', precision: 5, scale: 4, nullable: true })
+  classificationConfidence?: number;
+
+  @Column({ name: 'classification_model_version', type: 'varchar', length: 50, nullable: true })
+  classificationModelVersion?: string;
+
+  @Column({ name: 'classification_reviewed_at', type: 'timestamptz', nullable: true })
+  classificationReviewedAt?: Date;
+
+  @Column({ name: 'classification_metadata', type: 'jsonb', nullable: true })
+  classificationMetadata?: Record<string, any>;
+
   @ManyToOne(() => User, (user) => user.movements, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;

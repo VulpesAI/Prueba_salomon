@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ClassificationService } from './classification.service';
+import { ClassificationLabel } from './entities/classification-label.entity';
 import { ClassificationController } from './classification.controller';
+import { FinancialMovement } from '../financial-movements/entities/financial-movement.entity';
+import { KafkaModule } from '../kafka/kafka.module';
 import { NlpModule } from '../nlp/nlp.module';
 import { QdrantModule } from '../qdrant/qdrant.module';
 
@@ -18,7 +22,9 @@ import { QdrantModule } from '../qdrant/qdrant.module';
     // Módulos core
     NlpModule, 
     QdrantModule,
-    
+    KafkaModule,
+    TypeOrmModule.forFeature([ClassificationLabel, FinancialMovement]),
+
     // Cache para mejorar performance
     CacheModule.register({
       ttl: 300, // 5 minutos
