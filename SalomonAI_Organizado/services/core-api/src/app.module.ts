@@ -27,6 +27,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { BelvoModule } from './belvo/belvo.module';
 import { FinancialForecastsModule } from './financial-forecasts/financial-forecasts.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { GoalsModule } from './goals/goals.module';
 
 @Module({
   imports: [
@@ -83,6 +85,8 @@ import { AlertsModule } from './alerts/alerts.module';
     BelvoModule,
     FinancialForecastsModule,
     AlertsModule,
+    NotificationsModule,
+    GoalsModule,
     TransactionsModule,
     ClassificationModule,
     ClassificationRulesModule,
