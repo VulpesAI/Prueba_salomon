@@ -65,10 +65,10 @@ const Features = () => {
     },
     {
       icon: Banknote,
-      title: "Asesoría Tributaria",
-      description: "Optimización automática para declaración de renta y deducciones",
-      badge: "SII",
-      color: "text-yellow-400"
+      title: "Planificador de Presupuesto",
+      description: "Crea presupuestos dinámicos con límites flexibles y seguimiento en tiempo real",
+      badge: "Presupuesto",
+      color: "text-lime-400"
     },
     {
       icon: Smartphone,
@@ -139,7 +139,7 @@ const Features = () => {
               { name: "Santander", status: "Activo" },
               { name: "BCI", status: "Activo" },
               { name: "Falabella", status: "Próximamente" },
-              { name: "SII", status: "Integrado" },
+              { name: "Tenpo", status: "Activo" },
               { name: "Belvo API", status: "Certificado" },
               { name: "Fintoc", status: "Soporte" },
               { name: "MercadoPago", status: "Activo" }

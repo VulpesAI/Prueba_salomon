@@ -81,24 +81,24 @@ export default function IntegracionesPage() {
       status: "primary"
     },
     {
-      name: "SII Webservices",
-      type: "Servicios Tributarios",
-      description: "Automatización de procesos tributarios y declaraciones",
-      capabilities: ["Facturas Electrónicas", "Boletas", "Declaraciones", "Timbraje"],
+      name: "Tenpo",
+      type: "Billetera Digital",
+      description: "Controla tus pagos cotidianos y automatiza tus recargas en segundos",
+      capabilities: ["Tarjeta prepago internacional", "Pagos automáticos", "Control de gastos", "Cashback personalizado"],
       status: "active"
     },
     {
-      name: "Previred",
-      type: "Previsión Social",
-      description: "Conexión con sistema previsional chileno",
-      capabilities: ["AFP", "ISAPRE", "Cesantía", "APV"],
+      name: "Mach",
+      type: "Wallet Personal",
+      description: "Pagos instantáneos entre amigos y seguimiento de gastos compartidos",
+      capabilities: ["Transferencias inmediatas", "División de cuentas", "Tarjeta virtual", "Topes de gasto"],
       status: "beta"
     },
     {
-      name: "CMF",
-      type: "Regulador Financiero",
-      description: "Datos oficiales de instituciones financieras",
-      capabilities: ["Tasas Oficiales", "Indicadores", "UF", "UTM"],
+      name: "Fintual",
+      type: "Inversión Personal",
+      description: "Importa tus portafolios y proyecta metas de inversión a largo plazo",
+      capabilities: ["Portafolios automatizados", "Ahorro objetivo", "Reportes de rendimiento", "Metas temporizadas"],
       status: "active"
     }
   ];
