@@ -132,12 +132,14 @@ export function useConversationEngine({ sessionId, onSummary }: UseConversationO
           break;
         case 'insight':
           if (event.insight) {
+            const insight = event.insight;
             setInsights(prev => {
-              const exists = prev.find(item => item.label === event.insight?.label);
+              const { label } = insight;
+              const exists = prev.find(item => item.label === label);
               if (exists) {
-                return prev.map(item => (item.label === event.insight?.label ? event.insight! : item));
+                return prev.map(item => (item.label === label ? insight : item));
               }
-              return [...prev, event.insight];
+              return [...prev, insight];
             });
           }
           break;
