@@ -1,72 +1,108 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Navigation } from '../../components/Navigation';
-import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
-import { Brain, Eye, EyeOff, UserPlus, Check } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Navigation } from '../../components/Navigation'
+import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
+import { Brain, Eye, EyeOff, UserPlus, Check } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/hooks/use-toast'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
+    confirmPassword: '',
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { register: registerUser, user, isLoading } = useAuth()
+  const { toast } = useToast()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace('/dashboard')
+    }
+  }, [isLoading, user, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const passwordStrength = useMemo(() => {
+    const password = formData.password
+    let strength = 0
+    if (password.length >= 8) strength++
+    if (/[A-Z]/.test(password)) strength++
+    if (/[0-9]/.test(password)) strength++
+    if (/[^A-Za-z0-9]/.test(password)) strength++
+    return strength
+  }, [formData.password])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     if (formData.password !== formData.confirmPassword) {
-      alert('Las contraseñas no coinciden');
-      return;
+      toast({
+        title: 'Las contraseñas no coinciden',
+        description: 'Verifica que ambas contraseñas sean iguales.',
+        variant: 'destructive',
+      })
+      return
     }
 
     if (!acceptTerms) {
-      alert('Debes aceptar los términos y condiciones');
-      return;
+      toast({
+        title: 'Debes aceptar los términos',
+        description: 'Por favor acepta los términos y condiciones antes de continuar.',
+        variant: 'destructive',
+      })
+      return
     }
 
-    setIsLoading(true);
-    
-    // TODO: Implementar registro con Firebase
-    console.log('Signup attempt:', formData);
-    
-    // Simular registro por ahora
-    setTimeout(() => {
-      setIsLoading(false);
-      // Redirigir al dashboard
-      window.location.href = '/dashboard';
-    }, 1500);
-  };
+    setIsSubmitting(true)
+    try {
+      await registerUser({
+        fullName: formData.name,
+        email: formData.email,
+        password: formData.password,
+      })
+      toast({
+        title: 'Cuenta creada con éxito',
+        description: '¡Bienvenido a SalomonAI! Estamos preparando tu panel.',
+      })
+      router.push('/dashboard')
+    } catch (error) {
+      toast({
+        title: 'No se pudo crear la cuenta',
+        description: error instanceof Error ? error.message : 'Intenta nuevamente más tarde.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
-  const passwordStrength = (password: string) => {
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^A-Za-z0-9]/.test(password)) strength++;
-    return strength;
-  };
+  const handleGoogleSignup = () => {
+    toast({
+      title: 'Próximamente',
+      description: 'La creación de cuentas con Google estará disponible muy pronto.',
+    })
+  }
 
-  const strength = passwordStrength(formData.password);
+  const disableForm = isSubmitting || isLoading
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <div className="min-h-screen flex items-center justify-center px-6 py-20">
         <div className="max-w-md w-full">
           {/* Header */}
@@ -76,18 +112,19 @@ export default function SignupPage() {
                 <Brain className="w-8 h-8 text-primary-foreground" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold mb-2" style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              color: 'transparent'
-            }}>
+            <h1
+              className="text-3xl font-bold mb-2"
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                color: 'transparent',
+              }}
+            >
               Crear Cuenta
             </h1>
-            <p className="text-muted-foreground">
-              Comienza tu experiencia financiera inteligente
-            </p>
+            <p className="text-muted-foreground">Comienza tu experiencia financiera inteligente</p>
           </div>
 
           {/* Signup Form */}
@@ -103,10 +140,10 @@ export default function SignupPage() {
                   type="text"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm 
-                           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   placeholder="Juan Pérez"
                   required
+                  disabled={disableForm}
                 />
               </div>
 
@@ -120,10 +157,10 @@ export default function SignupPage() {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm 
-                           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   placeholder="juan@email.com"
                   required
+                  disabled={disableForm}
                 />
               </div>
 
@@ -138,10 +175,10 @@ export default function SignupPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm 
-                             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     placeholder="••••••••"
                     required
+                    disabled={disableForm}
                   />
                   <button
                     type="button"
@@ -151,19 +188,19 @@ export default function SignupPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                
+
                 {/* Password Strength Indicator */}
                 {formData.password && (
                   <div className="mt-2">
                     <div className="flex space-x-1 mb-1">
-                      {[1, 2, 3, 4].map(level => (
+                      {[1, 2, 3, 4].map((level) => (
                         <div
                           key={level}
                           className={`h-2 w-full rounded ${
-                            level <= strength
-                              ? strength < 2
+                            level <= passwordStrength
+                              ? passwordStrength < 2
                                 ? 'bg-red-400'
-                                : strength < 3
+                                : passwordStrength < 3
                                 ? 'bg-yellow-400'
                                 : 'bg-green-400'
                               : 'bg-gray-200'
@@ -172,10 +209,10 @@ export default function SignupPage() {
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {strength < 2 && 'Contraseña débil'}
-                      {strength === 2 && 'Contraseña regular'}
-                      {strength === 3 && 'Contraseña buena'}
-                      {strength === 4 && 'Contraseña excelente'}
+                      {passwordStrength < 2 && 'Contraseña débil'}
+                      {passwordStrength === 2 && 'Contraseña regular'}
+                      {passwordStrength === 3 && 'Contraseña buena'}
+                      {passwordStrength === 4 && 'Contraseña excelente'}
                     </p>
                   </div>
                 )}
@@ -192,10 +229,10 @@ export default function SignupPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm 
-                             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     placeholder="••••••••"
                     required
+                    disabled={disableForm}
                   />
                   <button
                     type="button"
@@ -219,6 +256,7 @@ export default function SignupPage() {
                   onChange={(e) => setAcceptTerms(e.target.checked)}
                   className="mt-1 rounded border-input"
                   required
+                  disabled={disableForm}
                 />
                 <label htmlFor="terms" className="text-sm text-muted-foreground">
                   Acepto los{' '}
@@ -235,9 +273,9 @@ export default function SignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
-                disabled={isLoading || !acceptTerms}
+                disabled={disableForm || !acceptTerms}
               >
-                {isLoading ? (
+                {isSubmitting ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Creando cuenta...</span>
@@ -263,15 +301,16 @@ export default function SignupPage() {
 
             {/* Social Signup */}
             <Button
+              type="button"
               variant="outline"
               className="w-full border-primary/30 hover:bg-primary/10"
-              onClick={() => console.log('Google signup')}
+              onClick={handleGoogleSignup}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
               Continuar con Google
             </Button>
@@ -312,5 +351,5 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
