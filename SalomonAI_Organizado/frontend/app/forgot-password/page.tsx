@@ -2,28 +2,35 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Brain, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+
 import { Navigation } from '../../components/Navigation';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Brain, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // TODO: Implementar recuperación de contraseña con Firebase
-    console.log('Password reset request for:', email);
-    
-    // Simular envío de email
-    setTimeout(() => {
-      setIsLoading(false);
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await resetPassword(email);
       setEmailSent(true);
-    }, 1500);
+    } catch (err) {
+      console.error('Firebase reset password error:', err);
+      setError('No pudimos enviar el correo de recuperación. Verifica el email e inténtalo nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (emailSent) {
@@ -140,12 +147,18 @@ export default function ForgotPasswordPage() {
                 </div>
               </div>
 
+              {error && (
+                <p className="text-sm text-red-500" role="alert">
+                  {error}
+                </p>
+              )}
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
-                disabled={isLoading}
+                disabled={isSubmitting}
               >
-                {isLoading ? (
+                {isSubmitting ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Enviando...</span>

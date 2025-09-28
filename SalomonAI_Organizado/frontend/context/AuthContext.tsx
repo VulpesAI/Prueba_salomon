@@ -1,88 +1,86 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import {
+  GoogleAuthProvider,
+  type User,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  updateProfile,
+  type UserCredential,
+} from "firebase/auth"
 
-type User = {
-  id: string
-  email: string
-  name: string
-} | null
+import { auth } from "@/lib/firebase"
 
 type AuthContextType = {
-  user: User
-  login: (email: string, password: string) => Promise<void>
-  logout: () => void
+  user: User | null
   isLoading: boolean
+  login: (email: string, password: string) => Promise<UserCredential>
+  signup: (email: string, password: string, displayName?: string) => Promise<UserCredential>
+  loginWithGoogle: () => Promise<UserCredential>
+  resetPassword: (email: string) => Promise<void>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar token almacenado y validar sesión
-    checkAuth()
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser)
+      setIsLoading(false)
+    })
+
+    return () => unsubscribe()
   }, [])
 
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      if (token) {
-        // Verificar token con backend
-        const response = await fetch('/api/auth/verify', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (response.ok) {
-          const userData = await response.json()
-          setUser(userData)
-        } else {
-          localStorage.removeItem('token')
-        }
-      }
-    } catch (error) {
-      console.error('Error checking auth:', error)
-    } finally {
-      setIsLoading(false)
-    }
+  const login = (email: string, password: string) => {
+    return signInWithEmailAndPassword(auth, email, password)
   }
 
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-      
-      if (!response.ok) throw new Error('Login failed')
-      
-      const { token, user: userData } = await response.json()
-      localStorage.setItem('token', token)
-      setUser(userData)
-    } catch (error) {
-      console.error('Login error:', error)
-      throw error
+  const signup = async (email: string, password: string, displayName?: string) => {
+    const credential = await createUserWithEmailAndPassword(auth, email, password)
+
+    if (displayName) {
+      await updateProfile(credential.user, { displayName })
     }
+
+    return credential
+  }
+
+  const loginWithGoogle = () => {
+    const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({ prompt: "select_account" })
+    return signInWithPopup(auth, provider)
+  }
+
+  const resetPassword = (email: string) => {
+    return sendPasswordResetEmail(auth, email)
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
-    setUser(null)
+    return signOut(auth)
   }
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, isLoading, login, signup, loginWithGoogle, resetPassword, logout }),
+    [user, isLoading]
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }
