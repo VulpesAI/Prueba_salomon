@@ -60,6 +60,8 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_CONVERSATION_ENGINE_URL=http://localhost:8002
+      - NEXT_PUBLIC_VOICE_GATEWAY_URL=http://localhost:8100
       - PORT=3000
     networks:
       - salomon-net
@@ -109,6 +111,48 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"] # Asume que tienes un endpoint /health
       interval: 15s
       timeout: 5s
+      retries: 3
+
+  conversation-engine:
+    build:
+      context: ./services/conversation-engine
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    environment:
+      - CORE_API_BASE_URL=http://core-api:3000
+    depends_on:
+      core-api:
+        condition: service_started
+    networks:
+      - salomon-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  voice-gateway:
+    build:
+      context: ./services/voice-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8100"
+    env_file:
+      - .env
+    environment:
+      - VOICE_STT_PROVIDER=${VOICE_STT_PROVIDER:-mock}
+      - VOICE_TTS_PROVIDER=${VOICE_TTS_PROVIDER:-mock}
+    depends_on:
+      - conversation-engine
+    networks:
+      - salomon-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 10s
       retries: 3
 
   # --- Infrastructure ---
