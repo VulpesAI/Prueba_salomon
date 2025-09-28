@@ -10,12 +10,14 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FinancialMovementsService } from '../financial-movements/financial-movements.service';
 import { FinancialForecastsService } from '../financial-forecasts/financial-forecasts.service';
+import { GoalsService } from '../goals/goals.service';
 
 @Controller('dashboard')
 export class DashboardController {
   constructor(
     private readonly financialMovementsService: FinancialMovementsService,
     private readonly financialForecastsService: FinancialForecastsService,
+    private readonly goalsService: GoalsService,
   ) {}
 
   /**
@@ -71,6 +73,8 @@ export class DashboardController {
     // Tendencias semanales
     const weeklyTrends = this.calculateWeeklyTrends(movements);
 
+    const goalsOverview = await this.goalsService.getDashboardOverview(userId);
+
     return {
       summary: {
         totalIncome,
@@ -84,6 +88,7 @@ export class DashboardController {
       },
       categories: categoryBreakdown,
       trends: weeklyTrends,
+      goals: goalsOverview,
       recentTransactions: movements
         .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime())
         .slice(0, 10)
@@ -96,6 +101,13 @@ export class DashboardController {
           currency: m.currency,
         })),
     };
+  }
+
+  @Get('goals')
+  @UseGuards(JwtAuthGuard)
+  async getGoalsOverview(@Request() req) {
+    const userId = req.user.id;
+    return this.goalsService.getDashboardOverview(userId);
   }
 
   /**

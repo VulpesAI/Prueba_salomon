@@ -10,6 +10,7 @@ import { FinancialMovement } from '../../financial-movements/entities/financial-
 import { UserClassificationRule } from '../../classification-rules/entities/user-classification-rule.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
+import { FinancialGoal } from '../../goals/entities/financial-goal.entity';
 
 @Entity('users') // Mapea esta clase a la tabla 'users' en la BD
 export class User {
@@ -95,6 +96,9 @@ export class User {
 
   @OneToMany(() => Transaction, (transaction: Transaction) => transaction.user)
   transactions: Transaction[];
+
+  @OneToMany(() => FinancialGoal, goal => goal.user)
+  goals: FinancialGoal[];
 
   // Relaciones con otras entidades se agregarán gradualmente
   // @OneToMany(() => FinancialAccount, (account) => account.user)

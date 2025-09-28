@@ -10,6 +10,7 @@ export const createDatabaseConfig = (configService: ConfigService) => ({
   password: configService.get<string>('POSTGRES_PASSWORD'),
   database: configService.get<string>('POSTGRES_DB', 'salomon_db'),
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   synchronize: configService.get<string>('NODE_ENV') !== 'production',
   logging: configService.get<string>('NODE_ENV') !== 'production',
   ssl: false, // Disable SSL for Docker development and production
@@ -96,6 +97,7 @@ export const setupSwagger = (app: INestApplication) => {
     .addTag('Transactions', 'Gestión de transacciones')
     .addTag('Classification', 'Clasificación inteligente de transacciones')
     .addTag('NLP', 'Procesamiento de lenguaje natural')
+    .addTag('Goals', 'Gestión de metas financieras y seguimiento de progreso')
     .addTag('Health', 'Health checks y monitoreo')
     .build();
 

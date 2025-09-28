@@ -1,19 +1,50 @@
+'use client';
+
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  CreditCard, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  CreditCard,
   PiggyBank,
   ShoppingCart,
   Coffee,
   Car,
-  Home
+  Home,
+  AlertTriangle,
+  CheckCircle2,
+  TimerReset
 } from "lucide-react";
+import { useFinancialGoals } from "@/hooks/useFinancialGoals";
+
+const currencyFormatter = new Intl.NumberFormat("es-CL", {
+  style: "currency",
+  currency: "CLP",
+  maximumFractionDigits: 0
+});
+
+const percentageFormatter = new Intl.NumberFormat("es-CL", {
+  style: "percent",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1
+});
 
 const Dashboard = () => {
+  const { goals, summary, isLoading, error } = useFinancialGoals();
+
+  const primaryGoal = goals[0];
+  const atRiskGoals = useMemo(() => goals.filter(goal => goal.metrics.pace === "off_track"), [goals]);
+  const aheadGoals = useMemo(() => goals.filter(goal => goal.metrics.pace === "ahead"), [goals]);
+
+  const formatCurrency = (value: number) => currencyFormatter.format(Math.round(value));
+const formatPercentage = (value: number) =>
+  Number.isFinite(value) ? percentageFormatter.format(value / 100) : percentageFormatter.format(0);
+  const formatEta = (isoDate: string | null) =>
+    isoDate ? new Date(isoDate).toLocaleDateString("es-CL", { month: "short", day: "numeric" }) : "Sin proyección";
+
   return (
     <section className="py-20 bg-background" id="demo">
       <div className="container mx-auto px-6">
@@ -64,18 +95,143 @@ const Dashboard = () => {
 
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ahorro Meta</CardTitle>
+              <CardTitle className="text-sm font-medium">Metas financieras</CardTitle>
               <PiggyBank className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">68%</div>
-              <p className="text-xs text-muted-foreground mb-2">
-                $340,000 de $500,000
-              </p>
-              <Progress value={68} className="h-2" />
+              {primaryGoal ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-muted-foreground">{primaryGoal.name}</span>
+                    <Badge variant={primaryGoal.metrics.pace === "off_track" ? "destructive" : "secondary"}>
+                      {primaryGoal.metrics.pace === "off_track" ? "Desvío" : "En curso"}
+                    </Badge>
+                  </div>
+                  <div className="text-2xl font-bold text-accent">
+                    {formatPercentage(primaryGoal.metrics.progressPercentage)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {formatCurrency(primaryGoal.metrics.totalActual)} de {formatCurrency(primaryGoal.targetAmount)}
+                  </p>
+                  <Progress value={primaryGoal.metrics.progressPercentage} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    ETA: {formatEta(primaryGoal.metrics.eta)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Tus metas financieras aparecerán aquí.</p>
+              )}
             </CardContent>
           </Card>
         </div>
+
+        {error && (
+          <div className="mb-8">
+            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+              {error}
+            </Badge>
+          </div>
+        )}
+
+        {!isLoading && goals.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <TimerReset className="w-5 h-5 text-primary" />
+                  Seguimiento de metas
+                </CardTitle>
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                  {summary.completed} completadas · {summary.onTrack} en ritmo · {summary.offTrack} en riesgo
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {goals.map(goal => (
+                  <div key={goal.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">{goal.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Objetivo: {formatCurrency(goal.targetAmount)} · ETA {formatEta(goal.metrics.eta)}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={goal.metrics.pace === "off_track" ? "destructive" : goal.metrics.pace === "ahead" ? "default" : "secondary"}
+                        className={goal.metrics.pace === "ahead" ? "bg-emerald-500/10 text-emerald-500" : undefined}
+                      >
+                        {goal.metrics.pace === "off_track"
+                          ? "En riesgo"
+                          : goal.metrics.pace === "ahead"
+                            ? "Adelantada"
+                            : goal.metrics.pace === "completed"
+                              ? "Completada"
+                              : "Al día"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{formatCurrency(goal.metrics.totalActual)}</span>
+                      <span className="text-muted-foreground">{formatPercentage(goal.metrics.progressPercentage)}</span>
+                    </div>
+                    <Progress value={goal.metrics.progressPercentage} className="h-2" />
+                    <p className="text-xs text-muted-foreground">
+                      Desviación actual: {formatCurrency(goal.metrics.deviationAmount)} ({formatPercentage(goal.metrics.deviationRatio * 100)})
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+              {atRiskGoals.length > 0 && (
+                <Card className="border-destructive/40 bg-destructive/5">
+                  <CardHeader className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="w-5 h-5" />
+                      Metas con desviaciones
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {atRiskGoals.map(goal => (
+                      <div key={goal.id} className="space-y-2 rounded-md border border-destructive/20 p-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-destructive">{goal.name}</p>
+                          <Badge variant="outline" className="border-destructive/40 text-destructive">
+                            Falta {formatCurrency(Math.max(goal.metrics.expectedAmountByNow - goal.metrics.totalActual, 0))}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-destructive/80">
+                          Progreso actual {formatPercentage(goal.metrics.progressPercentage)} vs esperado{' '}
+                          {formatPercentage((goal.metrics.expectedAmountByNow / goal.targetAmount) * 100)}
+                        </p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {aheadGoals.length > 0 && (
+                <Card className="border-emerald-400/40 bg-emerald-500/5">
+                  <CardHeader className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-emerald-500">
+                      <CheckCircle2 className="w-5 h-5" />
+                      Metas adelantadas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {aheadGoals.map(goal => (
+                      <div key={goal.id} className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-foreground">{goal.name}</span>
+                        <span className="text-emerald-500">
+                          +{formatCurrency(goal.metrics.deviationAmount)} ({formatPercentage(goal.metrics.deviationRatio * 100)})
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Spending Categories */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
