@@ -14,6 +14,11 @@ import { LocalAuthGuard } from './local-auth.guard';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
 import { UsersService } from '../users/users.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { VerifyMfaDto } from './dto/verify-mfa.dto';
+import { DisableMfaDto } from './dto/disable-mfa.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LoginUserDto } from './dto/login-user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -31,8 +36,33 @@ export class AuthController {
   @Post('login')
   @UseGuards(LocalAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async login(@Request() req) {
+  async login(@Request() req, @Body() _loginDto: LoginUserDto) {
     return this.authService.login(req.user);
+  }
+
+  @Post('token/refresh')
+  @HttpCode(HttpStatus.OK)
+  async refreshTokens(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshTokens(dto.refreshToken);
+  }
+
+  @Post('mfa/setup')
+  @UseGuards(JwtAuthGuard)
+  async setupMfa(@Request() req) {
+    return this.authService.initiateMfaEnrollment(req.user.id);
+  }
+
+  @Post('mfa/verify')
+  @UseGuards(JwtAuthGuard)
+  async verifyMfa(@Request() req, @Body() dto: VerifyMfaDto) {
+    return this.authService.verifyMfaEnrollment(req.user.id, dto.token);
+  }
+
+  @Post('mfa/disable')
+  @UseGuards(JwtAuthGuard)
+  async disableMfa(@Request() req, @Body() dto: DisableMfaDto) {
+    await this.authService.disableMfa(req.user.id, dto.token, dto.backupCode);
+    return { message: 'MFA desactivado correctamente' };
   }
 
   /**
@@ -69,26 +99,16 @@ export class AuthController {
       });
 
       // Generar JWT interno para nuestra aplicación
-      const jwtToken = await this.authService.generateJwtToken({
+      const session = await this.authService.login({
         id: user.id,
         email: user.email,
-        uid: user.uid,
         roles: user.roles,
+        mfaEnabled: user.mfaEnabled,
       });
 
       return {
-        access_token: jwtToken,
-        user: {
-          id: user.id,
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          emailVerified: user.emailVerified,
-          phoneNumber: user.phoneNumber,
-          roles: user.roles,
-          preferences: user.preferences,
-        },
+        ...session,
+        access_token: session.accessToken,
       };
     } catch (error) {
       console.error('Error en login Firebase:', error);
@@ -115,14 +135,16 @@ export class AuthController {
       return {
         valid: true,
         uid: decodedToken.uid,
-        user: user ? {
-          id: user.id,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          emailVerified: user.emailVerified,
-          roles: user.roles,
-        } : null,
+        user: user
+          ? {
+              id: user.id,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+              emailVerified: user.emailVerified,
+              roles: user.roles,
+            }
+          : null,
       };
     } catch (error) {
       return {

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -53,7 +58,129 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User> {
-    return this.userRepository.findOne({ where: { email }, select: ['id', 'email', 'passwordHash'] });
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect(['user.passwordHash', 'user.mfaSecret', 'user.mfaTempSecret', 'user.mfaBackupCodes'])
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+
+  async getByIdWithSecrets(id: string): Promise<User | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect(['user.mfaSecret', 'user.mfaTempSecret', 'user.mfaBackupCodes'])
+      .where('user.id = :id', { id })
+      .getOne();
+  }
+
+  async setMfaTempSecret(userId: string, secret: string): Promise<void> {
+    await this.userRepository.update({ id: userId }, { mfaTempSecret: secret });
+  }
+
+  async activateMfa(userId: string, secret: string, backupCodes: string[]): Promise<void> {
+    await this.userRepository.update(
+      { id: userId },
+      {
+        mfaSecret: secret,
+        mfaEnabled: true,
+        mfaTempSecret: null,
+        mfaBackupCodes: backupCodes,
+        lastMfaAt: new Date(),
+      },
+    );
+  }
+
+  async updateMfaUsage(userId: string): Promise<void> {
+    await this.userRepository.update({ id: userId }, { lastMfaAt: new Date() });
+  }
+
+  async disableMfa(userId: string): Promise<void> {
+    await this.userRepository.update(
+      { id: userId },
+      {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaTempSecret: null,
+        mfaBackupCodes: null,
+        lastMfaAt: null,
+      },
+    );
+  }
+
+  async consumeBackupCode(userId: string, code: string): Promise<boolean> {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect(['user.mfaBackupCodes'])
+      .where('user.id = :userId', { userId })
+      .getOne();
+
+    if (!user?.mfaBackupCodes?.length) {
+      return false;
+    }
+
+    for (let i = 0; i < user.mfaBackupCodes.length; i++) {
+      const storedHash = user.mfaBackupCodes[i];
+      if (storedHash && (await bcrypt.compare(code, storedHash))) {
+        const updatedCodes = [...user.mfaBackupCodes];
+        updatedCodes.splice(i, 1);
+        await this.userRepository.update({ id: userId }, { mfaBackupCodes: updatedCodes });
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  async upsertOAuthUser(params: {
+    email: string;
+    fullName?: string;
+    displayName?: string;
+    picture?: string;
+    provider: string;
+    subject: string;
+  }): Promise<User> {
+    let user = await this.userRepository.findOne({ where: { email: params.email } });
+
+    if (!user) {
+      user = this.userRepository.create({
+        email: params.email,
+        fullName: params.fullName ?? params.displayName ?? params.email,
+        displayName: params.displayName ?? params.fullName ?? params.email,
+        photoURL: params.picture,
+        roles: ['user'],
+        isActive: true,
+        emailVerified: true,
+        oauthProviders: [
+          {
+            provider: params.provider,
+            subject: params.subject,
+            picture: params.picture,
+            lastLoginAt: new Date().toISOString(),
+          },
+        ],
+      });
+    } else {
+      user.oauthProviders = user.oauthProviders ?? [];
+      const providerIndex = user.oauthProviders.findIndex(p => p.provider === params.provider);
+      const providerEntry = {
+        provider: params.provider,
+        subject: params.subject,
+        picture: params.picture,
+        lastLoginAt: new Date().toISOString(),
+      };
+      if (providerIndex >= 0) {
+        user.oauthProviders[providerIndex] = providerEntry;
+      } else {
+        user.oauthProviders.push(providerEntry);
+      }
+      user.fullName = params.fullName ?? user.fullName;
+      user.displayName = params.displayName ?? user.displayName ?? user.fullName;
+      user.photoURL = params.picture ?? user.photoURL;
+      user.emailVerified = true;
+    }
+
+    const saved = await this.userRepository.save(user);
+    return saved;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
