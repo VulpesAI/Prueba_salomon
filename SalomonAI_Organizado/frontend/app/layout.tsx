@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
 
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/context/AuthContext";
+import { SyncProvider } from "@/context/SyncContext";
 
 export const metadata: Metadata = {
   title: "SalomonAI - Tu Asistente Financiero Inteligente",
@@ -16,7 +18,11 @@ export default function RootLayout({
   return (
     <html lang="es" className="dark">
       <body className="font-sans antialiased bg-background text-foreground">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ThemeProvider defaultTheme="system">
+            <SyncProvider>{children}</SyncProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );
