@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Not, Repository } from 'typeorm';
@@ -101,6 +101,16 @@ export class PrivacyService {
     entry.status = dto.status;
     if (dto.status === DataInventoryStatus.ANONYMIZED) {
       entry.metadata = {};
+      entry.anonymizedAt = new Date();
+      entry.purgedAt = null;
+    }
+    if (dto.status === DataInventoryStatus.PURGED) {
+      entry.metadata = null;
+      entry.purgedAt = new Date();
+    }
+    if (dto.status === DataInventoryStatus.ACTIVE) {
+      entry.anonymizedAt = null;
+      entry.purgedAt = null;
     }
 
     const saved = await this.dataInventoryRepository.save(entry);
@@ -164,6 +174,9 @@ export class PrivacyService {
   }
 
   async logConsent(dto: LogConsentDto): Promise<ConsentLog> {
+    if (!dto.userId) {
+      throw new BadRequestException('Debe especificarse el usuario para registrar el consentimiento.');
+    }
     const consent = this.consentLogRepository.create({
       userId: dto.userId,
       consentType: dto.consentType,
@@ -215,7 +228,16 @@ export class PrivacyService {
     });
   }
 
+  async getConsentLogById(id: string): Promise<ConsentLog | null> {
+    return this.consentLogRepository.findOne({ where: { id } });
+  }
+
   async syncCookiePreferences(dto: SyncCookiePreferencesDto): Promise<CookiePreference> {
+    if (!dto.userId) {
+      throw new BadRequestException(
+        'Debe especificarse el usuario para sincronizar preferencias de cookies.',
+      );
+    }
     let preference = await this.cookiePreferenceRepository.findOne({
       where: { userId: dto.userId },
     });
@@ -252,6 +274,9 @@ export class PrivacyService {
   }
 
   async requestAccess(dto: CreateDsarRequestDto): Promise<DsarRequest> {
+    if (!dto.userId) {
+      throw new BadRequestException('No se indicó el usuario que solicita el acceso a datos.');
+    }
     const request = await this.dsarRequestRepository.save(
       this.dsarRequestRepository.create({
         userId: dto.userId,
@@ -289,6 +314,9 @@ export class PrivacyService {
   }
 
   async requestRectification(dto: CreateDsarRequestDto): Promise<DsarRequest> {
+    if (!dto.userId) {
+      throw new BadRequestException('No se indicó el usuario que solicita la rectificación.');
+    }
     const request = await this.dsarRequestRepository.save(
       this.dsarRequestRepository.create({
         userId: dto.userId,
@@ -335,6 +363,9 @@ export class PrivacyService {
   }
 
   async requestErasure(dto: CreateDsarRequestDto): Promise<DsarRequest> {
+    if (!dto.userId) {
+      throw new BadRequestException('No se indicó el usuario que solicita el derecho al olvido.');
+    }
     const request = await this.dsarRequestRepository.save(
       this.dsarRequestRepository.create({
         userId: dto.userId,
@@ -450,6 +481,8 @@ export class PrivacyService {
 
     entry.metadata = {};
     entry.status = DataInventoryStatus.ANONYMIZED;
+    entry.anonymizedAt = new Date();
+    entry.purgedAt = null;
     await this.dataInventoryRepository.save(entry);
     await this.recordAudit('data_inventory.anonymized', actor, {
       entryId: entry.id,
@@ -462,7 +495,14 @@ export class PrivacyService {
     actor: string,
     context: Record<string, any> = {},
   ): Promise<void> {
-    await this.dataInventoryRepository.remove(entry);
+    if (entry.status === DataInventoryStatus.PURGED) {
+      return;
+    }
+
+    entry.metadata = null;
+    entry.status = DataInventoryStatus.PURGED;
+    entry.purgedAt = new Date();
+    await this.dataInventoryRepository.save(entry);
     await this.recordAudit('data_inventory.purged', actor, {
       entryId: entry.id,
       dataSubjectId: entry.dataSubjectId,

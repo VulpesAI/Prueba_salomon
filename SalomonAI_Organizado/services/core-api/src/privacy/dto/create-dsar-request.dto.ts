@@ -2,9 +2,10 @@ import { IsEnum, IsObject, IsOptional, IsString, MaxLength } from 'class-validat
 import { DsarRequestType } from '../entities/dsar-request.entity';
 
 export class CreateDsarRequestDto {
+  @IsOptional()
   @IsString()
   @MaxLength(120)
-  userId!: string;
+  userId?: string;
 
   @IsOptional()
   @IsEnum(DsarRequestType)

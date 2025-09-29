@@ -1,9 +1,10 @@
 import { IsBoolean, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class LogConsentDto {
+  @IsOptional()
   @IsString()
   @MaxLength(120)
-  userId!: string;
+  userId?: string;
 
   @IsString()
   @MaxLength(120)

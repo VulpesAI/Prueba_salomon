@@ -33,6 +33,12 @@ export class DataInventory {
   @Column({ type: 'enum', enum: DataInventoryStatus, default: DataInventoryStatus.ACTIVE })
   status!: DataInventoryStatus;
 
+  @Column({ name: 'anonymized_at', type: 'timestamptz', nullable: true })
+  anonymizedAt?: Date | null;
+
+  @Column({ name: 'purged_at', type: 'timestamptz', nullable: true })
+  purgedAt?: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

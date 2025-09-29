@@ -1,9 +1,10 @@
 import { IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class SyncCookiePreferencesDto {
+  @IsOptional()
   @IsString()
   @MaxLength(120)
-  userId!: string;
+  userId?: string;
 
   @IsObject()
   preferences!: Record<string, boolean>;
