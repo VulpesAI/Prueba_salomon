@@ -1,7 +1,7 @@
 "use client"
 
-import { PlaceholderPage } from "@/components/authenticated/placeholder-page"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorBanner } from "@/components/ui/error-banner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +27,9 @@ import {
   type NotificationSeverity,
   useDashboardNotifications,
 } from "@/hooks/dashboard/use-dashboard-notifications"
-import { AlertCircle, Bell, RefreshCcw } from "lucide-react"
+import { Bell, RefreshCcw } from "lucide-react"
+
+import { cn } from "@/lib/utils"
 
 const channelConfig: Record<
   NotificationChannel,
@@ -61,42 +63,16 @@ export default function NotificationsPage() {
   const {
     notifications,
     isLoading,
+    isFetching,
+    isError,
     error,
     refresh,
     apiBaseUrl,
   } = useDashboardNotifications()
 
   const unreadCount = notifications.filter((notification) => !notification.read).length
-
-  if (!isLoading && notifications.length === 0 && !error) {
-    return (
-      <PlaceholderPage
-        title="Historial de notificaciones"
-        description="Integra el servicio de notificaciones para mostrar eventos recientes con su canal y estado de lectura."
-        sections={[
-          {
-            title: "Listado de eventos",
-            description:
-              "Consulta GET /notifications para poblar la tabla con mensaje, canal, severidad y marca de lectura.",
-            skeletons: 4,
-          },
-          {
-            title: "Gestión de lectura",
-            description:
-              "Agrega acciones para PATCH /notifications/:id/mark-read y mantener sincronizado el estado.",
-            skeletons: 2,
-          },
-          {
-            title: "Filtros por canal",
-            description:
-              "Permite segmentar por email, push, SMS o in-app para priorizar seguimientos.",
-            skeletons: 2,
-            layout: "list",
-          },
-        ]}
-      />
-    )
-  }
+  const handleRefresh = () => refresh()
+  const showEmptyState = !isLoading && notifications.length === 0 && !isError
 
   return (
     <div className="space-y-8">
@@ -113,8 +89,14 @@ export default function NotificationsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => refresh()} className="gap-2">
-            <RefreshCcw className="h-4 w-4" /> Actualizar
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            className="gap-2"
+            disabled={isFetching}
+          >
+            <RefreshCcw className={cn("h-4 w-4", isFetching && "animate-spin")} aria-hidden />
+            {isFetching ? "Actualizando" : "Actualizar"}
           </Button>
           <Badge variant={unreadCount > 0 ? "default" : "secondary"}>
             {unreadCount > 0
@@ -124,14 +106,13 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {error ? (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>No pudimos cargar el historial</AlertTitle>
-          <AlertDescription>
-            {error}. Verifica la conexión con {`${apiBaseUrl}/notifications`} y reintenta.
-          </AlertDescription>
-        </Alert>
+      {isError ? (
+        <ErrorBanner
+          error={error}
+          title="No pudimos cargar el historial"
+          description={`Verifica la conexión con ${apiBaseUrl}/notifications e inténtalo nuevamente.`}
+          onRetry={handleRefresh}
+        />
       ) : null}
 
       <Card>
@@ -154,8 +135,15 @@ export default function NotificationsPage() {
                 </div>
               ))}
             </div>
+          ) : showEmptyState ? (
+            <EmptyState
+              icon={Bell}
+              title="Sin notificaciones disponibles"
+              description="Cuando conectes el servicio, verás aquí los eventos recientes clasificados por canal y severidad."
+              cta={{ label: "Configurar canales", href: "/integraciones" }}
+            />
           ) : (
-            <Table>
+            <Table aria-busy={isFetching} data-state={isFetching ? "loading" : undefined}>
               <TableHeader>
                 <TableRow>
                   <TableHead>Mensaje</TableHead>
@@ -198,21 +186,20 @@ export default function NotificationsPage() {
               </TableBody>
               <TableCaption>
                 {unreadCount > 0
-                  ? `${unreadCount} notificaciones requieren seguimiento.`
-                  : "No hay notificaciones pendientes."}
+                  ? "Prioriza las notificaciones pendientes para mantener a los usuarios informados."
+                  : "¡Excelente! Todas las notificaciones fueron revisadas."}
               </TableCaption>
             </Table>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col items-start gap-2 text-sm text-muted-foreground">
-          <p>
-            Conecta la mutación <code>PATCH /notifications/:id/mark-read</code> para
-            sincronizar cambios de estado después de interactuar con cada registro.
-          </p>
-          <p>
-            El hook <code>useDashboardNotifications</code> centraliza la carga inicial y el refresco,
-            ideal para compartir lógica entre el dashboard y este módulo dedicado.
-          </p>
+        <CardFooter className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardDescription>
+            Marca los elementos como revisados desde el canal correspondiente
+            o usa el endpoint PATCH <code>{`${apiBaseUrl}/notifications/:id/mark-read`}</code>.
+          </CardDescription>
+          <CardDescription>
+            Controla la cadencia de envíos ajustando la configuración en cada canal para evitar ruido innecesario.
+          </CardDescription>
         </CardFooter>
       </Card>
     </div>

@@ -1,6 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { useAuth } from "@/context/AuthContext"
 
@@ -24,56 +26,43 @@ export type UserNotificationPreferences = {
   mutedEvents?: { key: string; until?: string | null }[]
 }
 
-type NotificationsState = {
+type NotificationsResponse = {
   notifications: NotificationHistoryItem[]
   preferences: UserNotificationPreferences | null
-  isLoading: boolean
-  error: string | null
 }
 
-const initialState: NotificationsState = {
+const QUERY_KEY = ["dashboard", "notifications"]
+
+const fallbackData: NotificationsResponse = {
   notifications: [],
   preferences: null,
-  isLoading: true,
-  error: null,
 }
 
 export const useDashboardNotifications = () => {
   const { user } = useAuth()
-  const [state, setState] = useState<NotificationsState>(initialState)
+  const queryClient = useQueryClient()
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
     []
   )
 
-  const fetchNotifications = useCallback(async () => {
-    if (!user) {
-      setState((previous) => ({ ...previous, isLoading: false, error: null }))
-      return
-    }
+  const query = useQuery<NotificationsResponse>({
+    queryKey: QUERY_KEY,
+    enabled: Boolean(user),
+    placeholderData: fallbackData,
+    queryFn: async () => {
+      if (!user) {
+        return fallbackData
+      }
 
-    setState((previous) => ({ ...previous, isLoading: true, error: null }))
-
-    try {
       const token = await user.getIdToken()
       const authHeaders = { Authorization: `Bearer ${token}` }
 
       // TODO: Reemplazar por integración real
-      // const historyResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/notifications/history`, {
-      //   headers: authHeaders,
-      // })
-      // const preferencesResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/notifications/preferences`, {
-      //   headers: authHeaders,
-      // })
-      // const [historyData, preferencesData] = await Promise.all([
-      //   historyResponse.json(),
-      //   preferencesResponse.json(),
-      // ])
-
       void authHeaders
 
-      setState({
+      return {
         notifications: [
           {
             id: "notif_1",
@@ -109,68 +98,64 @@ export const useDashboardNotifications = () => {
             { key: "marketing", until: null },
           ],
         },
-        isLoading: false,
-        error: null,
-      })
-    } catch (error) {
-      console.error("Dashboard notifications placeholder error", error)
-      setState((previous) => ({
-        ...previous,
-        isLoading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "No pudimos cargar las notificaciones.",
-      }))
-    }
-  }, [apiBaseUrl, user])
+      }
+    },
+  })
 
-  const updatePreferences = useCallback(
-    async (preferences: UserNotificationPreferences) => {
+  const mutation = useMutation({
+    mutationFn: async (preferences: UserNotificationPreferences) => {
       if (!user) return
 
-      setState((previous) => ({
-        ...previous,
+      const token = await user.getIdToken()
+      const authHeaders = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      }
+
+      // TODO: Integrar con endpoint real
+      void authHeaders
+
+      return preferences
+    },
+    onMutate: async (preferences) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEY })
+
+      const previous = queryClient.getQueryData<NotificationsResponse>(QUERY_KEY)
+
+      queryClient.setQueryData<NotificationsResponse>(QUERY_KEY, (current) => ({
+        notifications: current?.notifications ?? [],
         preferences,
       }))
 
-      try {
-        const token = await user.getIdToken()
-        const authHeaders = {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        }
-
-        // TODO: Integrar con el endpoint real de actualización de preferencias
-        // await fetch(`${apiBaseUrl}/api/v1/dashboard/notifications/preferences`, {
-        //   method: "PUT",
-        //   headers: authHeaders,
-        //   body: JSON.stringify(preferences),
-        // })
-
-        void authHeaders
-      } catch (error) {
-        console.error("Dashboard update preferences placeholder error", error)
-        setState((previous) => ({
-          ...previous,
-          error:
-            error instanceof Error
-              ? error.message
-              : "No pudimos actualizar las preferencias.",
-        }))
+      return { previous }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(QUERY_KEY, context.previous)
       }
     },
-    [apiBaseUrl, user]
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEY })
+    },
+  })
+
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+    [queryClient]
   )
 
-  useEffect(() => {
-    void fetchNotifications()
-  }, [fetchNotifications])
+  const data = query.data ?? fallbackData
 
   return {
-    ...state,
-    refresh: fetchNotifications,
-    updatePreferences,
+    notifications: data.notifications,
+    preferences: data.preferences,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
+    error: query.error,
+    refresh,
+    updatePreferences: mutation.mutateAsync,
+    isUpdatingPreferences: mutation.isPending,
     apiBaseUrl,
   }
 }

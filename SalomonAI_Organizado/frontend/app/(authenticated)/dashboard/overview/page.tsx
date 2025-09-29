@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { ErrorBanner } from "@/components/ui/error-banner"
 import {
   Accordion,
   AccordionContent,
@@ -390,23 +391,13 @@ export default function DashboardOverviewPage() {
         ) : null}
       </section>
 
-      {overview.error ? (
-        <Card className="border-destructive/40">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              No pudimos recuperar el resumen financiero
-            </CardTitle>
-            <CardDescription>
-              {overview.error} — intenta nuevamente o verifica la conexión con la API.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button variant="destructive" onClick={handleRefresh}>
-              Reintentar
-            </Button>
-          </CardFooter>
-        </Card>
+      {overview.isError ? (
+        <ErrorBanner
+          error={overview.error}
+          title="No pudimos recuperar el resumen financiero"
+          description="Intenta nuevamente o verifica la conexión con la API antes de continuar."
+          onRetry={handleRefresh}
+        />
       ) : null}
 
       {isDetailed ? (

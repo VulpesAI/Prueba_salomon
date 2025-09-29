@@ -1,6 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
+
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { useAuth } from "@/context/AuthContext"
 
@@ -59,66 +61,50 @@ export type PersonalizedRecommendation = {
 
 type FeedbackStatus = "idle" | "sending" | "sent" | "error"
 
-type IntelligenceState = {
+type IntelligenceResponse = {
   forecastSummary: ForecastSummary | null
   predictiveAlerts: PredictiveAlert[]
   insights: DashboardInsight[]
   recommendations: PersonalizedRecommendation[]
-  recommendationFeedback: Record<string, FeedbackStatus>
-  isLoading: boolean
-  error: string | null
 }
 
-const initialState: IntelligenceState = {
+type FeedbackState = Record<string, FeedbackStatus>
+
+const QUERY_KEY = ["dashboard", "intelligence"]
+
+const fallbackData: IntelligenceResponse = {
   forecastSummary: null,
   predictiveAlerts: [],
   insights: [],
   recommendations: [],
-  recommendationFeedback: {},
-  isLoading: true,
-  error: null,
 }
 
 export const useDashboardIntelligence = () => {
   const { user } = useAuth()
-  const [state, setState] = useState<IntelligenceState>(initialState)
+  const queryClient = useQueryClient()
+  const [recommendationFeedback, setRecommendationFeedback] = useState<FeedbackState>({})
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
     []
   )
 
-  const fetchIntelligence = useCallback(async () => {
-    if (!user) {
-      setState((previous) => ({ ...previous, isLoading: false, error: null }))
-      return
-    }
+  const query = useQuery<IntelligenceResponse>({
+    queryKey: QUERY_KEY,
+    enabled: Boolean(user),
+    placeholderData: fallbackData,
+    queryFn: async () => {
+      if (!user) {
+        return fallbackData
+      }
 
-    setState((previous) => ({ ...previous, isLoading: true, error: null }))
-
-    try {
       const token = await user.getIdToken()
       const authHeaders = { Authorization: `Bearer ${token}` }
 
-      // TODO: Reemplazar por integración real con el backend
-      // const insightsResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/insights`, {
-      //   headers: authHeaders,
-      // })
-      // const forecastsResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/forecasts`, {
-      //   headers: authHeaders,
-      // })
-      // const recommendationsResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/recommendations/personalized`, {
-      //   headers: authHeaders,
-      // })
-      // const [insightsData, forecastsData, recommendationsData] = await Promise.all([
-      //   insightsResponse.json(),
-      //   forecastsResponse.json(),
-      //   recommendationsResponse.json(),
-      // ])
-
+      // TODO: Integrar con backend real
       void authHeaders
 
-      setState({
+      return {
         forecastSummary: {
           modelType: "prophet_v1",
           generatedAt: new Date().toISOString(),
@@ -200,41 +186,30 @@ export const useDashboardIntelligence = () => {
           },
           {
             id: "rec_2",
-            title: "Aumenta tu fondo de emergencias",
+            title: "Anticipa pagos de servicios",
             description:
-              "Puedes destinar 10% del superávit proyectado para alcanzar 4 meses de colchón.",
-            score: 0.76,
-            category: "Planeación",
-            explanation: "Balance positivo constante en los últimos 6 meses.",
+              "Programa recordatorios automáticos para evitar recargos por atraso.",
+            score: 0.64,
+            category: "Operación",
+            explanation: "Historial de pagos y gastos variables.",
           },
         ],
-        recommendationFeedback: {},
-        isLoading: false,
-        error: null,
-      })
-    } catch (error) {
-      console.error("Dashboard intelligence placeholder error", error)
-      setState((previous) => ({
-        ...previous,
-        isLoading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "No pudimos cargar los datos analíticos.",
-      }))
-    }
-  }, [apiBaseUrl, user])
+      }
+    },
+  })
+
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+    [queryClient]
+  )
 
   const sendRecommendationFeedback = useCallback(
     async (recommendationId: string, feedback: "positive" | "negative") => {
       if (!user) return
 
-      setState((previous) => ({
+      setRecommendationFeedback((previous) => ({
         ...previous,
-        recommendationFeedback: {
-          ...previous.recommendationFeedback,
-          [recommendationId]: "sending",
-        },
+        [recommendationId]: "sending",
       }))
 
       try {
@@ -244,43 +219,35 @@ export const useDashboardIntelligence = () => {
           "Content-Type": "application/json",
         }
 
-        // TODO: Integrar con el endpoint real de feedback
-        // await fetch(`${apiBaseUrl}/api/v1/dashboard/recommendations/feedback`, {
-        //   method: "POST",
-        //   headers: authHeaders,
-        //   body: JSON.stringify({ id: recommendationId, feedback }),
-        // })
-
+        // TODO: Integrar con endpoint real
         void authHeaders
+        void feedback
 
-        setState((previous) => ({
+        setRecommendationFeedback((previous) => ({
           ...previous,
-          recommendationFeedback: {
-            ...previous.recommendationFeedback,
-            [recommendationId]: "sent",
-          },
+          [recommendationId]: "sent",
         }))
       } catch (error) {
-        console.error("Dashboard feedback placeholder error", error)
-        setState((previous) => ({
+        console.error("Dashboard recommendation feedback placeholder error", error)
+        setRecommendationFeedback((previous) => ({
           ...previous,
-          recommendationFeedback: {
-            ...previous.recommendationFeedback,
-            [recommendationId]: "error",
-          },
+          [recommendationId]: "error",
         }))
       }
     },
-    [apiBaseUrl, user]
+    [user]
   )
 
-  useEffect(() => {
-    void fetchIntelligence()
-  }, [fetchIntelligence])
+  const data = query.data ?? fallbackData
 
   return {
-    ...state,
-    refresh: fetchIntelligence,
+    ...data,
+    recommendationFeedback,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
+    error: query.error,
+    refresh,
     sendRecommendationFeedback,
     apiBaseUrl,
   }

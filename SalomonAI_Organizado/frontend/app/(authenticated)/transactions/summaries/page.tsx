@@ -1,28 +1,35 @@
-import { PlaceholderPage } from "@/components/authenticated/placeholder-page"
+import { FeaturePreview, type FeaturePreviewSection } from "@/components/authenticated/feature-preview"
+import { PieChart } from "lucide-react"
+
+const sections: FeaturePreviewSection[] = [
+  {
+    title: "Resumen mensual",
+    description: "Comparativo mes a mes con variaciones porcentuales y metas.",
+    skeletons: 3,
+    variant: "chart",
+  },
+  {
+    title: "Desglose por categoría",
+    description: "Visualiza aportes de cada categoría y detecta desviaciones relevantes.",
+    skeletons: 4,
+    variant: "card",
+  },
+  {
+    title: "Compartir reportes",
+    description: "Exporta resúmenes en PDF o publica snapshots para stakeholders.",
+    skeletons: 2,
+    layout: "list",
+  },
+]
 
 export default function TransactionsSummariesPage() {
   return (
-    <PlaceholderPage
+    <FeaturePreview
+      icon={PieChart}
       title="Resúmenes de transacciones"
       description="Genera reportes agregados por categoría, periodo y canal de pago."
-      sections={[
-        {
-          title: "Resumen mensual",
-          description: "Comparativo mes a mes con variaciones porcentuales y metas.",
-          skeletons: 3,
-        },
-        {
-          title: "Desglose por categoría",
-          description: "Visualiza aportes de cada categoría y detecta desviaciones relevantes.",
-          skeletons: 4,
-        },
-        {
-          title: "Compartir reportes",
-          description: "Exporta resúmenes en PDF o publica snapshots para stakeholders.",
-          skeletons: 2,
-          layout: "list",
-        },
-      ]}
+      cta={{ label: "Descargar plantilla", href: "/demo" }}
+      sections={sections}
     />
   )
 }

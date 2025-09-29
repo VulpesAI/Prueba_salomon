@@ -1,6 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
+
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { useAuth } from "@/context/AuthContext"
 
@@ -36,72 +38,47 @@ export type CategoryBreakdown = {
   color: string
 }
 
-type OverviewState = {
+type OverviewResponse = {
   totals: OverviewTotals | null
   accounts: AccountSummary[]
   recentTransactions: TransactionSummary[]
   categoryBreakdown: CategoryBreakdown[]
-  isLoading: boolean
-  error: string | null
 }
 
-const initialState: OverviewState = {
+const QUERY_KEY = ["dashboard", "overview"]
+
+const fallbackData: OverviewResponse = {
   totals: null,
   accounts: [],
   recentTransactions: [],
   categoryBreakdown: [],
-  isLoading: true,
-  error: null,
 }
 
 export const useDashboardOverview = () => {
   const { user } = useAuth()
-  const [state, setState] = useState<OverviewState>(initialState)
+  const queryClient = useQueryClient()
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
     []
   )
 
-  const fetchOverview = useCallback(async () => {
-    if (!user) {
-      setState((previous) => ({
-        ...previous,
-        isLoading: false,
-        error: null,
-      }))
-      return
-    }
+  const query = useQuery<OverviewResponse>({
+    queryKey: QUERY_KEY,
+    enabled: Boolean(user),
+    placeholderData: fallbackData,
+    queryFn: async () => {
+      if (!user) {
+        return fallbackData
+      }
 
-    setState((previous) => ({ ...previous, isLoading: true, error: null }))
-
-    try {
       const token = await user.getIdToken()
       const authHeaders = { Authorization: `Bearer ${token}` }
 
       // TODO: Reemplazar por integración real con el backend
-      // const summaryResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/summary`, {
-      //   headers: authHeaders,
-      // })
-      // const accountsResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/accounts`, {
-      //   headers: authHeaders,
-      // })
-      // const transactionsResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/transactions/recent`, {
-      //   headers: authHeaders,
-      // })
-      // const categoriesResponse = await fetch(`${apiBaseUrl}/api/v1/dashboard/categories`, {
-      //   headers: authHeaders,
-      // })
-      // const [summaryData, accountsData, transactionsData, categoriesData] = await Promise.all([
-      //   summaryResponse.json(),
-      //   accountsResponse.json(),
-      //   transactionsResponse.json(),
-      //   categoriesResponse.json(),
-      // ])
-
       void authHeaders
 
-      setState({
+      return {
         totals: {
           balance: 12850,
           income: 8650,
@@ -163,29 +140,24 @@ export const useDashboardOverview = () => {
           { name: "Estilo de vida", amount: 420, percentage: 8, color: "#facc15" },
           { name: "Ahorro", amount: 1200, percentage: 23, color: "#a855f7" },
         ],
-        isLoading: false,
-        error: null,
-      })
-    } catch (error) {
-      console.error("Dashboard overview placeholder error", error)
-      setState((previous) => ({
-        ...previous,
-        isLoading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "No pudimos cargar el resumen financiero.",
-      }))
-    }
-  }, [apiBaseUrl, user])
+      }
+    },
+  })
 
-  useEffect(() => {
-    void fetchOverview()
-  }, [fetchOverview])
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+    [queryClient]
+  )
+
+  const data = query.data ?? fallbackData
 
   return {
-    ...state,
-    refresh: fetchOverview,
+    ...data,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isError: query.isError,
+    error: query.error,
+    refresh,
     apiBaseUrl,
   }
 }
