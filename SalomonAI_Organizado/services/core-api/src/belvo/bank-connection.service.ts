@@ -77,6 +77,61 @@ export class BankConnectionService {
   }
 
   /**
+   * Registrar una conexión bancaria usando un link existente (Widget)
+   */
+  async createConnectionFromLink(userId: string, linkId: string): Promise<BankConnection> {
+    try {
+      const belvoLink = await this.belvoService.getLinkStatus(linkId);
+      const institutions = await this.belvoService.getInstitutions('CL');
+      const institution = institutions.find(inst => inst.id === belvoLink.institution);
+
+      let bankConnection = this.bankConnectionRepository.create({
+        userId,
+        belvoLinkId: belvoLink.id,
+        institutionName: institution?.display_name || belvoLink.institution,
+        institutionId: belvoLink.institution,
+        institutionType: institution?.type || 'bank',
+        accessMode: belvoLink.access_mode,
+        status: belvoLink.status,
+        lastAccessedAt: belvoLink.last_accessed_at
+          ? new Date(belvoLink.last_accessed_at)
+          : new Date(),
+        metadata: {
+          institutionLogo: institution?.logo,
+          institutionWebsite: institution?.website,
+          institutionPrimaryColor: institution?.primary_color,
+          belvoInstitutionData: institution,
+          belvoLinkStatus: belvoLink,
+        },
+      });
+
+      let savedConnection = await this.bankConnectionRepository.save(bankConnection);
+
+      try {
+        await this.syncAccounts(savedConnection.id);
+        const refreshedConnection = await this.bankConnectionRepository.findOne({
+          where: { id: savedConnection.id },
+        });
+        if (refreshedConnection) {
+          savedConnection = refreshedConnection;
+        }
+      } catch (error) {
+        const syncErrorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        savedConnection.incrementErrorCount(`Error sincronizando cuentas iniciales: ${syncErrorMessage}`);
+        await this.bankConnectionRepository.save(savedConnection);
+        throw error;
+      }
+
+      return savedConnection;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      throw new BadRequestException(
+        `Error registrando conexión bancaria: ${errorMessage}`,
+      );
+    }
+  }
+
+  /**
    * Obtener conexiones bancarias de un usuario
    */
   async getUserConnections(userId: string): Promise<BankConnection[]> {

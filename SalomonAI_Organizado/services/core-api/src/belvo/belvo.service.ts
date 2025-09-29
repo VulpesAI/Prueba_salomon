@@ -166,6 +166,41 @@ export class BelvoService {
   }
 
   /**
+   * Crear una sesión temporal para el widget de conexión bancaria
+   */
+  async createWidgetSession(
+    externalId?: string,
+    scopes: string[] = [
+      'read_institutions',
+      'write_links',
+      'read_links',
+      'write_accounts',
+      'read_accounts',
+      'write_transactions',
+      'read_transactions',
+    ],
+  ): Promise<{ access: string; refresh?: string; expires_in?: number }> {
+    try {
+      const config = this.getRequestConfig();
+      const payload: Record<string, unknown> = {
+        scopes,
+        ...(externalId ? { external_id: externalId } : {}),
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.post(`${this.baseUrl}/api/token/`, payload, config),
+      );
+
+      return response.data;
+    } catch (error) {
+      throw new HttpException(
+        `Error creando sesión de widget: ${error.response?.data?.message || error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  /**
    * Obtener cuentas de un link específico
    */
   async getAccounts(linkId: string): Promise<BelvoAccount[]> {
