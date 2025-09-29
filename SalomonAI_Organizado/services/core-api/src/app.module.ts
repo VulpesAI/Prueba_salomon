@@ -30,6 +30,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GoalsModule } from './goals/goals.module';
 import { SecurityModule } from './security/security.module';
+import { PrivacyModule } from './privacy/privacy.module';
 
 @Module({
   imports: [
@@ -98,6 +99,7 @@ import { SecurityModule } from './security/security.module';
     QdrantModule,
     HealthModule,
     SecurityModule,
+    PrivacyModule,
   ],
   controllers: [],
   providers: [],
