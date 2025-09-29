@@ -31,19 +31,13 @@ import {
   Wallet,
 } from "lucide-react"
 
-const formatCurrency = (value?: number | null) => {
-  const amount = typeof value === "number" ? value : 0
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-const formatPercentage = (value: number) => `${Math.round(value * 100)}%`
+const DASHBOARD_LOCALE = "es-CL"
 
 const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString("es-CL", { day: "numeric", month: "short" })
+  new Date(value).toLocaleDateString(DASHBOARD_LOCALE, {
+    day: "numeric",
+    month: "short",
+  })
 
 export default function DashboardOverviewPage() {
   const overview = useDashboardOverview()
@@ -52,6 +46,36 @@ export default function DashboardOverviewPage() {
   const { refresh: refreshOverview } = overview
   const { refresh: refreshIntelligence } = intelligence
   const { refresh: refreshNotifications } = notifications
+
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(DASHBOARD_LOCALE, {
+        style: "currency",
+        currency: overview.currency ?? "CLP",
+        maximumFractionDigits: 0,
+      }),
+    [overview.currency]
+  )
+
+  const percentageFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(DASHBOARD_LOCALE, {
+        style: "percent",
+        maximumFractionDigits: 0,
+      }),
+    []
+  )
+
+  const formatCurrency = useCallback(
+    (value?: number | null) =>
+      currencyFormatter.format(typeof value === "number" ? value : 0),
+    [currencyFormatter]
+  )
+
+  const formatPercentage = useCallback(
+    (value: number) => percentageFormatter.format(value),
+    [percentageFormatter]
+  )
 
   const totalsCards = useMemo(
     () => {
@@ -96,7 +120,7 @@ export default function DashboardOverviewPage() {
         },
       ]
     },
-    [overview.totals]
+    [formatCurrency, overview.totals]
   )
 
   const handleRefresh = useCallback(() => {

@@ -9,6 +9,7 @@ export type OverviewTotals = {
   income: number
   expenses: number
   savings?: number | null
+  currency?: string | null
 }
 
 export type AccountSummary = {
@@ -43,6 +44,7 @@ type OverviewState = {
   categoryBreakdown: CategoryBreakdown[]
   isLoading: boolean
   error: string | null
+  currency: string
 }
 
 const initialState: OverviewState = {
@@ -52,6 +54,7 @@ const initialState: OverviewState = {
   categoryBreakdown: [],
   isLoading: true,
   error: null,
+  currency: "CLP",
 }
 
 export const useDashboardOverview = () => {
@@ -101,12 +104,15 @@ export const useDashboardOverview = () => {
 
       void authHeaders
 
+      const placeholderCurrency = "CLP"
+
       setState({
         totals: {
           balance: 12850,
           income: 8650,
           expenses: 5230,
           savings: 2740,
+          currency: placeholderCurrency,
         },
         accounts: [
           {
@@ -165,6 +171,7 @@ export const useDashboardOverview = () => {
         ],
         isLoading: false,
         error: null,
+        currency: placeholderCurrency,
       })
     } catch (error) {
       console.error("Dashboard overview placeholder error", error)
