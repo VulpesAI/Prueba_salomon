@@ -47,6 +47,8 @@ type OverviewState = {
   currency: string
 }
 
+const PLACEHOLDER_CURRENCY = "CLP"
+
 const initialState: OverviewState = {
   totals: null,
   accounts: [],
@@ -54,7 +56,7 @@ const initialState: OverviewState = {
   categoryBreakdown: [],
   isLoading: true,
   error: null,
-  currency: "CLP",
+  currency: PLACEHOLDER_CURRENCY,
 }
 
 export const useDashboardOverview = () => {
@@ -104,15 +106,13 @@ export const useDashboardOverview = () => {
 
       void authHeaders
 
-      const placeholderCurrency = "CLP"
-
       setState({
         totals: {
           balance: 12850,
           income: 8650,
           expenses: 5230,
           savings: 2740,
-          currency: placeholderCurrency,
+          currency: PLACEHOLDER_CURRENCY,
         },
         accounts: [
           {
@@ -121,7 +121,7 @@ export const useDashboardOverview = () => {
             balance: 4250,
             type: "checking",
             institution: "Banco Central",
-            currency: "CLP",
+            currency: PLACEHOLDER_CURRENCY,
           },
           {
             id: "acc_2",
@@ -129,7 +129,7 @@ export const useDashboardOverview = () => {
             balance: -850,
             type: "credit",
             institution: "Banco Central",
-            currency: "CLP",
+            currency: PLACEHOLDER_CURRENCY,
           },
           {
             id: "acc_3",
@@ -137,7 +137,7 @@ export const useDashboardOverview = () => {
             balance: 8900,
             type: "savings",
             institution: "Finanzas Digitales",
-            currency: "CLP",
+            currency: PLACEHOLDER_CURRENCY,
           },
         ],
         recentTransactions: [
@@ -147,6 +147,7 @@ export const useDashboardOverview = () => {
             amount: 2800,
             date: new Date().toISOString(),
             category: "Ingresos",
+            currency: PLACEHOLDER_CURRENCY,
           },
           {
             id: "txn_2",
@@ -154,6 +155,7 @@ export const useDashboardOverview = () => {
             amount: -650,
             date: new Date().toISOString(),
             category: "Gastos esenciales",
+            currency: PLACEHOLDER_CURRENCY,
           },
           {
             id: "txn_3",
@@ -161,6 +163,7 @@ export const useDashboardOverview = () => {
             amount: -200,
             date: new Date().toISOString(),
             category: "Suscripciones",
+            currency: PLACEHOLDER_CURRENCY,
           },
         ],
         categoryBreakdown: [
@@ -171,7 +174,7 @@ export const useDashboardOverview = () => {
         ],
         isLoading: false,
         error: null,
-        currency: placeholderCurrency,
+        currency: PLACEHOLDER_CURRENCY,
       })
     } catch (error) {
       console.error("Dashboard overview placeholder error", error)
