@@ -91,7 +91,7 @@ Content-Type: application/json
 
 {
   "displayName": "María Pérez",
-  "preferences": { "currency": "USD" }
+  "preferences": { "currency": "CLP" }
 }
 ```
 
@@ -103,7 +103,7 @@ Respuesta:
   "email": "maria@example.com",
   "displayName": "María Pérez",
   "preferences": {
-    "currency": "USD",
+    "currency": "CLP",
     "timezone": "America/Santiago",
     "language": "es",
     "notifications": { "email": true, "push": true, "sms": false },
