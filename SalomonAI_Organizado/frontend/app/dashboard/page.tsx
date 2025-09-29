@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -80,6 +80,31 @@ type PersonalizedRecommendationsResponse = {
 
 type FeedbackStatus = 'idle' | 'sending' | 'sent' | 'error';
 
+type AccountSummary = {
+  id: string | number;
+  name: string;
+  balance: number;
+  type?: string | null;
+  institution?: string | null;
+  currency?: string | null;
+};
+
+type TransactionSummary = {
+  id: string | number;
+  description: string;
+  amount: number;
+  date: string;
+  category?: string | null;
+  currency?: string | null;
+};
+
+type CategoryBreakdown = {
+  name: string;
+  amount: number;
+  percentage: number;
+  color: string;
+};
+
 export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -94,9 +119,44 @@ export default function DashboardPage() {
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, FeedbackStatus>>({});
 
+  const [totals, setTotals] = useState<{
+    balance: number;
+    income: number;
+    expenses: number;
+    savings?: number | null;
+  } | null>(null);
+  const [accounts, setAccounts] = useState<AccountSummary[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<TransactionSummary[]>([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown[]>([]);
+
+  const [isLoadingTotals, setIsLoadingTotals] = useState(false);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+  const [totalsError, setTotalsError] = useState<string | null>(null);
+  const [accountsError, setAccountsError] = useState<string | null>(null);
+  const [transactionsError, setTransactionsError] = useState<string | null>(null);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
   const apiBaseUrl = useMemo(() => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000', []);
+
+  const resetFinancialData = useCallback(() => {
+    setTotals(null);
+    setAccounts([]);
+    setRecentTransactions([]);
+    setCategoryBreakdown([]);
+    setTotalsError(null);
+    setAccountsError(null);
+    setTransactionsError(null);
+    setCategoriesError(null);
+    setIsLoadingTotals(false);
+    setIsLoadingAccounts(false);
+    setIsLoadingTransactions(false);
+    setIsLoadingCategories(false);
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -106,9 +166,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const abortControllers: AbortController[] = [];
+
+    const isAbortError = (error: unknown) =>
+      error instanceof DOMException && error.name === 'AbortError';
 
     const fetchPredictiveInsights = async () => {
       if (!user) {
+        resetFinancialData();
         setForecastSummary(null);
         setPredictiveAlerts([]);
         setPersonalizedRecommendations([]);
@@ -121,15 +186,176 @@ export default function DashboardPage() {
         token = await user.getIdToken();
       } catch (error) {
         console.error('No fue posible obtener el token de autenticación', error);
-        setForecastError('Sesión expirada, inicia nuevamente.');
-        setAlertsError('Sesión expirada, inicia nuevamente.');
-        setForecastSummary(null);
-        setPredictiveAlerts([]);
-        setPersonalizedRecommendations([]);
-        setFeedbackStatus({});
+        if (!cancelled) {
+          const sessionExpiredMessage = 'Sesión expirada, inicia nuevamente.';
+          setForecastError(sessionExpiredMessage);
+          setAlertsError(sessionExpiredMessage);
+          setRecommendationsError(sessionExpiredMessage);
+          setTotalsError(sessionExpiredMessage);
+          setAccountsError(sessionExpiredMessage);
+          setTransactionsError(sessionExpiredMessage);
+          setCategoriesError(sessionExpiredMessage);
+          resetFinancialData();
+          setForecastSummary(null);
+          setPredictiveAlerts([]);
+          setPersonalizedRecommendations([]);
+          setFeedbackStatus({});
+        }
         return;
       }
 
+      const createAbortController = () => {
+        const controller = new AbortController();
+        abortControllers.push(controller);
+        return controller;
+      };
+
+      const summaryController = createAbortController();
+      try {
+        setIsLoadingTotals(true);
+        setIsLoadingTransactions(true);
+        setIsLoadingCategories(true);
+        setTotalsError(null);
+        setTransactionsError(null);
+        setCategoriesError(null);
+
+        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/summary`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: summaryController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener el resumen (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (!cancelled) {
+          const summary = data?.summary ?? {};
+          const income = typeof summary.totalIncome === 'number' ? summary.totalIncome : 0;
+          const expenses = typeof summary.totalExpenses === 'number' ? summary.totalExpenses : 0;
+          const balance =
+            typeof summary.balance === 'number' ? summary.balance : income - expenses;
+          const savings =
+            typeof summary.savings === 'number'
+              ? summary.savings
+              : balance > 0
+              ? balance
+              : 0;
+
+          setTotals({
+            balance,
+            income,
+            expenses,
+            savings,
+          });
+
+          const transactions: TransactionSummary[] = Array.isArray(data?.recentTransactions)
+            ? data.recentTransactions
+            : [];
+          setRecentTransactions(transactions);
+
+          const rawCategories = data?.categories ?? {};
+          const palette = [
+            '#ef4444',
+            '#3b82f6',
+            '#10b981',
+            '#f59e0b',
+            '#8b5cf6',
+            '#ec4899',
+            '#14b8a6',
+            '#6366f1',
+          ];
+          let colorIndex = 0;
+          const breakdown: CategoryBreakdown[] = Object.entries(rawCategories)
+            .filter(([, value]) => value && typeof value === 'object')
+            .map(([name, value]) => {
+              const total =
+                typeof (value as { total?: number }).total === 'number'
+                  ? (value as { total?: number }).total!
+                  : 0;
+              const categoryType = (value as { type?: string }).type ?? 'expense';
+              if (categoryType === 'income') {
+                return null;
+              }
+              const relevantTotal = expenses > 0 ? expenses : income;
+              const percentage = relevantTotal > 0 ? (total / relevantTotal) * 100 : 0;
+              const color = palette[colorIndex % palette.length];
+              colorIndex += 1;
+              return {
+                name,
+                amount: total,
+                percentage: Number(percentage.toFixed(1)),
+                color,
+              } satisfies CategoryBreakdown;
+            })
+            .filter((category): category is CategoryBreakdown => category !== null)
+            .sort((a, b) => b.amount - a.amount);
+
+          setCategoryBreakdown(breakdown);
+        }
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+        console.error('No fue posible cargar el resumen financiero', error);
+        if (!cancelled) {
+          setTotals(null);
+          setRecentTransactions([]);
+          setCategoryBreakdown([]);
+          setTotalsError('No fue posible cargar el balance. Intenta nuevamente.');
+          setTransactionsError('No fue posible cargar las transacciones recientes.');
+          setCategoriesError('No fue posible cargar el desglose por categoría.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingTotals(false);
+          setIsLoadingTransactions(false);
+          setIsLoadingCategories(false);
+        }
+      }
+
+      const accountsController = createAbortController();
+      try {
+        setIsLoadingAccounts(true);
+        setAccountsError(null);
+        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/accounts`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: accountsController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener cuentas (${response.status})`);
+        }
+
+        const data = await response.json();
+        const receivedAccounts: AccountSummary[] = Array.isArray(data?.accounts)
+          ? data.accounts
+          : Array.isArray(data)
+          ? data
+          : [];
+        if (!cancelled) {
+          setAccounts(receivedAccounts);
+        }
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+        console.error('No fue posible cargar las cuentas', error);
+        if (!cancelled) {
+          setAccounts([]);
+          setAccountsError('No fue posible cargar las cuentas conectadas.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAccounts(false);
+        }
+      }
+
+      const forecastsController = createAbortController();
       try {
         setIsLoadingForecasts(true);
         setForecastError(null);
@@ -137,6 +363,7 @@ export default function DashboardPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          signal: forecastsController.signal,
         });
 
         if (!response.ok) {
@@ -148,6 +375,9 @@ export default function DashboardPage() {
           setForecastSummary(data);
         }
       } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
         console.error('No fue posible cargar las proyecciones', error);
         if (!cancelled) {
           setForecastSummary(null);
@@ -159,6 +389,7 @@ export default function DashboardPage() {
         }
       }
 
+      const alertsController = createAbortController();
       try {
         setIsLoadingAlerts(true);
         setAlertsError(null);
@@ -166,6 +397,7 @@ export default function DashboardPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          signal: alertsController.signal,
         });
 
         if (!response.ok) {
@@ -177,6 +409,9 @@ export default function DashboardPage() {
           setPredictiveAlerts(data.alerts);
         }
       } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
         console.error('No fue posible cargar las alertas predictivas', error);
         if (!cancelled) {
           setPredictiveAlerts([]);
@@ -188,6 +423,7 @@ export default function DashboardPage() {
         }
       }
 
+      const recommendationsController = createAbortController();
       try {
         setIsLoadingRecommendations(true);
         setRecommendationsError(null);
@@ -195,6 +431,7 @@ export default function DashboardPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          signal: recommendationsController.signal,
         });
 
         if (response.status === 404) {
@@ -221,6 +458,9 @@ export default function DashboardPage() {
           });
         }
       } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
         console.error('No fue posible cargar las recomendaciones personalizadas', error);
         if (!cancelled) {
           setPersonalizedRecommendations([]);
@@ -240,8 +480,9 @@ export default function DashboardPage() {
 
     return () => {
       cancelled = true;
+      abortControllers.forEach((controller) => controller.abort());
     };
-  }, [user, isLoading]);
+  }, [user, isLoading, apiBaseUrl, resetFinancialData]);
 
   const displayName = useMemo(() => {
     if (!user) return 'Usuario';
@@ -279,32 +520,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Datos simulados - en producción vendrán del backend
-  const [financialData] = useState({
-    totalBalance: 2847650,
-    monthlyIncome: 1500000,
-    monthlyExpenses: 980000,
-    savings: 520000,
-    accounts: [
-      { id: 1, name: 'Cuenta Corriente Santander', balance: 1200000, type: 'checking' },
-      { id: 2, name: 'Cuenta de Ahorros BCI', balance: 1647650, type: 'savings' }
-    ],
-    recentTransactions: [
-      { id: 1, description: 'Supermercado Jumbo', amount: -45000, date: '2025-08-01', category: 'Alimentación' },
-      { id: 2, description: 'Sueldo', amount: 1500000, date: '2025-07-30', category: 'Ingresos' },
-      { id: 3, description: 'Netflix', amount: -12000, date: '2025-07-28', category: 'Entretenimiento' },
-      { id: 4, description: 'Farmacia Cruz Verde', amount: -23000, date: '2025-07-27', category: 'Salud' },
-      { id: 5, description: 'Uber', amount: -8500, date: '2025-07-26', category: 'Transporte' }
-    ],
-    monthlyCategories: [
-      { name: 'Alimentación', amount: 280000, percentage: 28.6, color: '#ef4444' },
-      { name: 'Vivienda', amount: 350000, percentage: 35.7, color: '#3b82f6' },
-      { name: 'Transporte', amount: 120000, percentage: 12.2, color: '#10b981' },
-      { name: 'Entretenimiento', amount: 80000, percentage: 8.2, color: '#f59e0b' },
-      { name: 'Otros', amount: 150000, percentage: 15.3, color: '#8b5cf6' }
-    ]
-  });
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -317,6 +532,35 @@ export default function DashboardPage() {
     const rounded = Number(value.toFixed(1));
     const sign = rounded > 0 ? '+' : '';
     return `${sign}${rounded}%`;
+  };
+
+  const renderTotalsValue = (
+    value: number | null | undefined,
+    className: string,
+    fallbackMessage: string,
+  ) => {
+    if (isLoadingTotals) {
+      return (
+        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Cargando...</span>
+        </div>
+      );
+    }
+
+    if (totalsError) {
+      return <p className="text-sm text-red-500">{totalsError}</p>;
+    }
+
+    if (value === undefined || value === null) {
+      return <p className="text-sm text-muted-foreground">{fallbackMessage}</p>;
+    }
+
+    return (
+      <div className={`text-2xl font-bold ${className}`}>
+        {showBalance ? formatCurrency(value) : '••••••••'}
+      </div>
+    );
   };
 
   const formatDate = (value: string) => {
@@ -478,8 +722,8 @@ export default function DashboardPage() {
                 <DollarSign className="w-5 h-5 text-primary" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-primary">
-              {showBalance ? formatCurrency(financialData.totalBalance) : '••••••••'}
+            <div className="min-h-[2.5rem]">
+              {renderTotalsValue(totals?.balance, 'text-primary', 'Sin balance disponible')}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-green-500">+12.5%</span> desde el mes pasado
@@ -491,8 +735,8 @@ export default function DashboardPage() {
               <h3 className="text-sm font-medium text-muted-foreground">Ingresos del Mes</h3>
               <TrendingUp className="w-5 h-5 text-green-500" />
             </div>
-            <div className="text-2xl font-bold text-green-500">
-              {showBalance ? formatCurrency(financialData.monthlyIncome) : '••••••••'}
+            <div className="min-h-[2.5rem]">
+              {renderTotalsValue(totals?.income, 'text-green-500', 'Sin ingresos disponibles')}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-green-500">+5.2%</span> vs mes anterior
@@ -504,8 +748,8 @@ export default function DashboardPage() {
               <h3 className="text-sm font-medium text-muted-foreground">Gastos del Mes</h3>
               <CreditCard className="w-5 h-5 text-red-500" />
             </div>
-            <div className="text-2xl font-bold text-red-500">
-              {showBalance ? formatCurrency(financialData.monthlyExpenses) : '••••••••'}
+            <div className="min-h-[2.5rem]">
+              {renderTotalsValue(totals?.expenses, 'text-red-500', 'Sin gastos disponibles')}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-red-500">+3.1%</span> vs mes anterior
@@ -517,8 +761,12 @@ export default function DashboardPage() {
               <h3 className="text-sm font-medium text-muted-foreground">Ahorros</h3>
               <PieChart className="w-5 h-5 text-blue-500" />
             </div>
-            <div className="text-2xl font-bold text-blue-500">
-              {showBalance ? formatCurrency(financialData.savings) : '••••••••'}
+            <div className="min-h-[2.5rem]">
+              {renderTotalsValue(
+                totals?.savings ?? (totals ? totals.balance : null),
+                'text-blue-500',
+                'Sin información de ahorros',
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-blue-500">+8.7%</span> este mes
@@ -537,29 +785,55 @@ export default function DashboardPage() {
                   Conectar Cuenta
                 </Button>
               </div>
-              
+
               <div className="space-y-4">
-                {financialData.accounts.map(account => (
-                  <div key={account.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
-                        <CreditCard className="w-5 h-5 text-primary" />
+                {isLoadingAccounts ? (
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Cargando cuentas...</span>
+                  </div>
+                ) : accountsError ? (
+                  <p className="text-sm text-red-500">{accountsError}</p>
+                ) : accounts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Aún no hay cuentas conectadas. Vincula una cuenta bancaria para comenzar.
+                  </p>
+                ) : (
+                  accounts.map((account) => (
+                    <div
+                      key={account.id}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-secondary/30 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+                          <CreditCard className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{account.name}</h3>
+                          <p className="text-sm text-muted-foreground capitalize">
+                            {account.type
+                              ? account.type.replace(/[_-]/g, ' ')
+                              : account.institution ?? 'Cuenta financiera'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-medium">{account.name}</h3>
+                      <div className="text-right">
+                        <p className="font-semibold">
+                          {typeof account.balance === 'number'
+                            ? showBalance
+                              ? formatCurrency(account.balance)
+                              : '••••••••'
+                            : showBalance
+                            ? 'Sin dato'
+                            : '••••••••'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {account.type === 'checking' ? 'Cuenta Corriente' : 'Cuenta de Ahorros'}
+                          {account.currency ?? 'Disponible'}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
-                        {showBalance ? formatCurrency(account.balance) : '••••••••'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Disponible</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Card>
 
@@ -580,27 +854,60 @@ export default function DashboardPage() {
               </div>
               
               <div className="space-y-3">
-                {financialData.recentTransactions.map(transaction => (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        transaction.amount > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                      }`}>
-                        {transaction.amount > 0 ? '↗' : '↙'}
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{transaction.description}</h3>
-                        <p className="text-sm text-muted-foreground">{transaction.category}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-semibold ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{transaction.date}</p>
-                    </div>
+                {isLoadingTransactions ? (
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Cargando transacciones...</span>
                   </div>
-                ))}
+                ) : transactionsError ? (
+                  <p className="text-sm text-red-500">{transactionsError}</p>
+                ) : recentTransactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay transacciones recientes registradas.
+                  </p>
+                ) : (
+                  recentTransactions.map((transaction) => {
+                    const amountValue =
+                      typeof transaction.amount === 'number' ? transaction.amount : null;
+                    const isPositive = (amountValue ?? 0) > 0;
+                    const formattedAmount = amountValue === null
+                      ? 'Sin dato'
+                      : showBalance
+                      ? `${isPositive ? '+' : ''}${formatCurrency(amountValue)}`
+                      : '••••••••';
+
+                    return (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/30 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                            }`}
+                          >
+                            {isPositive ? '↗' : '↙'}
+                          </div>
+                          <div>
+                            <h3 className="font-medium">{transaction.description}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {transaction.category ?? 'Sin categoría'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            {formattedAmount}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.date ? formatDate(transaction.date) : 'Fecha no disponible'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
               
               <div className="mt-4 text-center">
@@ -615,28 +922,47 @@ export default function DashboardPage() {
             <Card className="p-6 bg-gradient-card border-primary/20">
               <h2 className="text-xl font-semibold mb-6">Gastos por Categoría</h2>
               <div className="space-y-4">
-                {financialData.monthlyCategories.map((category, index) => (
-                  <div key={index}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">{category.name}</span>
-                      <span className="text-sm text-muted-foreground">{category.percentage}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full"
-                        style={{
-                          width: `${category.percentage}%`,
-                          backgroundColor: category.color
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        {formatCurrency(category.amount)}
-                      </span>
-                    </div>
+                {isLoadingCategories ? (
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Calculando categorías...</span>
                   </div>
-                ))}
+                ) : categoriesError ? (
+                  <p className="text-sm text-red-500">{categoriesError}</p>
+                ) : categoryBreakdown.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Aún no hay datos suficientes para mostrar el desglose por categoría.
+                  </p>
+                ) : (
+                  categoryBreakdown.map((category, index) => (
+                    <div key={category.name ?? index}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">{category.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {Number.isFinite(category.percentage) ? category.percentage : 0}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(Math.max(category.percentage, 0), 100)}%`,
+                            backgroundColor: category.color,
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {typeof category.amount === 'number'
+                            ? showBalance
+                              ? formatCurrency(category.amount)
+                              : '••••••••'
+                            : 'Sin dato'}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
 
