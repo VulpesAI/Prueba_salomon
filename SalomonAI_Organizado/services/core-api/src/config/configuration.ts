@@ -27,6 +27,10 @@ export default registerAs('app', () => ({
     engineUrl: process.env.FORECASTING_ENGINE_URL || DEFAULT_CONFIG.forecasting.engineUrl,
     horizonDays: parseInt(process.env.FORECASTING_DEFAULT_HORIZON_DAYS ?? '', 10) || DEFAULT_CONFIG.forecasting.horizonDays,
   },
+  recommendations: {
+    engineUrl: process.env.RECOMMENDATION_ENGINE_URL || DEFAULT_CONFIG.recommendations.engineUrl,
+    timeoutMs: parseInt(process.env.RECOMMENDATION_ENGINE_TIMEOUT_MS ?? '', 10) || DEFAULT_CONFIG.recommendations.timeoutMs,
+  },
   api: {
     globalPrefix: DEFAULT_CONFIG.api.globalPrefix,
     corsOrigin: process.env.FRONTEND_URL || DEFAULT_CONFIG.api.corsOrigin,

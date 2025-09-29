@@ -21,6 +21,10 @@ import {
   AlertTriangle,
   Loader2,
   CalendarDays
+  Sparkles,
+  ThumbsUp,
+  ThumbsDown,
+  CheckCircle
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -56,6 +60,26 @@ type PredictiveAlert = {
   details?: Record<string, unknown>;
 };
 
+type PersonalizedRecommendation = {
+  id: string;
+  title: string;
+  description: string;
+  score: number;
+  category: string;
+  explanation: string;
+  generatedAt: string;
+  cluster?: number | null;
+};
+
+type PersonalizedRecommendationsResponse = {
+  userId: string;
+  generatedAt: string;
+  recommendations: PersonalizedRecommendation[];
+  featureSummary?: Record<string, unknown> | null;
+};
+
+type FeedbackStatus = 'idle' | 'sending' | 'sent' | 'error';
+
 export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -65,9 +89,14 @@ export default function DashboardPage() {
   const [isLoadingAlerts, setIsLoadingAlerts] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [alertsError, setAlertsError] = useState<string | null>(null);
+  const [personalizedRecommendations, setPersonalizedRecommendations] = useState<PersonalizedRecommendation[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
+  const [feedbackStatus, setFeedbackStatus] = useState<Record<string, FeedbackStatus>>({});
 
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const apiBaseUrl = useMemo(() => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000', []);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -82,10 +111,11 @@ export default function DashboardPage() {
       if (!user) {
         setForecastSummary(null);
         setPredictiveAlerts([]);
+        setPersonalizedRecommendations([]);
+        setFeedbackStatus({});
         return;
       }
 
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
       let token: string;
       try {
         token = await user.getIdToken();
@@ -95,6 +125,8 @@ export default function DashboardPage() {
         setAlertsError('Sesión expirada, inicia nuevamente.');
         setForecastSummary(null);
         setPredictiveAlerts([]);
+        setPersonalizedRecommendations([]);
+        setFeedbackStatus({});
         return;
       }
 
@@ -153,6 +185,51 @@ export default function DashboardPage() {
       } finally {
         if (!cancelled) {
           setIsLoadingAlerts(false);
+        }
+      }
+
+      try {
+        setIsLoadingRecommendations(true);
+        setRecommendationsError(null);
+        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/recommendations/personalized`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 404) {
+          if (!cancelled) {
+            setPersonalizedRecommendations([]);
+            setFeedbackStatus({});
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener recomendaciones (${response.status})`);
+        }
+
+        const data: PersonalizedRecommendationsResponse = await response.json();
+        if (!cancelled) {
+          setPersonalizedRecommendations(data.recommendations ?? []);
+          setFeedbackStatus((prev) => {
+            const updated: Record<string, FeedbackStatus> = {};
+            (data.recommendations ?? []).forEach((rec) => {
+              updated[rec.id] = prev[rec.id] ?? 'idle';
+            });
+            return updated;
+          });
+        }
+      } catch (error) {
+        console.error('No fue posible cargar las recomendaciones personalizadas', error);
+        if (!cancelled) {
+          setPersonalizedRecommendations([]);
+          setFeedbackStatus({});
+          setRecommendationsError('No fue posible cargar las recomendaciones personalizadas.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRecommendations(false);
         }
       }
     };
@@ -249,6 +326,14 @@ export default function DashboardPage() {
     }).format(new Date(value));
   };
 
+  const formatScore = (value: number) => {
+    if (Number.isNaN(value)) {
+      return '0%';
+    }
+    const normalized = Math.min(Math.max(value, 0), 1);
+    return `${Math.round(normalized * 100)}%`;
+  };
+
   const getSeverityStyles = (severity: PredictiveAlert['severity']) => {
     switch (severity) {
       case 'high':
@@ -257,6 +342,35 @@ export default function DashboardPage() {
         return 'bg-amber-500/10 text-amber-500 border border-amber-500/30';
       default:
         return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30';
+    }
+  };
+
+  const handleRecommendationFeedback = async (recommendationId: string, score: number) => {
+    if (!user) {
+      return;
+    }
+
+    setFeedbackStatus((prev) => ({ ...prev, [recommendationId]: 'sending' }));
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/recommendations/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ recommendationId, score }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al enviar feedback (${response.status})`);
+      }
+
+      setFeedbackStatus((prev) => ({ ...prev, [recommendationId]: 'sent' }));
+      setRecommendationsError(null);
+    } catch (error) {
+      console.error('No fue posible enviar feedback de recomendación', error);
+      setFeedbackStatus((prev) => ({ ...prev, [recommendationId]: 'error' }));
     }
   };
 
@@ -526,27 +640,91 @@ export default function DashboardPage() {
               </div>
             </Card>
 
-            {/* Quick Actions */}
+            {/* Personalized Recommendations */}
             <Card className="p-6 bg-gradient-card border-primary/20">
-              <h2 className="text-xl font-semibold mb-6">Acciones Rápidas</h2>
-              <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar Transacción
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Ver Análisis IA
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Generar Reporte
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configuración
-                </Button>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Recomendaciones para ti</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Acciones sugeridas según tus hábitos financieros recientes
+                  </p>
+                </div>
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                </div>
               </div>
+
+              {isLoadingRecommendations ? (
+                <div className="flex items-center space-x-3 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Generando recomendaciones...</span>
+                </div>
+              ) : recommendationsError ? (
+                <p className="text-sm text-red-500">{recommendationsError}</p>
+              ) : personalizedRecommendations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aún no hay recomendaciones personalizadas. Conecta tus cuentas o espera a que se
+                  procesen tus transacciones recientes.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {personalizedRecommendations.map((recommendation) => {
+                    const status = feedbackStatus[recommendation.id] ?? 'idle';
+                    const isDisabled = status === 'sending' || status === 'sent';
+
+                    return (
+                      <div
+                        key={recommendation.id}
+                        className="p-4 bg-background/70 border border-border/60 rounded-lg space-y-2"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">{recommendation.title}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {recommendation.category.replace(/[-_]/g, ' ')}
+                            </p>
+                          </div>
+                          <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/10 text-primary">
+                            {formatScore(recommendation.score)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{recommendation.description}</p>
+                        <p className="text-xs text-primary/80">
+                          🧠 {recommendation.explanation}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={() => handleRecommendationFeedback(recommendation.id, 1)}
+                            disabled={isDisabled}
+                          >
+                            <ThumbsUp className="w-3 h-3 mr-1" /> Útil
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={() => handleRecommendationFeedback(recommendation.id, 0)}
+                            disabled={isDisabled}
+                          >
+                            <ThumbsDown className="w-3 h-3 mr-1" /> No útil
+                          </Button>
+                          {status === 'sent' ? (
+                            <span className="flex items-center text-xs text-emerald-500 gap-1">
+                              <CheckCircle className="w-3 h-3" /> ¡Gracias por tu feedback!
+                            </span>
+                          ) : null}
+                          {status === 'error' ? (
+                            <span className="text-xs text-red-500">Error al registrar tu feedback.</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
 
             {/* AI Insights */}
