@@ -62,6 +62,8 @@ export class User {
       email?: boolean;
       push?: boolean;
       sms?: boolean;
+      pushTokens?: string[];
+      mutedEvents?: { key: string; until?: string }[];
     };
     privacy?: {
       shareData?: boolean;

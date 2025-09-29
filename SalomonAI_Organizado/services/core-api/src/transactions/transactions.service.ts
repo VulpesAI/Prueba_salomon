@@ -4,6 +4,7 @@ import { Repository, Between, FindOptionsWhere } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { FinancialAccount } from './entities/financial-account.entity';
 import { ClassificationService } from '../classification/classification.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 interface CreateTransactionDto {
   amount: number;
@@ -43,6 +44,7 @@ export class TransactionsService {
     @InjectRepository(FinancialAccount)
     private accountRepository: Repository<FinancialAccount>,
     private classificationService: ClassificationService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createTransactionDto: CreateTransactionDto): Promise<Transaction> {
@@ -70,6 +72,11 @@ export class TransactionsService {
     });
 
     await this.transactionRepository.save(transaction);
+
+    this.eventEmitter.emit('transactions.created', {
+      userId: createTransactionDto.userId,
+      transaction,
+    });
 
     // Actualizar el balance de la cuenta
     const amountChange = createTransactionDto.type === 'EXPENSE' ? -createTransactionDto.amount : createTransactionDto.amount;

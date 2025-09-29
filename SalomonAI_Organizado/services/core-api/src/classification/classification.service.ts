@@ -628,7 +628,7 @@ export class ClassificationService implements OnModuleInit {
         correctionQueuedAt: new Date().toISOString(),
       };
 
-      await this.labelRepository.update({ id: label.id }, { metadata });
+      await this.labelRepository.update({ id: label.id }, { metadata: metadata as any });
 
       return { queued: true, label: { ...label, metadata } };
     } catch (error) {
@@ -689,7 +689,7 @@ export class ClassificationService implements OnModuleInit {
 
         return this.labelRepository.update({ id: label.id }, {
           status: ClassificationLabelStatus.QUEUED,
-          metadata,
+          metadata: metadata as any,
         });
       }));
 
