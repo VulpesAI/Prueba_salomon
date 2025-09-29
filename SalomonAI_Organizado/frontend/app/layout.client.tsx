@@ -2,6 +2,7 @@
 
 import '@/styles/globals.css'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { SyncProvider } from '@/context/SyncContext'
 import { cn } from '@/lib/utils'
 
 export default function RootLayoutClient({
@@ -15,7 +16,9 @@ export default function RootLayoutClient({
     <html lang="es" suppressHydrationWarning>
       <body className={cn(fonts.inter.className, 'bg-background')}>
         <ThemeProvider defaultTheme="system">
-          {children}
+          <SyncProvider>
+            {children}
+          </SyncProvider>
         </ThemeProvider>
       </body>
     </html>

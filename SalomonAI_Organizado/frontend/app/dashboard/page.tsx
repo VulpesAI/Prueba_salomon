@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -30,6 +30,8 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { SyncStatusWidget } from '@/components/dashboard/SyncStatusWidget';
+import { useSync } from '@/hooks/useSync';
 
 type ForecastDirection = 'upward' | 'downward' | 'stable';
 
@@ -96,6 +98,7 @@ export default function DashboardPage() {
 
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const { enqueue, isOnline } = useSync();
   const apiBaseUrl = useMemo(() => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000', []);
 
   useEffect(() => {
@@ -345,8 +348,34 @@ export default function DashboardPage() {
     }
   };
 
+  const queueRecommendationFeedback = useCallback(
+    async (recommendationId: string, score: number) => {
+      let authToken: string | undefined;
+      try {
+        authToken = user ? await user.getIdToken() : undefined;
+      } catch (error) {
+        console.warn('No fue posible obtener token para sincronización diferida', error);
+      }
+
+      enqueue({
+        endpoint: '/api/v1/dashboard/recommendations/feedback',
+        payload: { recommendationId, score },
+        metadata: { type: 'recommendation-feedback' },
+        authToken: authToken ?? null,
+      });
+      setFeedbackStatus((prev) => ({ ...prev, [recommendationId]: 'sent' }));
+      setRecommendationsError('Tu feedback se sincronizará cuando recuperemos la conexión.');
+    },
+    [enqueue, user],
+  );
+
   const handleRecommendationFeedback = async (recommendationId: string, score: number) => {
     if (!user) {
+      return;
+    }
+
+    if (!isOnline) {
+      await queueRecommendationFeedback(recommendationId, score);
       return;
     }
 
@@ -370,7 +399,7 @@ export default function DashboardPage() {
       setRecommendationsError(null);
     } catch (error) {
       console.error('No fue posible enviar feedback de recomendación', error);
-      setFeedbackStatus((prev) => ({ ...prev, [recommendationId]: 'error' }));
+      await queueRecommendationFeedback(recommendationId, score);
     }
   };
 
@@ -459,6 +488,23 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">¡Hola, {greetingName}! 👋</h1>
           <p className="text-muted-foreground">Aquí tienes un resumen de tu situación financiera</p>
+        </div>
+
+        {/* Sync + Balance */}
+        <div className="mb-8 grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <SyncStatusWidget />
+          <Card className="p-4 xl:col-span-2 bg-muted/30 border-dashed border-primary/30">
+            <h3 className="text-lg font-semibold mb-2">Modo offline inteligente</h3>
+            <p className="text-sm text-muted-foreground">
+              Conservamos tus acciones críticas en el dispositivo y las reintentamos automáticamente cuando el backend confirma la disponibilidad.
+              Puedes seguir capturando gastos, notas o metas sin preocuparte por la conectividad.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span className="px-2 py-1 rounded-full bg-background border">Reintentos exponenciales</span>
+              <span className="px-2 py-1 rounded-full bg-background border">SSE en tiempo real</span>
+              <span className="px-2 py-1 rounded-full bg-background border">Persistencia local segura</span>
+            </div>
+          </Card>
         </div>
 
         {/* Balance Cards */}

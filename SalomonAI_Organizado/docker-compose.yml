@@ -134,6 +134,27 @@ services:
       timeout: 10s
       retries: 3
 
+  ocr-processor:
+    build:
+      context: ./services/ocr-processor
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - OCR_ENGINE=${OCR_ENGINE:-tesseract}
+    depends_on:
+      core-api:
+        condition: service_started
+    networks:
+      - salomon-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   forecasting-engine:
     build:
       context: ./services/forecasting-engine

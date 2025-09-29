@@ -31,6 +31,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { GoalsModule } from './goals/goals.module';
 import { SecurityModule } from './security/security.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { SyncModule } from './sync/sync.module';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { PrivacyModule } from './privacy/privacy.module';
     NotificationsModule,
     GoalsModule,
     TransactionsModule,
+    SyncModule,
     ClassificationModule,
     ClassificationRulesModule,
     NlpModule,
