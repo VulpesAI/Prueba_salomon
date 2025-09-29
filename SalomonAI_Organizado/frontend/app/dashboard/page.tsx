@@ -20,7 +20,7 @@ import {
   Download,
   AlertTriangle,
   Loader2,
-  CalendarDays
+  CalendarDays,
   Sparkles,
   ThumbsUp,
   ThumbsDown,
