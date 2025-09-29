@@ -28,7 +28,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.replace('/dashboard');
+      router.replace('/dashboard/overview');
     }
   }, [isLoading, router, user]);
 
@@ -57,7 +57,7 @@ export default function SignupPage() {
 
     try {
       await signup(formData.email, formData.password, formData.name);
-      router.push('/dashboard');
+      router.push('/dashboard/overview');
     } catch (err) {
       console.error('Firebase signup error:', err);
       setError('No pudimos crear tu cuenta. Verifica los datos e inténtalo nuevamente.');

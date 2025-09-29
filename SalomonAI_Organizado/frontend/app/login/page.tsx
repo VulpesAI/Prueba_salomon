@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.replace('/dashboard');
+      router.replace('/dashboard/overview');
     }
   }, [isLoading, router, user]);
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/dashboard');
+      router.push('/dashboard/overview');
     } catch (err) {
       console.error('Firebase login error:', err);
       setError('No pudimos iniciar sesión con esas credenciales. Intenta nuevamente.');
@@ -48,7 +48,7 @@ export default function LoginPage() {
 
     try {
       await loginWithGoogle();
-      router.push('/dashboard');
+      router.push('/dashboard/overview');
     } catch (err) {
       console.error('Google login error:', err);
       setError('No pudimos iniciar sesión con Google. Intenta de nuevo.');
