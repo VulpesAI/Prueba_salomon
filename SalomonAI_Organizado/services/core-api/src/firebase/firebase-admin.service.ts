@@ -41,6 +41,10 @@ export class FirebaseAdminService implements OnModuleInit {
     return this.app.auth();
   }
 
+  getMessaging(): admin.messaging.Messaging {
+    return this.app.messaging();
+  }
+
   async verifyIdToken(idToken: string): Promise<admin.auth.DecodedIdToken> {
     try {
       return await this.getAuth().verifyIdToken(idToken);

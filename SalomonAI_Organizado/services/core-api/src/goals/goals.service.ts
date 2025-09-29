@@ -17,7 +17,7 @@ interface GoalProgressView {
   recordedAt: string;
 }
 
-interface GoalsSummary {
+export interface GoalsSummary {
   total: number;
   active: number;
   completed: number;
@@ -306,8 +306,21 @@ export class GoalsService {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       });
-      const message = `⚠️ Tu meta "${goal.name}" está un ${Math.abs(Math.round(response.metrics.deviationRatio * 100))}% por debajo del plan. Te faltan ${formatter.format(shortfall)} para estar al día.`;
-      await this.notificationsService.createNotification(user, message);
+      const message = `⚠️ Tu meta "${goal.name}" está un ${Math.abs(
+        Math.round(response.metrics.deviationRatio * 100),
+      )}% por debajo del plan. Te faltan ${formatter.format(shortfall)} para estar al día.`;
+      await this.notificationsService.createNotification(user, message, {
+        eventType: 'goals.off_track',
+        title: 'Meta financiera en riesgo',
+        channels: ['email', 'push', 'in_app'],
+        severity: 'warning',
+        metadata: {
+          goalId: goal.id,
+          deviation: response.metrics.deviationRatio,
+          expected: response.metrics.expectedAmountByNow,
+          actual: response.metrics.totalActual,
+        },
+      });
     }
   }
 }

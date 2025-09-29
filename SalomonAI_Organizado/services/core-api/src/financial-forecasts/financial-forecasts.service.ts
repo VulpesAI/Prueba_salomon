@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { FinancialForecast } from './entities/financial-forecast.entity';
 
@@ -47,6 +48,7 @@ export class FinancialForecastsService {
     private readonly forecastsRepository: Repository<FinancialForecast>,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.baseUrl =
       this.configService.get<string>('app.forecasting.engineUrl') ||
@@ -60,7 +62,13 @@ export class FinancialForecastsService {
     try {
       const response = await this.fetchForecastsFromEngine(userId, horizon, model);
       await this.persistForecasts(userId, response);
-      return this.toSummary(response);
+      const summary = this.toSummary(response);
+      this.eventEmitter.emit('metrics.updated', {
+        userId,
+        category: 'financial-forecast',
+        summary,
+      });
+      return summary;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
