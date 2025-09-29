@@ -47,7 +47,7 @@ type OverviewState = {
   currency: string
 }
 
-const PLACEHOLDER_CURRENCY = "CLP"
+export const PLACEHOLDER_CURRENCY = "CLP"
 
 const initialState: OverviewState = {
   totals: null,

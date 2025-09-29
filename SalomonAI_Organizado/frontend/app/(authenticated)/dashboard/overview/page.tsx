@@ -16,7 +16,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDashboardIntelligence } from "@/hooks/dashboard/use-dashboard-intelligence"
 import { useDashboardNotifications } from "@/hooks/dashboard/use-dashboard-notifications"
-import { useDashboardOverview } from "@/hooks/dashboard/use-dashboard-overview"
+import {
+  PLACEHOLDER_CURRENCY,
+  useDashboardOverview,
+} from "@/hooks/dashboard/use-dashboard-overview"
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -47,29 +50,26 @@ export default function DashboardOverviewPage() {
   const { refresh: refreshIntelligence } = intelligence
   const { refresh: refreshNotifications } = notifications
 
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(DASHBOARD_LOCALE, {
+  const formatCurrency = useCallback(
+    (value?: number | null) => {
+      const amount = typeof value === "number" ? value : 0
+
+      return new Intl.NumberFormat(DASHBOARD_LOCALE, {
         style: "currency",
-        currency: overview.currency ?? "CLP",
+        currency: overview.currency ?? PLACEHOLDER_CURRENCY,
         maximumFractionDigits: 0,
-      }),
+      }).format(amount)
+    },
     [overview.currency]
   )
 
   const percentageFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(DASHBOARD_LOCALE, {
-        style: "percent",
-        maximumFractionDigits: 0,
-      }),
+      () =>
+        new Intl.NumberFormat(DASHBOARD_LOCALE, {
+          style: "percent",
+          maximumFractionDigits: 0,
+        }),
     []
-  )
-
-  const formatCurrency = useCallback(
-    (value?: number | null) =>
-      currencyFormatter.format(typeof value === "number" ? value : 0),
-    [currencyFormatter]
   )
 
   const formatPercentage = useCallback(
@@ -248,7 +248,7 @@ export default function DashboardOverviewPage() {
                         {formatCurrency(account.balance)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {account.currency ?? "CLP"}
+                        {account.currency ?? PLACEHOLDER_CURRENCY}
                       </p>
                     </div>
                   </div>
