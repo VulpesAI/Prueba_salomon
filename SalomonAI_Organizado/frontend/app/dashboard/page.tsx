@@ -38,9 +38,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Switch } from '../../components/ui/switch';
 import { Label } from '../../components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 
 declare global {
   interface Window {
@@ -146,6 +154,14 @@ type TransactionSummary = {
   currency?: string | null;
 };
 
+type TransactionFilters = {
+  startDate: string;
+  endDate: string;
+  category: string;
+  minAmount: string;
+  maxAmount: string;
+};
+
 type CategoryBreakdown = {
   name: string;
   amount: number;
@@ -167,6 +183,16 @@ export default function DashboardPage() {
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, FeedbackStatus>>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>({
+    startDate: '',
+    endDate: '',
+    category: '',
+    minAmount: '',
+    maxAmount: '',
+  });
+  const [isExportingTransactions, setIsExportingTransactions] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const [isAlertCenterOpen, setIsAlertCenterOpen] = useState(false);
   const [alertNotifications, setAlertNotifications] = useState<NotificationHistoryItem[]>([]);
@@ -1098,27 +1124,206 @@ export default function DashboardPage() {
     return forecastSummary.forecasts.slice(0, 7);
   }, [forecastSummary]);
 
+  const categoryOptions = useMemo(() => {
+    const categories = new Set<string>();
+    for (const transaction of recentTransactions) {
+      if (transaction.category) {
+        categories.add(transaction.category);
+      }
+    }
+    return Array.from(categories).sort((a, b) => a.localeCompare(b));
+  }, [recentTransactions]);
+
+  const hasActiveFilters = useMemo(
+    () => Object.values(transactionFilters).some((value) => value.trim() !== ''),
+    [transactionFilters],
+  );
+
   const filteredTransactions = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return recentTransactions;
-    }
+    const parseFilterDate = (value: string, endOfDay = false) => {
+      if (!value) {
+        return null;
+      }
+      const date = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    const startDate = parseFilterDate(transactionFilters.startDate);
+    const endDate = parseFilterDate(transactionFilters.endDate, true);
+
+    const minAmount = transactionFilters.minAmount
+      ? Number.parseFloat(transactionFilters.minAmount)
+      : null;
+    const maxAmount = transactionFilters.maxAmount
+      ? Number.parseFloat(transactionFilters.maxAmount)
+      : null;
 
     return recentTransactions.filter((transaction) => {
       const description = transaction.description?.toLowerCase() ?? '';
       const category = transaction.category?.toLowerCase() ?? '';
-      const amount =
-        typeof transaction.amount === 'number' ? transaction.amount.toString() : '';
-      const date = transaction.date?.toLowerCase() ?? '';
+      const amountValue =
+        typeof transaction.amount === 'number' ? transaction.amount : null;
+      const amount = amountValue !== null ? amountValue.toString() : '';
+      const dateValue = transaction.date ? new Date(transaction.date) : null;
 
-      return (
-        description.includes(query) ||
-        category.includes(query) ||
-        amount.includes(query) ||
-        date.includes(query)
-      );
+      if (query) {
+        const matchesQuery =
+          description.includes(query) ||
+          category.includes(query) ||
+          amount.includes(query) ||
+          (transaction.date?.toLowerCase() ?? '').includes(query);
+
+        if (!matchesQuery) {
+          return false;
+        }
+      }
+
+      if (startDate || endDate) {
+        if (!dateValue || Number.isNaN(dateValue.getTime())) {
+          return false;
+        }
+        if (startDate && dateValue < startDate) {
+          return false;
+        }
+        if (endDate && dateValue > endDate) {
+          return false;
+        }
+      }
+
+      if (transactionFilters.category) {
+        if (category !== transactionFilters.category.toLowerCase()) {
+          return false;
+        }
+      }
+
+      if (minAmount !== null && !Number.isNaN(minAmount)) {
+        if (amountValue === null || amountValue < minAmount) {
+          return false;
+        }
+      }
+
+      if (maxAmount !== null && !Number.isNaN(maxAmount)) {
+        if (amountValue === null || amountValue > maxAmount) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [recentTransactions, searchQuery]);
+  }, [recentTransactions, searchQuery, transactionFilters]);
+
+  const handleFilterFieldChange = useCallback(
+    (field: keyof TransactionFilters, value: string) => {
+      setTransactionFilters((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
+
+  const handleClearFilters = useCallback(() => {
+    setTransactionFilters({
+      startDate: '',
+      endDate: '',
+      category: '',
+      minAmount: '',
+      maxAmount: '',
+    });
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    setIsFilterDialogOpen(false);
+  }, []);
+
+  const handleExportTransactions = useCallback(async () => {
+    if (!user) {
+      setExportError('Debes iniciar sesión para exportar tus transacciones.');
+      return;
+    }
+
+    try {
+      setIsExportingTransactions(true);
+      setExportError(null);
+      const { startDate, endDate, category, minAmount, maxAmount } = transactionFilters;
+
+      const token = await user.getIdToken();
+      const params = new URLSearchParams();
+
+      if (startDate) {
+        params.set('startDate', startDate);
+      }
+      if (endDate) {
+        params.set('endDate', endDate);
+      }
+      if (category) {
+        params.set('category', category);
+      }
+
+      if (minAmount && !Number.isNaN(Number.parseFloat(minAmount))) {
+        params.set('minAmount', minAmount);
+      }
+      if (maxAmount && !Number.isNaN(Number.parseFloat(maxAmount))) {
+        params.set('maxAmount', maxAmount);
+      }
+
+      if (searchQuery.trim().length > 0) {
+        params.set('q', searchQuery.trim());
+      }
+
+      const queryString = params.toString();
+      const exportUrl = `${apiBaseUrl}/api/v1/dashboard/transactions/export${
+        queryString ? `?${queryString}` : ''
+      }`;
+
+      const response = await fetch(exportUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition');
+      const filenameMatch = disposition?.match(/filename\*=([^;]+)|filename=([^;]+)/i);
+      let filename = 'transacciones.csv';
+
+      if (filenameMatch) {
+        const encoded = filenameMatch[1] ?? filenameMatch[2];
+        if (encoded) {
+          const clean = encoded.replace(/"/g, '').trim();
+          filename = clean.startsWith("UTF-8''")
+            ? decodeURIComponent(clean.replace("UTF-8''", ''))
+            : clean;
+        }
+      } else {
+        const contentType = response.headers.get('Content-Type');
+        if (contentType?.includes('spreadsheet') || contentType?.includes('excel')) {
+          filename = 'transacciones.xlsx';
+        }
+      }
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('No fue posible exportar las transacciones', error);
+      setExportError('No fue posible exportar las transacciones. Intenta nuevamente.');
+    } finally {
+      setIsExportingTransactions(false);
+    }
+  }, [apiBaseUrl, searchQuery, transactionFilters, user]);
+
+  const handleViewAllTransactions = useCallback(() => {
+    router.push('/dashboard/transactions');
+    router.refresh();
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -1553,17 +1758,48 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold">Transacciones Recientes</h2>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant={hasActiveFilters ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setIsFilterDialogOpen(true)}
+                    className="relative"
+                  >
                     <Filter className="w-4 h-4 mr-2" />
                     Filtrar
+                    {hasActiveFilters ? (
+                      <span className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                      </span>
+                    ) : null}
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Exportar
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportTransactions}
+                    disabled={
+                      isExportingTransactions ||
+                      isLoadingTransactions ||
+                      recentTransactions.length === 0
+                    }
+                  >
+                    {isExportingTransactions ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    {isExportingTransactions ? 'Exportando...' : 'Exportar'}
                   </Button>
                 </div>
               </div>
-              
+
+              {exportError ? (
+                <div className="flex items-center text-sm text-red-500 mb-4">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  <span>{exportError}</span>
+                </div>
+              ) : null}
+
               <div className="space-y-3">
                 {isLoadingTransactions ? (
                   <div className="flex items-center space-x-2 text-muted-foreground">
@@ -1574,8 +1810,8 @@ export default function DashboardPage() {
                   <p className="text-sm text-red-500">{transactionsError}</p>
                 ) : filteredTransactions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    {searchQuery.trim().length > 0
-                      ? 'No se encontraron transacciones que coincidan con tu búsqueda.'
+                    {searchQuery.trim().length > 0 || hasActiveFilters
+                      ? 'No se encontraron transacciones que coincidan con tus criterios.'
                       : 'No hay transacciones recientes registradas.'}
                   </p>
                 ) : (
@@ -1622,9 +1858,11 @@ export default function DashboardPage() {
                   })
                 )}
               </div>
-              
+
               <div className="mt-4 text-center">
-                <Button variant="outline">Ver todas las transacciones</Button>
+                <Button variant="outline" onClick={handleViewAllTransactions}>
+                  Ver todas las transacciones
+                </Button>
               </div>
             </Card>
           </div>
@@ -1920,6 +2158,109 @@ export default function DashboardPage() {
             )}
           </Card>
         </div>
+        <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Filtrar transacciones</DialogTitle>
+              <DialogDescription>
+                Aplica criterios para refinar la lista de movimientos recientes.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="filter-start-date">Desde</Label>
+                  <Input
+                    id="filter-start-date"
+                    type="date"
+                    value={transactionFilters.startDate}
+                    onChange={(event) => handleFilterFieldChange('startDate', event.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="filter-end-date">Hasta</Label>
+                  <Input
+                    id="filter-end-date"
+                    type="date"
+                    value={transactionFilters.endDate}
+                    onChange={(event) => handleFilterFieldChange('endDate', event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="filter-category">Categoría</Label>
+                <Select
+                  value={transactionFilters.category}
+                  onValueChange={(value) => handleFilterFieldChange('category', value)}
+                >
+                  <SelectTrigger id="filter-category">
+                    <SelectValue placeholder="Todas las categorías" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas las categorías</SelectItem>
+                    {categoryOptions.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="filter-min-amount">Monto mínimo</Label>
+                  <Input
+                    id="filter-min-amount"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={transactionFilters.minAmount}
+                    onChange={(event) => handleFilterFieldChange('minAmount', event.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="filter-max-amount">Monto máximo</Label>
+                  <Input
+                    id="filter-max-amount"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={transactionFilters.maxAmount}
+                    onChange={(event) => handleFilterFieldChange('maxAmount', event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleClearFilters}
+                disabled={!hasActiveFilters}
+                className="w-full sm:w-auto"
+              >
+                Limpiar filtros
+              </Button>
+              <div className="flex w-full sm:w-auto gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsFilterDialogOpen(false)}
+                  className="flex-1 sm:flex-none"
+                >
+                  Cancelar
+                </Button>
+                <Button type="button" onClick={handleApplyFilters} className="flex-1 sm:flex-none">
+                  Aplicar filtros
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
