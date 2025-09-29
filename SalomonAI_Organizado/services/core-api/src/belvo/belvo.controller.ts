@@ -1,17 +1,18 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
+  BadRequestException,
   Body,
-  Param,
-  Query,
-  UseGuards,
-  Request,
+  Controller,
+  DefaultValuePipe,
+  Delete,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
   ParseIntPipe,
-  DefaultValuePipe,
+  Post,
+  Query,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BelvoService } from './belvo.service';
@@ -61,6 +62,51 @@ export class BelvoController {
     };
 
     const connection = await this.bankConnectionService.createConnection(dto);
+
+    return {
+      connection: {
+        id: connection.id,
+        institutionName: connection.institutionName,
+        institutionType: connection.institutionType,
+        status: connection.status,
+        accountsCount: connection.accountsCount,
+        createdAt: connection.createdAt,
+        lastAccessedAt: connection.lastAccessedAt,
+        isHealthy: connection.isHealthy,
+      },
+    };
+  }
+
+  /**
+   * Obtener un token temporal para el widget de conexión
+   */
+  @Post('widget/token')
+  async createWidgetToken(@Request() req) {
+    const session = await this.belvoService.createWidgetSession(req.user.id);
+
+    return {
+      token: session.access,
+      refreshToken: session.refresh ?? null,
+      expiresIn: session.expires_in ?? null,
+    };
+  }
+
+  /**
+   * Registrar una conexión creada mediante el widget
+   */
+  @Post('widget/connections')
+  async createConnectionFromWidget(
+    @Request() req,
+    @Body() body: { linkId?: string },
+  ) {
+    if (!body?.linkId) {
+      throw new BadRequestException('linkId es requerido');
+    }
+
+    const connection = await this.bankConnectionService.createConnectionFromLink(
+      req.user.id,
+      body.linkId,
+    );
 
     return {
       connection: {

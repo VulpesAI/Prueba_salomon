@@ -42,6 +42,24 @@ import { ScrollArea } from '../../components/ui/scroll-area';
 import { Switch } from '../../components/ui/switch';
 import { Label } from '../../components/ui/label';
 
+declare global {
+  interface Window {
+    BelvoSDK?: {
+      createWidget: (
+        accessToken: string,
+        options: {
+          access_mode?: string;
+          country_codes?: string[];
+          locale?: string;
+          callback: (data: { id: string }) => void;
+          onExit?: (data: { success?: boolean; error?: { message?: string } }) => void;
+          onError?: (error: { message?: string }) => void;
+        },
+      ) => { build: () => void };
+    };
+  }
+}
+
 type ForecastDirection = 'upward' | 'downward' | 'stable';
 
 type ForecastPoint = {
@@ -175,6 +193,10 @@ export default function DashboardPage() {
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
+  const [isLinkingAccount, setIsLinkingAccount] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkSuccessMessage, setLinkSuccessMessage] = useState<string | null>(null);
+
   const [totalsError, setTotalsError] = useState<string | null>(null);
   const [accountsError, setAccountsError] = useState<string | null>(null);
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
@@ -198,6 +220,360 @@ export default function DashboardPage() {
     setIsLoadingTransactions(false);
     setIsLoadingCategories(false);
   }, []);
+
+  const fetchSummaryAndAccounts = useCallback(
+    async (
+      token: string,
+      options?: {
+        createAbortController?: () => AbortController;
+        isCancelled?: () => boolean;
+      },
+    ) => {
+      const createController = options?.createAbortController ?? (() => new AbortController());
+      const isCancelled = options?.isCancelled ?? (() => false);
+      const isAbortError = (error: unknown) =>
+        error instanceof DOMException && error.name === 'AbortError';
+
+      const summaryController = createController();
+      try {
+        if (!isCancelled()) {
+          setIsLoadingTotals(true);
+          setIsLoadingTransactions(true);
+          setIsLoadingCategories(true);
+          setTotalsError(null);
+          setTransactionsError(null);
+          setCategoriesError(null);
+        }
+
+        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/summary`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: summaryController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener el resumen (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (isCancelled()) {
+          return;
+        }
+
+        const summary = data?.summary ?? {};
+        const income = typeof summary.totalIncome === 'number' ? summary.totalIncome : 0;
+        const expenses = typeof summary.totalExpenses === 'number' ? summary.totalExpenses : 0;
+        const balance =
+          typeof summary.balance === 'number' ? summary.balance : income - expenses;
+        const savings =
+          typeof summary.savings === 'number'
+            ? summary.savings
+            : balance > 0
+            ? balance
+            : 0;
+
+        setTotals({
+          balance,
+          income,
+          expenses,
+          savings,
+        });
+
+        const transactions: TransactionSummary[] = Array.isArray(data?.recentTransactions)
+          ? data.recentTransactions
+          : Array.isArray(data)
+          ? data
+          : [];
+
+        setRecentTransactions(transactions);
+
+        const categories = data?.categories ?? {};
+        const palette = [
+          '#4F46E5',
+          '#22C55E',
+          '#F97316',
+          '#EC4899',
+          '#0EA5E9',
+          '#A855F7',
+          '#F59E0B',
+          '#14B8A6',
+        ];
+        let colorIndex = 0;
+
+        const breakdown = Object.entries(categories)
+          .filter(([, value]) => value && typeof value === 'object')
+          .map(([name, value]) => {
+            const total =
+              typeof (value as { total?: number }).total === 'number'
+                ? (value as { total?: number }).total!
+                : 0;
+            const categoryType = (value as { type?: string }).type ?? 'expense';
+            if (categoryType === 'income') {
+              return null;
+            }
+            const relevantTotal = expenses > 0 ? expenses : income;
+            const percentage = relevantTotal > 0 ? (total / relevantTotal) * 100 : 0;
+            const color = palette[colorIndex % palette.length];
+            colorIndex += 1;
+            return {
+              name,
+              amount: total,
+              percentage: Number(percentage.toFixed(1)),
+              color,
+            } satisfies CategoryBreakdown;
+          })
+          .filter((category): category is CategoryBreakdown => category !== null)
+          .sort((a, b) => b.amount - a.amount);
+
+        setCategoryBreakdown(breakdown);
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+        console.error('No fue posible cargar el resumen financiero', error);
+        if (!isCancelled()) {
+          setTotals(null);
+          setRecentTransactions([]);
+          setCategoryBreakdown([]);
+          setTotalsError('No fue posible cargar el balance. Intenta nuevamente.');
+          setTransactionsError('No fue posible cargar las transacciones recientes.');
+          setCategoriesError('No fue posible cargar el desglose por categoría.');
+        }
+      } finally {
+        if (!isCancelled()) {
+          setIsLoadingTotals(false);
+          setIsLoadingTransactions(false);
+          setIsLoadingCategories(false);
+        }
+      }
+
+      const accountsController = createController();
+      try {
+        if (!isCancelled()) {
+          setIsLoadingAccounts(true);
+          setAccountsError(null);
+        }
+
+        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/accounts`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: accountsController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener cuentas (${response.status})`);
+        }
+
+        const data = await response.json();
+        const receivedAccounts: AccountSummary[] = Array.isArray(data?.accounts)
+          ? data.accounts
+          : Array.isArray(data)
+          ? data
+          : [];
+        if (!isCancelled()) {
+          setAccounts(receivedAccounts);
+        }
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+        console.error('No fue posible cargar las cuentas', error);
+        if (!isCancelled()) {
+          setAccounts([]);
+          setAccountsError('No fue posible cargar las cuentas conectadas.');
+        }
+      } finally {
+        if (!isCancelled()) {
+          setIsLoadingAccounts(false);
+        }
+      }
+    },
+    [apiBaseUrl],
+  );
+
+  const refreshAccountsAndTransactions = useCallback(async () => {
+    if (!user) {
+      throw new Error('Debes iniciar sesión para actualizar tus cuentas.');
+    }
+
+    let token: string;
+    try {
+      token = await user.getIdToken();
+    } catch (error) {
+      throw new Error('Sesión expirada, inicia nuevamente.');
+    }
+
+    await fetchSummaryAndAccounts(token);
+  }, [fetchSummaryAndAccounts, user]);
+
+  const loadExternalScript = useCallback((src: string) => {
+    return new Promise<void>((resolve, reject) => {
+      if (typeof document === 'undefined') {
+        reject(new Error('El documento no está disponible.'));
+        return;
+      }
+
+      const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+      if (existingScript) {
+        if (existingScript.dataset.loaded === 'true') {
+          resolve();
+          return;
+        }
+        existingScript.addEventListener(
+          'load',
+          () => resolve(),
+          { once: true },
+        );
+        existingScript.addEventListener(
+          'error',
+          () => reject(new Error(`No fue posible cargar el script ${src}`)),
+          { once: true },
+        );
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.loaded = 'false';
+      script.onload = () => {
+        script.dataset.loaded = 'true';
+        resolve();
+      };
+      script.onerror = () => reject(new Error(`No fue posible cargar el script ${src}`));
+      document.body.appendChild(script);
+    });
+  }, []);
+
+  const handleConnectAccount = useCallback(async () => {
+    if (isLinkingAccount) {
+      return;
+    }
+
+    if (!user) {
+      setLinkError('Debes iniciar sesión para conectar una cuenta.');
+      return;
+    }
+
+    setIsLinkingAccount(true);
+    setLinkError(null);
+    setLinkSuccessMessage(null);
+
+    try {
+      const provider = (process.env.NEXT_PUBLIC_FINANCIAL_PROVIDER ?? 'belvo').toLowerCase();
+      const token = await user.getIdToken();
+
+      if (provider === 'fintoc') {
+        throw new Error('La integración con Fintoc aún no está disponible en esta aplicación.');
+      }
+
+      const sessionResponse = await fetch(`${apiBaseUrl}/api/v1/belvo/widget/token`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error(`Error al iniciar la vinculación (${sessionResponse.status}).`);
+      }
+
+      const sessionData: { token?: string; access?: string } = await sessionResponse.json();
+      const widgetToken = sessionData?.token ?? sessionData?.access;
+
+      if (!widgetToken) {
+        throw new Error('El backend no entregó un token válido para iniciar Belvo.');
+      }
+
+      await loadExternalScript('https://cdn.belvo.io/belvo-widget-1-stable.js');
+
+      if (!window.BelvoSDK || typeof window.BelvoSDK.createWidget !== 'function') {
+        throw new Error('El SDK de Belvo no está disponible.');
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        let completed = false;
+        const finalize = (callback: () => void) => {
+          if (!completed) {
+            completed = true;
+            callback();
+          }
+        };
+
+        const widget = window.BelvoSDK!.createWidget(widgetToken, {
+          access_mode: 'single',
+          locale: 'es',
+          country_codes: ['CL'],
+          callback: async (link: { id: string }) => {
+            try {
+              const registerResponse = await fetch(
+                `${apiBaseUrl}/api/v1/belvo/widget/connections`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ linkId: link.id }),
+                },
+              );
+
+              if (!registerResponse.ok) {
+                throw new Error(
+                  `Error registrando la nueva conexión (${registerResponse.status}).`,
+                );
+              }
+
+              await refreshAccountsAndTransactions();
+              setLinkSuccessMessage('Cuenta conectada correctamente.');
+              finalize(resolve);
+            } catch (error) {
+              console.error('Error registrando conexión bancaria', error);
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : 'No fue posible registrar la conexión bancaria.';
+              finalize(() => reject(new Error(message)));
+            }
+          },
+          onError: (error: { message?: string }) => {
+            const message = error?.message ?? 'Ocurrió un error en el widget de Belvo.';
+            finalize(() => reject(new Error(message)));
+          },
+          onExit: (data: { success?: boolean; error?: { message?: string } }) => {
+            if (completed) {
+              return;
+            }
+            if (data?.success) {
+              finalize(resolve);
+              return;
+            }
+            const message = data?.error?.message ?? 'Conexión cancelada por el usuario.';
+            finalize(() => reject(new Error(message)));
+          },
+        });
+
+        widget.build();
+      });
+    } catch (error) {
+      console.error('No fue posible conectar la cuenta bancaria', error);
+      setLinkError(
+        error instanceof Error
+          ? error.message
+          : 'No fue posible conectar la cuenta bancaria. Intenta nuevamente.',
+      );
+    } finally {
+      setIsLinkingAccount(false);
+    }
+  }, [
+    apiBaseUrl,
+    isLinkingAccount,
+    loadExternalScript,
+    refreshAccountsAndTransactions,
+    user,
+  ]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -375,150 +751,10 @@ export default function DashboardPage() {
         return controller;
       };
 
-      const summaryController = createAbortController();
-      try {
-        setIsLoadingTotals(true);
-        setIsLoadingTransactions(true);
-        setIsLoadingCategories(true);
-        setTotalsError(null);
-        setTransactionsError(null);
-        setCategoriesError(null);
-
-        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/summary`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          signal: summaryController.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Error al obtener el resumen (${response.status})`);
-        }
-
-        const data = await response.json();
-        if (!cancelled) {
-          const summary = data?.summary ?? {};
-          const income = typeof summary.totalIncome === 'number' ? summary.totalIncome : 0;
-          const expenses = typeof summary.totalExpenses === 'number' ? summary.totalExpenses : 0;
-          const balance =
-            typeof summary.balance === 'number' ? summary.balance : income - expenses;
-          const savings =
-            typeof summary.savings === 'number'
-              ? summary.savings
-              : balance > 0
-              ? balance
-              : 0;
-
-          setTotals({
-            balance,
-            income,
-            expenses,
-            savings,
-          });
-
-          const transactions: TransactionSummary[] = Array.isArray(data?.recentTransactions)
-            ? data.recentTransactions
-            : [];
-          setRecentTransactions(transactions);
-
-          const rawCategories = data?.categories ?? {};
-          const palette = [
-            '#ef4444',
-            '#3b82f6',
-            '#10b981',
-            '#f59e0b',
-            '#8b5cf6',
-            '#ec4899',
-            '#14b8a6',
-            '#6366f1',
-          ];
-          let colorIndex = 0;
-          const breakdown: CategoryBreakdown[] = Object.entries(rawCategories)
-            .filter(([, value]) => value && typeof value === 'object')
-            .map(([name, value]) => {
-              const total =
-                typeof (value as { total?: number }).total === 'number'
-                  ? (value as { total?: number }).total!
-                  : 0;
-              const categoryType = (value as { type?: string }).type ?? 'expense';
-              if (categoryType === 'income') {
-                return null;
-              }
-              const relevantTotal = expenses > 0 ? expenses : income;
-              const percentage = relevantTotal > 0 ? (total / relevantTotal) * 100 : 0;
-              const color = palette[colorIndex % palette.length];
-              colorIndex += 1;
-              return {
-                name,
-                amount: total,
-                percentage: Number(percentage.toFixed(1)),
-                color,
-              } satisfies CategoryBreakdown;
-            })
-            .filter((category): category is CategoryBreakdown => category !== null)
-            .sort((a, b) => b.amount - a.amount);
-
-          setCategoryBreakdown(breakdown);
-        }
-      } catch (error) {
-        if (isAbortError(error)) {
-          return;
-        }
-        console.error('No fue posible cargar el resumen financiero', error);
-        if (!cancelled) {
-          setTotals(null);
-          setRecentTransactions([]);
-          setCategoryBreakdown([]);
-          setTotalsError('No fue posible cargar el balance. Intenta nuevamente.');
-          setTransactionsError('No fue posible cargar las transacciones recientes.');
-          setCategoriesError('No fue posible cargar el desglose por categoría.');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingTotals(false);
-          setIsLoadingTransactions(false);
-          setIsLoadingCategories(false);
-        }
-      }
-
-      const accountsController = createAbortController();
-      try {
-        setIsLoadingAccounts(true);
-        setAccountsError(null);
-        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/accounts`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          signal: accountsController.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Error al obtener cuentas (${response.status})`);
-        }
-
-        const data = await response.json();
-        const receivedAccounts: AccountSummary[] = Array.isArray(data?.accounts)
-          ? data.accounts
-          : Array.isArray(data)
-          ? data
-          : [];
-        if (!cancelled) {
-          setAccounts(receivedAccounts);
-        }
-      } catch (error) {
-        if (isAbortError(error)) {
-          return;
-        }
-        console.error('No fue posible cargar las cuentas', error);
-        if (!cancelled) {
-          setAccounts([]);
-          setAccountsError('No fue posible cargar las cuentas conectadas.');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingAccounts(false);
-        }
-      }
+      await fetchSummaryAndAccounts(token, {
+        createAbortController,
+        isCancelled: () => cancelled,
+      });
 
       const forecastsController = createAbortController();
       try {
@@ -647,7 +883,7 @@ export default function DashboardPage() {
       cancelled = true;
       abortControllers.forEach((controller) => controller.abort());
     };
-  }, [user, isLoading, apiBaseUrl, resetFinancialData]);
+  }, [user, isLoading, apiBaseUrl, fetchSummaryAndAccounts, resetFinancialData]);
 
   const displayName = useMemo(() => {
     if (!user) return 'Usuario';
@@ -1234,11 +1470,32 @@ export default function DashboardPage() {
             <Card className="p-6 bg-gradient-card border-primary/20">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold">Mis Cuentas</h2>
-                <Button size="sm" className="bg-gradient-primary hover:opacity-90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Conectar Cuenta
+                <Button
+                  size="sm"
+                  className="bg-gradient-primary hover:opacity-90"
+                  onClick={handleConnectAccount}
+                  disabled={isLinkingAccount}
+                >
+                  {isLinkingAccount ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Conectando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Conectar Cuenta
+                    </>
+                  )}
                 </Button>
               </div>
+
+              {linkError ? (
+                <p className="mb-4 text-sm text-red-500">{linkError}</p>
+              ) : null}
+              {linkSuccessMessage ? (
+                <p className="mb-4 text-sm text-green-500">{linkSuccessMessage}</p>
+              ) : null}
 
               <div className="space-y-4">
                 {isLoadingAccounts ? (
