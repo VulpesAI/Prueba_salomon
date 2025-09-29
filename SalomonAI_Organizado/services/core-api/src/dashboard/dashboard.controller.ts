@@ -1,6 +1,8 @@
 import {
+  Body,
   Controller,
   Get,
+  Post,
   UseGuards,
   Request,
   Query,
@@ -11,6 +13,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FinancialMovementsService } from '../financial-movements/financial-movements.service';
 import { FinancialForecastsService } from '../financial-forecasts/financial-forecasts.service';
 import { GoalsService } from '../goals/goals.service';
+import { RecommendationsService } from './recommendations.service';
+import { SubmitRecommendationFeedbackDto } from './dto/submit-recommendation-feedback.dto';
 
 @Controller('dashboard')
 export class DashboardController {
@@ -18,6 +22,7 @@ export class DashboardController {
     private readonly financialMovementsService: FinancialMovementsService,
     private readonly financialForecastsService: FinancialForecastsService,
     private readonly goalsService: GoalsService,
+    private readonly recommendationsService: RecommendationsService,
   ) {}
 
   /**
@@ -171,6 +176,28 @@ export class DashboardController {
     }
 
     return summary;
+  }
+
+  @Get('recommendations/personalized')
+  @UseGuards(JwtAuthGuard)
+  async getPersonalizedRecommendations(
+    @Request() req,
+    @Query('refresh') refresh?: string,
+  ) {
+    const userId = req.user.id;
+    const shouldRefresh = (refresh ?? 'false').toLowerCase() === 'true';
+    return this.recommendationsService.getPersonalizedRecommendations(userId, shouldRefresh);
+  }
+
+  @Post('recommendations/feedback')
+  @UseGuards(JwtAuthGuard)
+  async submitRecommendationFeedback(
+    @Request() req,
+    @Body() payload: SubmitRecommendationFeedbackDto,
+  ) {
+    const userId = req.user.id;
+    await this.recommendationsService.sendFeedback(userId, payload);
+    return { status: 'received' };
   }
 
   /**

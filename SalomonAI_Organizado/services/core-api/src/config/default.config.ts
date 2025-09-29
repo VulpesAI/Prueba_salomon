@@ -24,6 +24,10 @@ export const DEFAULT_CONFIG = {
     engineUrl: 'http://forecasting-engine:8003',
     horizonDays: 30,
   },
+  recommendations: {
+    engineUrl: 'http://recommendation-engine:8004',
+    timeoutMs: 8000,
+  },
   api: {
     globalPrefix: 'api/v1',
     corsOrigin: 'http://localhost:3001',

@@ -21,6 +21,8 @@ export const configModuleOptions: ConfigModuleOptions = {
     QDRANT_URL: Joi.string().default('http://qdrant:6333'),
     QDRANT_COLLECTION: Joi.string().default('transactions'),
     FRONTEND_URL: Joi.string().default('http://localhost:3001'),
+    RECOMMENDATION_ENGINE_URL: Joi.string().default('http://recommendation-engine:8004'),
+    RECOMMENDATION_ENGINE_TIMEOUT_MS: Joi.number().default(8000),
   }),
   validationOptions: {
     allowUnknown: true,
