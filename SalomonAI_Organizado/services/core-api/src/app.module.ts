@@ -29,6 +29,7 @@ import { FinancialForecastsModule } from './financial-forecasts/financial-foreca
 import { AlertsModule } from './alerts/alerts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { GoalsModule } from './goals/goals.module';
+import { SecurityModule } from './security/security.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { GoalsModule } from './goals/goals.module';
     KafkaModule,
     QdrantModule,
     HealthModule,
+    SecurityModule,
   ],
   controllers: [],
   providers: [],

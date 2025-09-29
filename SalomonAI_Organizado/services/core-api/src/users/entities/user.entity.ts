@@ -11,6 +11,7 @@ import { UserClassificationRule } from '../../classification-rules/entities/user
 import { Notification } from '../../notifications/entities/notification.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
 import { FinancialGoal } from '../../goals/entities/financial-goal.entity';
+import { AuthToken } from '../../auth/entities/auth-token.entity';
 
 @Entity('users') // Mapea esta clase a la tabla 'users' en la BD
 export class User {
@@ -52,6 +53,29 @@ export class User {
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
+
+  @Column({ name: 'mfa_enabled', default: false })
+  mfaEnabled: boolean;
+
+  @Column({ name: 'mfa_secret', nullable: true, select: false })
+  mfaSecret?: string | null;
+
+  @Column({ name: 'mfa_temp_secret', nullable: true, select: false })
+  mfaTempSecret?: string | null;
+
+  @Column('json', { name: 'mfa_backup_codes', nullable: true, select: false })
+  mfaBackupCodes?: string[] | null;
+
+  @Column({ name: 'last_mfa_at', type: 'timestamptz', nullable: true })
+  lastMfaAt?: Date | null;
+
+  @Column('json', { name: 'oauth_providers', nullable: true })
+  oauthProviders?: {
+    provider: string;
+    subject: string;
+    picture?: string;
+    lastLoginAt?: string;
+  }[];
 
   @Column('json', { nullable: true })
   preferences: {
@@ -101,6 +125,9 @@ export class User {
 
   @OneToMany(() => FinancialGoal, goal => goal.user)
   goals: FinancialGoal[];
+
+  @OneToMany(() => AuthToken, token => token.user)
+  authTokens: AuthToken[];
 
   // Relaciones con otras entidades se agregarán gradualmente
   // @OneToMany(() => FinancialAccount, (account) => account.user)

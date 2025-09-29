@@ -6,15 +6,24 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { setupGlobalPipes, setupGlobalPrefix, setupSwagger, setupCors } from './config/app.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { loadTlsOptionsFromEnv } from './security/tls.util';
 
 async function bootstrap() {
+  const httpsOptions = await loadTlsOptionsFromEnv();
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
+    ...(httpsOptions ? { httpsOptions } : {}),
   });
   
   const configService = app.get(ConfigService);
   const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
   app.useLogger(logger);
+
+  if (httpsOptions) {
+    logger.log('🔐 TLS 1.3 habilitado con certificados gestionados vía KMS.');
+  } else {
+    logger.warn('TLS no habilitado. Se ejecutará sobre HTTP hasta que se configuren certificados.');
+  }
 
   // Configuración de seguridad y rendimiento
   app.use(helmet({
@@ -64,7 +73,7 @@ async function bootstrap() {
   });
 
   await app.listen(port, '0.0.0.0');
-  
+
   logger.log(`🚀 SalomónAI API ejecutándose en: http://0.0.0.0:${port}`);
   logger.log(`📖 Documentación Swagger: http://0.0.0.0:${port}/api/docs`);
   logger.log(`🏥 Health Check: http://0.0.0.0:${port}/api/v1/health`);
