@@ -1,11 +1,14 @@
 import { PlaceholderPage } from "@/components/authenticated/placeholder-page"
 
-export default function AccountDetailPage({
+type AccountDetailPageProps = {
+  params: Promise<{ linkId: string }>
+}
+
+export default async function AccountDetailPage({
   params,
-}: {
-  params: { linkId: string }
-}) {
-  const accountId = decodeURIComponent(params.linkId)
+}: AccountDetailPageProps) {
+  const { linkId } = await params
+  const accountId = decodeURIComponent(linkId)
 
   return (
     <PlaceholderPage

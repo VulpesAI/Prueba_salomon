@@ -1,11 +1,14 @@
 import { PlaceholderPage } from "@/components/authenticated/placeholder-page"
 
-export default function GoalDetailPage({
+type GoalDetailPageProps = {
+  params: Promise<{ goalId: string }>
+}
+
+export default async function GoalDetailPage({
   params,
-}: {
-  params: { goalId: string }
-}) {
-  const goalId = decodeURIComponent(params.goalId)
+}: GoalDetailPageProps) {
+  const { goalId: encodedGoalId } = await params
+  const goalId = decodeURIComponent(encodedGoalId)
 
   return (
     <PlaceholderPage
