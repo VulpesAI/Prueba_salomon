@@ -5,7 +5,16 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value
   
   // Rutas protegidas que requieren autenticación
-  const protectedPaths = ['/dashboard']
+  const protectedPaths = [
+    '/dashboard',
+    '/accounts',
+    '/transactions',
+    '/analytics',
+    '/goals',
+    '/alerts',
+    '/assistant',
+    '/settings',
+  ]
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   )
@@ -23,12 +32,23 @@ export function middleware(request: NextRequest) {
   )
 
   if (isAuthPath && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/dashboard/overview', request.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup']
+  matcher: [
+    '/dashboard/:path*',
+    '/accounts/:path*',
+    '/transactions/:path*',
+    '/analytics/:path*',
+    '/goals/:path*',
+    '/alerts/:path*',
+    '/assistant/:path*',
+    '/settings/:path*',
+    '/login',
+    '/signup',
+  ],
 }
