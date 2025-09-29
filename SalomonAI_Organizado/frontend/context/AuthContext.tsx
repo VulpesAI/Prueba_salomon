@@ -18,6 +18,7 @@ import {
   type FirebaseAuth,
   type FirebaseUser,
 } from "@/lib/firebase"
+import { setApiClientSessionAccessors } from "@/lib/api-client"
 
 type BackendUser = {
   id: string
@@ -82,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sessionRef = useRef<AuthSession | null>(null)
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshSessionRef = useRef<() => Promise<void> | null>(null)
+  const getSessionSnapshot = useCallback(() => sessionRef.current, [])
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
@@ -306,6 +308,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [refreshSession])
+
+  useEffect(() => {
+    setApiClientSessionAccessors({
+      getSession: getSessionSnapshot,
+      refreshSession,
+    })
+
+    return () => {
+      setApiClientSessionAccessors(null)
+    }
+  }, [getSessionSnapshot, refreshSession])
 
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
