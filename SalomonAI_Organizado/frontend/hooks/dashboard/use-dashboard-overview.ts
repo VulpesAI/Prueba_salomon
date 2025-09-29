@@ -44,7 +44,7 @@ type OverviewState = {
   categoryBreakdown: CategoryBreakdown[]
   isLoading: boolean
   error: string | null
-  currency: string
+  currency: string | null
 }
 
 export const PLACEHOLDER_CURRENCY = "CLP"
@@ -193,8 +193,11 @@ export const useDashboardOverview = () => {
     void fetchOverview()
   }, [fetchOverview])
 
+  const currency = state.currency ?? PLACEHOLDER_CURRENCY
+
   return {
     ...state,
+    currency,
     refresh: fetchOverview,
     apiBaseUrl,
   }

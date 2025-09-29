@@ -50,25 +50,30 @@ export default function DashboardOverviewPage() {
   const { refresh: refreshIntelligence } = intelligence
   const { refresh: refreshNotifications } = notifications
 
+  const activeCurrency = useMemo(
+    () => overview.currency ?? PLACEHOLDER_CURRENCY,
+    [overview.currency]
+  )
+
   const formatCurrency = useCallback(
     (value?: number | null) => {
       const amount = typeof value === "number" ? value : 0
 
       return new Intl.NumberFormat(DASHBOARD_LOCALE, {
         style: "currency",
-        currency: overview.currency ?? PLACEHOLDER_CURRENCY,
+        currency: activeCurrency,
         maximumFractionDigits: 0,
       }).format(amount)
     },
-    [overview.currency]
+    [activeCurrency]
   )
 
   const percentageFormatter = useMemo(
-      () =>
-        new Intl.NumberFormat(DASHBOARD_LOCALE, {
-          style: "percent",
-          maximumFractionDigits: 0,
-        }),
+    () =>
+      new Intl.NumberFormat(DASHBOARD_LOCALE, {
+        style: "percent",
+        maximumFractionDigits: 0,
+      }),
     []
   )
 
