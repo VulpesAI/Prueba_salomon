@@ -114,16 +114,21 @@ const applyAuthHeader = (config: InternalAxiosRequestConfig) => {
   }
 
   const tokenType = session.tokenType ?? "Bearer"
-  const headers = config.headers ?? new AxiosHeaders()
 
-  if (headers instanceof AxiosHeaders) {
-    headers.set("Authorization", `${tokenType} ${session.accessToken}`)
-    config.headers = headers
+  if (config.headers instanceof AxiosHeaders) {
+    config.headers.set("Authorization", `${tokenType} ${session.accessToken}`)
+    return config
+  }
+
+  if (config.headers && typeof config.headers === "object") {
+    config.headers = {
+      ...(config.headers as Record<string, unknown>),
+      Authorization: `${tokenType} ${session.accessToken}`,
+    }
     return config
   }
 
   config.headers = {
-    ...headers,
     Authorization: `${tokenType} ${session.accessToken}`,
   }
 
