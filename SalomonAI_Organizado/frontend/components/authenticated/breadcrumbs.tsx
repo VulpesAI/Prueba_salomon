@@ -29,7 +29,7 @@ type Crumb = {
 export function Breadcrumbs({
   navigation = postLoginNavigation,
 }: BreadcrumbProps) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ""
   const match = findBestMatch(navigation, pathname)
 
   const crumbs: Crumb[] = [

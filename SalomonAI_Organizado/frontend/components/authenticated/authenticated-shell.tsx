@@ -49,7 +49,7 @@ export function AuthenticatedShell({
 }) {
   const { user, isLoading, logout } = useAuth()
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ""
 
   React.useEffect(() => {
     if (!isLoading && !user) {

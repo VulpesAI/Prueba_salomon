@@ -19,7 +19,7 @@ export function SidebarNav({
 }: {
   navigation?: typeof postLoginNavigation
 }) {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ""
   const quickActions = getQuickActions()
 
   return (
