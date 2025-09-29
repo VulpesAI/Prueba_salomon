@@ -118,6 +118,7 @@ export default function DashboardPage() {
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, FeedbackStatus>>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [totals, setTotals] = useState<{
     balance: number;
@@ -630,6 +631,28 @@ export default function DashboardPage() {
     return forecastSummary.forecasts.slice(0, 7);
   }, [forecastSummary]);
 
+  const filteredTransactions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return recentTransactions;
+    }
+
+    return recentTransactions.filter((transaction) => {
+      const description = transaction.description?.toLowerCase() ?? '';
+      const category = transaction.category?.toLowerCase() ?? '';
+      const amount =
+        typeof transaction.amount === 'number' ? transaction.amount.toString() : '';
+      const date = transaction.date?.toLowerCase() ?? '';
+
+      return (
+        description.includes(query) ||
+        category.includes(query) ||
+        amount.includes(query) ||
+        date.includes(query)
+      );
+    });
+  }, [recentTransactions, searchQuery]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -660,8 +683,10 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   placeholder="Buscar transacciones..."
-                  className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-md text-sm 
+                  className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-md text-sm
                            focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
                 />
               </div>
             </div>
@@ -861,12 +886,14 @@ export default function DashboardPage() {
                   </div>
                 ) : transactionsError ? (
                   <p className="text-sm text-red-500">{transactionsError}</p>
-                ) : recentTransactions.length === 0 ? (
+                ) : filteredTransactions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No hay transacciones recientes registradas.
+                    {searchQuery.trim().length > 0
+                      ? 'No se encontraron transacciones que coincidan con tu búsqueda.'
+                      : 'No hay transacciones recientes registradas.'}
                   </p>
                 ) : (
-                  recentTransactions.map((transaction) => {
+                  filteredTransactions.map((transaction) => {
                     const amountValue =
                       typeof transaction.amount === 'number' ? transaction.amount : null;
                     const isPositive = (amountValue ?? 0) > 0;
