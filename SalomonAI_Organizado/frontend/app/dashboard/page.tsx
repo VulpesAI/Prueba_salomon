@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Brain,
   CreditCard,
+  TrendingDown,
   TrendingUp,
   DollarSign,
   PieChart,
@@ -169,6 +170,23 @@ type CategoryBreakdown = {
   color: string;
 };
 
+type DashboardInsightMetric = {
+  label: string;
+  value: string | number;
+  trend?: 'up' | 'down' | 'neutral';
+  helperText?: string | null;
+};
+
+type DashboardInsight = {
+  id?: string | number;
+  title: string;
+  description: string;
+  metrics?: DashboardInsightMetric[];
+  type?: string | null;
+  category?: string | null;
+  highlight?: string | null;
+};
+
 export default function DashboardPage() {
   const [showBalance, setShowBalance] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -181,6 +199,9 @@ export default function DashboardPage() {
   const [personalizedRecommendations, setPersonalizedRecommendations] = useState<PersonalizedRecommendation[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
+  const [insights, setInsights] = useState<DashboardInsight[]>([]);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, FeedbackStatus>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
@@ -237,6 +258,9 @@ export default function DashboardPage() {
     setAccounts([]);
     setRecentTransactions([]);
     setCategoryBreakdown([]);
+    setInsights([]);
+    setInsightsError(null);
+    setIsLoadingInsights(false);
     setTotalsError(null);
     setAccountsError(null);
     setTransactionsError(null);
@@ -744,6 +768,9 @@ export default function DashboardPage() {
         setForecastSummary(null);
         setPredictiveAlerts([]);
         setPersonalizedRecommendations([]);
+        setInsights([]);
+        setInsightsError(null);
+        setIsLoadingInsights(false);
         setFeedbackStatus({});
         return;
       }
@@ -758,6 +785,7 @@ export default function DashboardPage() {
           setForecastError(sessionExpiredMessage);
           setAlertsError(sessionExpiredMessage);
           setRecommendationsError(sessionExpiredMessage);
+          setInsightsError(sessionExpiredMessage);
           setTotalsError(sessionExpiredMessage);
           setAccountsError(sessionExpiredMessage);
           setTransactionsError(sessionExpiredMessage);
@@ -766,6 +794,8 @@ export default function DashboardPage() {
           setForecastSummary(null);
           setPredictiveAlerts([]);
           setPersonalizedRecommendations([]);
+          setInsights([]);
+          setIsLoadingInsights(false);
           setFeedbackStatus({});
         }
         return;
@@ -781,6 +811,56 @@ export default function DashboardPage() {
         createAbortController,
         isCancelled: () => cancelled,
       });
+
+      const insightsController = createAbortController();
+      try {
+        setIsLoadingInsights(true);
+        setInsightsError(null);
+        const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/insights`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: insightsController.signal,
+        });
+
+        if (response.status === 404) {
+          if (!cancelled) {
+            setInsights([]);
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener insights (${response.status})`);
+        }
+
+        const payload = (await response.json()) as unknown;
+        if (!cancelled) {
+          let normalizedInsights: DashboardInsight[] = [];
+          if (Array.isArray(payload)) {
+            normalizedInsights = payload as DashboardInsight[];
+          } else if (payload && typeof payload === 'object') {
+            const data = payload as { insights?: unknown };
+            if (Array.isArray(data.insights)) {
+              normalizedInsights = data.insights as DashboardInsight[];
+            }
+          }
+          setInsights(normalizedInsights);
+        }
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+        console.error('No fue posible cargar los insights del dashboard', error);
+        if (!cancelled) {
+          setInsights([]);
+          setInsightsError('No fue posible cargar los insights del dashboard.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingInsights(false);
+        }
+      }
 
       const forecastsController = createAbortController();
       try {
@@ -959,6 +1039,55 @@ export default function DashboardPage() {
     const rounded = Number(value.toFixed(1));
     const sign = rounded > 0 ? '+' : '';
     return `${sign}${rounded}%`;
+  };
+
+  const getInsightStyles = (type?: string | null) => {
+    const normalized = (type ?? '').toLowerCase();
+
+    if (normalized.includes('ahorro') || normalized.includes('opportunity') || normalized.includes('saving')) {
+      return {
+        container: 'p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400',
+        title: 'font-medium text-blue-800',
+        description: 'text-blue-600',
+      };
+    }
+
+    if (normalized.includes('progreso') || normalized.includes('progress') || normalized.includes('success')) {
+      return {
+        container: 'p-3 bg-green-50 rounded-lg border-l-4 border-green-400',
+        title: 'font-medium text-green-800',
+        description: 'text-green-600',
+      };
+    }
+
+    if (normalized.includes('alerta') || normalized.includes('alert') || normalized.includes('riesgo') || normalized.includes('warning')) {
+      return {
+        container: 'p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400',
+        title: 'font-medium text-yellow-800',
+        description: 'text-yellow-600',
+      };
+    }
+
+    return {
+      container: 'p-3 bg-primary/5 rounded-lg border-l-4 border-primary/30',
+      title: 'font-medium text-primary',
+      description: 'text-muted-foreground',
+    };
+  };
+
+  const renderMetricTrend = (trend?: 'up' | 'down' | 'neutral') => {
+    if (!trend) {
+      return null;
+    }
+
+    const trendMap: Record<'up' | 'down' | 'neutral', { symbol: string; className: string }> = {
+      up: { symbol: '↑', className: 'text-emerald-500' },
+      down: { symbol: '↓', className: 'text-red-500' },
+      neutral: { symbol: '→', className: 'text-muted-foreground' },
+    };
+
+    const { symbol, className } = trendMap[trend];
+    return <span className={`text-xs font-semibold ${className}`}>{symbol}</span>;
   };
 
   const renderTotalsValue = (
@@ -2007,20 +2136,64 @@ export default function DashboardPage() {
             {/* AI Insights */}
             <Card className="p-6 bg-gradient-card border-primary/20">
               <h2 className="text-xl font-semibold mb-4">💡 Insights de IA</h2>
-              <div className="space-y-3 text-sm">
-                <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                  <p className="font-medium text-blue-800">Oportunidad de Ahorro</p>
-                  <p className="text-blue-600">Podrías ahorrar $45,000 reduciendo gastos en entretenimiento este mes.</p>
+              {isLoadingInsights ? (
+                <div className="flex items-center space-x-3 text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Analizando tu información...</span>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
-                  <p className="font-medium text-green-800">Buen Progreso</p>
-                  <p className="text-green-600">Tus ahorros han aumentado 8.7% este mes. ¡Excelente trabajo!</p>
+              ) : insightsError ? (
+                <p className="text-sm text-red-500">{insightsError}</p>
+              ) : insights.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aún no hay insights disponibles. Sigue utilizando la plataforma para generar nuevas oportunidades.
+                </p>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  {insights.map(insight => {
+                    const styles = getInsightStyles(insight.type ?? insight.category ?? insight.title);
+                    return (
+                      <div
+                        key={insight.id ?? insight.title}
+                        className={`${styles.container} space-y-2 transition-shadow hover:shadow-sm`}
+                      >
+                        <div className="space-y-1">
+                          <p className={styles.title}>{insight.title}</p>
+                          <p className={styles.description}>{insight.description}</p>
+                        </div>
+                        {insight.highlight ? (
+                          <p className="text-xs font-medium text-primary">{insight.highlight}</p>
+                        ) : null}
+                        {insight.metrics && insight.metrics.length > 0 ? (
+                          <div className="mt-2 space-y-2">
+                            {insight.metrics.map(metric => {
+                              const metricKey = `${insight.id ?? insight.title}-${metric.label}`;
+                              return (
+                                <div
+                                  key={metricKey}
+                                  className="rounded-md border border-border/60 bg-background/70 p-2"
+                                >
+                                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-medium text-foreground">{metric.label}</span>
+                                      {renderMetricTrend(metric.trend)}
+                                    </div>
+                                    <span className="text-xs font-semibold text-foreground">
+                                      {typeof metric.value === 'number' ? metric.value.toLocaleString('es-CL') : metric.value}
+                                    </span>
+                                  </div>
+                                  {metric.helperText ? (
+                                    <p className="mt-1 text-[11px] text-muted-foreground">{metric.helperText}</p>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
-                  <p className="font-medium text-yellow-800">Patrón Detectado</p>
-                  <p className="text-yellow-600">Gastas más los viernes. Considera planificar un presupuesto.</p>
-                </div>
-              </div>
+              )}
             </Card>
           </div>
         </div>
