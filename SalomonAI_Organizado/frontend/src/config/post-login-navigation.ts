@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Bot,
   Brain,
+  Bell,
   ChartBarStacked,
   ChartLine,
   Compass,
@@ -186,6 +187,12 @@ export const postLoginNavigation: NavigationGroup[] = [
         href: "/alerts/history",
         icon: AlertTriangle,
         description: "Eventos pasados y resolución",
+      },
+      {
+        title: "Historial de notificaciones",
+        href: "/notifications",
+        icon: Bell,
+        description: "Envíos por canal y estado de lectura consolidado.",
       },
       {
         title: "Preferencias",
