@@ -115,7 +115,7 @@ export const useDashboardOverview = () => {
             balance: 4250,
             type: "checking",
             institution: "Banco Central",
-            currency: "MXN",
+            currency: "CLP",
           },
           {
             id: "acc_2",
@@ -123,7 +123,7 @@ export const useDashboardOverview = () => {
             balance: -850,
             type: "credit",
             institution: "Banco Central",
-            currency: "MXN",
+            currency: "CLP",
           },
           {
             id: "acc_3",
@@ -131,7 +131,7 @@ export const useDashboardOverview = () => {
             balance: 8900,
             type: "savings",
             institution: "Finanzas Digitales",
-            currency: "MXN",
+            currency: "CLP",
           },
         ],
         recentTransactions: [

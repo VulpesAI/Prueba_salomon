@@ -33,9 +33,9 @@ import {
 
 const formatCurrency = (value?: number | null) => {
   const amount = typeof value === "number" ? value : 0
-  return new Intl.NumberFormat("es-MX", {
+  return new Intl.NumberFormat("es-CL", {
     style: "currency",
-    currency: "MXN",
+    currency: "CLP",
     maximumFractionDigits: 0,
   }).format(amount)
 }
@@ -43,7 +43,7 @@ const formatCurrency = (value?: number | null) => {
 const formatPercentage = (value: number) => `${Math.round(value * 100)}%`
 
 const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString("es-MX", { day: "numeric", month: "short" })
+  new Date(value).toLocaleDateString("es-CL", { day: "numeric", month: "short" })
 
 export default function DashboardOverviewPage() {
   const overview = useDashboardOverview()
@@ -224,7 +224,7 @@ export default function DashboardOverviewPage() {
                         {formatCurrency(account.balance)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {account.currency ?? "MXN"}
+                        {account.currency ?? "CLP"}
                       </p>
                     </div>
                   </div>
