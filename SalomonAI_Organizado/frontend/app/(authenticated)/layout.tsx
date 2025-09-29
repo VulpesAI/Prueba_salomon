@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import {
-  Hydrate,
+  HydrationBoundary,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query"
@@ -44,9 +44,9 @@ export default function AuthenticatedLayout({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Hydrate state={undefined}>
+      <HydrationBoundary state={undefined}>
         <AuthenticatedShell>{children}</AuthenticatedShell>
-      </Hydrate>
+      </HydrationBoundary>
     </QueryClientProvider>
   )
 }
