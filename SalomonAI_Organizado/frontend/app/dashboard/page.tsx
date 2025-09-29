@@ -30,6 +30,17 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
+import { ScrollArea } from '../../components/ui/scroll-area';
+import { Switch } from '../../components/ui/switch';
+import { Label } from '../../components/ui/label';
 
 type ForecastDirection = 'upward' | 'downward' | 'stable';
 
@@ -80,6 +91,25 @@ type PersonalizedRecommendationsResponse = {
 
 type FeedbackStatus = 'idle' | 'sending' | 'sent' | 'error';
 
+type NotificationHistoryItem = {
+  id: string;
+  message: string;
+  read: boolean;
+  channel: 'email' | 'push' | 'sms' | 'in_app';
+  eventType?: string | null;
+  severity: 'info' | 'warning' | 'critical';
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+type UserNotificationPreferences = {
+  email?: boolean;
+  push?: boolean;
+  sms?: boolean;
+  mutedEvents?: { key: string; until?: string | null }[];
+  pushTokens?: string[];
+};
+
 type AccountSummary = {
   id: string | number;
   name: string;
@@ -119,6 +149,16 @@ export default function DashboardPage() {
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, FeedbackStatus>>({});
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [isAlertCenterOpen, setIsAlertCenterOpen] = useState(false);
+  const [alertNotifications, setAlertNotifications] = useState<NotificationHistoryItem[]>([]);
+  const [isLoadingAlertCenter, setIsLoadingAlertCenter] = useState(false);
+  const [alertCenterError, setAlertCenterError] = useState<string | null>(null);
+
+  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
+  const [notificationPreferences, setNotificationPreferences] = useState<UserNotificationPreferences | null>(null);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [preferencesError, setPreferencesError] = useState<string | null>(null);
 
   const [totals, setTotals] = useState<{
     balance: number;
@@ -164,6 +204,130 @@ export default function DashboardPage() {
       router.replace('/login');
     }
   }, [isLoading, router, user]);
+
+  useEffect(() => {
+    if (!isAlertCenterOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const fetchNotifications = async () => {
+      if (!user) {
+        setAlertNotifications([]);
+        setAlertCenterError('Debes iniciar sesión para ver el centro de alertas.');
+        return;
+      }
+
+      setIsLoadingAlertCenter(true);
+      setAlertCenterError(null);
+
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(`${apiBaseUrl}/api/v1/notifications?limit=50`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener notificaciones (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (cancelled) {
+          return;
+        }
+
+        const notifications: NotificationHistoryItem[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.notifications)
+          ? data.notifications
+          : [];
+
+        setAlertNotifications(notifications);
+      } catch (error) {
+        if (cancelled || (error instanceof DOMException && error.name === 'AbortError')) {
+          return;
+        }
+        console.error('No fue posible cargar las notificaciones del usuario', error);
+        setAlertCenterError('No fue posible cargar tus notificaciones. Intenta nuevamente.');
+        setAlertNotifications([]);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAlertCenter(false);
+        }
+      }
+    };
+
+    void fetchNotifications();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [apiBaseUrl, isAlertCenterOpen, user]);
+
+  useEffect(() => {
+    if (!isSettingsPanelOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const fetchPreferences = async () => {
+      if (!user) {
+        setNotificationPreferences(null);
+        setPreferencesError('Debes iniciar sesión para ver la configuración.');
+        return;
+      }
+
+      setIsLoadingPreferences(true);
+      setPreferencesError(null);
+
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(`${apiBaseUrl}/api/v1/notifications/preferences`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener preferencias (${response.status})`);
+        }
+
+        const data: UserNotificationPreferences = await response.json();
+        if (cancelled) {
+          return;
+        }
+
+        setNotificationPreferences(data);
+      } catch (error) {
+        if (cancelled || (error instanceof DOMException && error.name === 'AbortError')) {
+          return;
+        }
+        console.error('No fue posible cargar las preferencias de notificación', error);
+        setPreferencesError('No fue posible cargar tus preferencias. Intenta nuevamente.');
+        setNotificationPreferences(null);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingPreferences(false);
+        }
+      }
+    };
+
+    void fetchPreferences();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [apiBaseUrl, isSettingsPanelOpen, user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -590,6 +754,73 @@ export default function DashboardPage() {
     }
   };
 
+  const getNotificationSeverityStyles = (severity: NotificationHistoryItem['severity']) => {
+    switch (severity) {
+      case 'critical':
+        return 'bg-red-500/10 text-red-500 border border-red-500/20';
+      case 'warning':
+        return 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
+      default:
+        return 'bg-blue-500/10 text-blue-500 border border-blue-500/20';
+    }
+  };
+
+  const getNotificationSeverityLabel = (severity: NotificationHistoryItem['severity']) => {
+    switch (severity) {
+      case 'critical':
+        return 'Crítica';
+      case 'warning':
+        return 'Alerta';
+      default:
+        return 'Informativa';
+    }
+  };
+
+  const getNotificationChannelLabel = (channel: NotificationHistoryItem['channel']) => {
+    switch (channel) {
+      case 'email':
+        return 'Correo electrónico';
+      case 'push':
+        return 'Push';
+      case 'sms':
+        return 'SMS';
+      default:
+        return 'En la plataforma';
+    }
+  };
+
+  const formatNotificationDateTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return 'Fecha desconocida';
+    }
+    return new Intl.DateTimeFormat('es-CL', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  };
+
+  const formatMutedUntil = (until?: string | null) => {
+    if (!until) {
+      return 'Silenciado indefinidamente';
+    }
+
+    const date = new Date(until);
+    if (Number.isNaN(date.getTime())) {
+      return 'Silenciado hasta fecha desconocida';
+    }
+
+    return `Silenciado hasta ${new Intl.DateTimeFormat('es-CL', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date)}`;
+  };
+
   const handleRecommendationFeedback = async (recommendationId: string, score: number) => {
     if (!user) {
       return;
@@ -693,7 +924,12 @@ export default function DashboardPage() {
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAlertCenterOpen(true)}
+                aria-label="Abrir centro de alertas"
+              >
                 <Bell className="w-5 h-5" />
               </Button>
               <div className="flex items-center space-x-2">
@@ -707,7 +943,12 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground">{user?.email ?? 'Cuenta sin correo'}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSettingsPanelOpen(true)}
+                aria-label="Abrir configuración de notificaciones"
+              >
                 <Settings className="w-5 h-5" />
               </Button>
               <Button
@@ -728,7 +969,195 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">¡Hola, {greetingName}! 👋</h1>
           <p className="text-muted-foreground">Aquí tienes un resumen de tu situación financiera</p>
-        </div>
+      </div>
+
+      <Dialog open={isAlertCenterOpen} onOpenChange={setIsAlertCenterOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Centro de alertas</DialogTitle>
+            <DialogDescription>
+              Visualiza las notificaciones más recientes generadas para tu cuenta.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {isLoadingAlertCenter ? (
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Cargando notificaciones...</span>
+              </div>
+            ) : alertCenterError ? (
+              <p className="text-sm text-red-500">{alertCenterError}</p>
+            ) : alertNotifications.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aún no tienes notificaciones en tu centro de alertas.
+              </p>
+            ) : (
+              <ScrollArea className="max-h-[420px] pr-4">
+                <div className="space-y-4">
+                  {alertNotifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className="flex items-start gap-3 rounded-lg border border-border/60 bg-background/70 p-4"
+                    >
+                      <span
+                        className={`mt-1 h-2 w-2 rounded-full ${
+                          notification.read ? 'bg-muted-foreground/40' : 'bg-emerald-500'
+                        }`}
+                        aria-hidden
+                      />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getNotificationSeverityStyles(
+                                notification.severity,
+                              )}`}
+                            >
+                              {getNotificationSeverityLabel(notification.severity)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {getNotificationChannelLabel(notification.channel)}
+                            </span>
+                            {notification.eventType ? (
+                              <span className="text-xs text-muted-foreground">
+                                Evento: {notification.eventType}
+                              </span>
+                            ) : null}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatNotificationDateTime(notification.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed">{notification.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAlertCenterOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSettingsPanelOpen} onOpenChange={setIsSettingsPanelOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Configuración de notificaciones</DialogTitle>
+            <DialogDescription>
+              Revisa tus preferencias actuales para los distintos canales de alerta.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-6">
+            {isLoadingPreferences ? (
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Cargando configuración...</span>
+              </div>
+            ) : preferencesError ? (
+              <p className="text-sm text-red-500">{preferencesError}</p>
+            ) : notificationPreferences ? (
+              <>
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Canales disponibles
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium">Correo electrónico</p>
+                        <p className="text-xs text-muted-foreground">
+                          Recibe alertas en tu bandeja de entrada.
+                        </p>
+                      </div>
+                      <Switch checked={Boolean(notificationPreferences.email)} disabled />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium">Notificaciones push</p>
+                        <p className="text-xs text-muted-foreground">
+                          Actívalas para recibir avisos en tus dispositivos.
+                        </p>
+                      </div>
+                      <Switch checked={Boolean(notificationPreferences.push)} disabled />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium">Mensajes SMS</p>
+                        <p className="text-xs text-muted-foreground">
+                          Mantente informado con mensajes de texto.
+                        </p>
+                      </div>
+                      <Switch checked={Boolean(notificationPreferences.sms)} disabled />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Eventos silenciados
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Estos eventos no generarán notificaciones hasta que los habilites nuevamente.
+                    </p>
+                  </div>
+
+                  {notificationPreferences.mutedEvents && notificationPreferences.mutedEvents.length > 0 ? (
+                    <ScrollArea className="max-h-[220px] pr-3">
+                      <div className="space-y-3">
+                        {notificationPreferences.mutedEvents.map((event) => (
+                          <div
+                            key={event.key}
+                            className="rounded-lg border border-border/60 bg-background/70 px-4 py-3"
+                          >
+                            <p className="text-sm font-medium">{event.key}</p>
+                            <p className="text-xs text-muted-foreground">{formatMutedUntil(event.until)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No tienes eventos silenciados actualmente.
+                    </p>
+                  )}
+
+                  {notificationPreferences.pushTokens && notificationPreferences.pushTokens.length > 0 ? (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Dispositivos registrados</h4>
+                      <ul className="space-y-1 text-xs text-muted-foreground">
+                        {notificationPreferences.pushTokens.map((token) => (
+                          <li key={token} className="truncate">
+                            <Label className="font-normal text-xs text-muted-foreground">{token}</Label>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No fue posible cargar tu configuración actual.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSettingsPanelOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
         {/* Balance Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
