@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -14,7 +15,11 @@ export class AuthToken {
   id: string;
 
   @ManyToOne(() => User, user => user.authTokens, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @Column({ name: 'user_id' })
+  userId: string;
 
   @Column({ name: 'refresh_token_hash', nullable: false, select: false })
   refreshTokenHash: string;
