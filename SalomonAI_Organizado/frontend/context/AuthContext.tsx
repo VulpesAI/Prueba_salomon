@@ -98,7 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const buildApiUrl = useCallback(
     (path: string) => {
       const normalizedPath = path.startsWith("/") ? path : `/${path}`
-      return `${normalizedApiBaseUrl}/api/v1${normalizedPath}`
+      const baseUrl = normalizedApiBaseUrl.endsWith("/api/v1")
+        ? normalizedApiBaseUrl
+        : `${normalizedApiBaseUrl}/api/v1`
+
+      return `${baseUrl}${normalizedPath}`
     },
     [normalizedApiBaseUrl]
   )
