@@ -53,6 +53,7 @@ import { PrivacyModule } from './privacy/privacy.module';
     
     // Cache Management
     CacheModule.registerAsync({
+      isGlobal: true,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createCacheConfig(configService),

@@ -1,0 +1,139 @@
+import { CacheModule } from '@nestjs/cache-manager';
+import { BadRequestException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import axios from 'axios';
+import { OAuthService } from './oauth.service';
+import { TokenService } from './token.service';
+import { UserService } from '../users/user.service';
+import { SiemLoggerService } from '../security/siem-logger.service';
+import { ConfigService } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+
+describe('OAuthService', () => {
+  let service: OAuthService;
+  let cache: Cache;
+
+  const configService = {
+    get: jest.fn((key: string, defaultValue?: string) => {
+      const map: Record<string, string> = {
+        GOOGLE_CLIENT_ID: 'client-id',
+        GOOGLE_CLIENT_SECRET: 'client-secret',
+        GOOGLE_OAUTH_REDIRECT_URI: 'http://localhost/callback',
+      };
+
+      return map[key] ?? defaultValue;
+    }),
+  } as unknown as ConfigService;
+
+  const userService = {
+    upsertOAuthUser: jest.fn(),
+  } as unknown as UserService;
+
+  const tokenService = {
+    issueTokenPair: jest.fn(),
+  } as unknown as TokenService;
+
+  const siemLogger = {
+    logSecurityEvent: jest.fn().mockResolvedValue(undefined),
+  } as unknown as SiemLoggerService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [CacheModule.register()],
+      providers: [
+        OAuthService,
+        { provide: ConfigService, useValue: configService },
+        { provide: UserService, useValue: userService },
+        { provide: TokenService, useValue: tokenService },
+        { provide: SiemLoggerService, useValue: siemLogger },
+      ],
+    }).compile();
+
+    service = moduleRef.get(OAuthService);
+    cache = moduleRef.get(CACHE_MANAGER);
+  });
+
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await cache.reset?.();
+  });
+
+  it('stores state and codeVerifier when generating the authorization URL', async () => {
+    const result = await service.generateGoogleAuthorizationUrl();
+    const cached = await cache.get<{ codeVerifier: string }>(`oauth:google:${result.state}`);
+
+    expect(result.authorizationUrl).toContain(`state=${result.state}`);
+    expect(result.codeVerifier).toEqual(cached?.codeVerifier);
+  });
+
+  it('completes the callback when state is valid', async () => {
+    const stateData = await service.generateGoogleAuthorizationUrl();
+
+    jest.spyOn(axios, 'post').mockResolvedValue({
+      data: {
+        access_token: 'access',
+        refresh_token: 'refresh',
+        expires_in: 3600,
+        id_token: 'id-token',
+      },
+    });
+
+    jest.spyOn(axios, 'get').mockResolvedValue({
+      data: {
+        email: 'user@example.com',
+        name: 'User Example',
+        given_name: 'User',
+        picture: 'http://example.com/avatar.png',
+        sub: 'google-sub',
+      },
+    });
+
+    (userService.upsertOAuthUser as jest.Mock).mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      fullName: 'User Example',
+      roles: ['user'],
+      uid: 'uid-123',
+    });
+
+    (tokenService.issueTokenPair as jest.Mock).mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+
+    const response = await service.handleGoogleCallback({
+      code: 'auth-code',
+      codeVerifier: stateData.codeVerifier,
+      redirectUri: 'http://localhost/override',
+      state: stateData.state,
+    });
+
+    expect(response.user).toEqual(
+      expect.objectContaining({ id: 'user-id', email: 'user@example.com' }),
+    );
+    expect(await cache.get(`oauth:google:${stateData.state}`)).toBeUndefined();
+  });
+
+  it('rejects the callback when the state is missing or invalid', async () => {
+    await expect(
+      service.handleGoogleCallback({
+        code: 'auth-code',
+        codeVerifier: 'verifier',
+        redirectUri: 'http://localhost/override',
+        state: undefined as unknown as string,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.handleGoogleCallback({
+        code: 'auth-code',
+        codeVerifier: 'verifier',
+        redirectUri: 'http://localhost/override',
+        state: 'unknown-state',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
