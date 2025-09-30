@@ -17,8 +17,7 @@ export class GoogleOAuthCallbackDto {
   @IsUrl({ require_tld: false })
   redirectUri?: string;
 
-  @IsOptional()
   @IsString()
-  state?: string;
+  state: string;
 }
 

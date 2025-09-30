@@ -1,7 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { randomBytes, randomUUID, createHash } from 'crypto';
+import type { Cache } from 'cache-manager';
 import { UserService } from '../users/user.service';
 import { TokenService } from './token.service';
 import { SiemLoggerService } from '../security/siem-logger.service';
@@ -25,7 +32,14 @@ export class OAuthService {
     private readonly userService: UserService,
     private readonly tokenService: TokenService,
     private readonly siemLogger: SiemLoggerService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
+
+  private readonly GOOGLE_STATE_CACHE_PREFIX = 'oauth:google:';
+
+  private buildGoogleStateCacheKey(state: string) {
+    return `${this.GOOGLE_STATE_CACHE_PREFIX}${state}`;
+  }
 
   private getGoogleClientId(): string {
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
@@ -47,10 +61,16 @@ export class OAuthService {
     return override ?? this.configService.get<string>('GOOGLE_OAUTH_REDIRECT_URI', 'http://localhost:3000/auth/google/callback');
   }
 
-  generateGoogleAuthorizationUrl(redirectUri?: string) {
+  async generateGoogleAuthorizationUrl(redirectUri?: string) {
     const verifier = base64UrlEncode(randomBytes(32));
     const challenge = base64UrlEncode(createHash('sha256').update(verifier).digest());
     const state = randomUUID();
+
+    await this.cacheManager.set(
+      this.buildGoogleStateCacheKey(state),
+      { codeVerifier: verifier },
+      5 * 60 * 1000,
+    );
 
     const params = new URLSearchParams({
       client_id: this.getGoogleClientId(),
@@ -73,6 +93,20 @@ export class OAuthService {
   }
 
   async handleGoogleCallback(dto: GoogleOAuthCallbackDto) {
+    if (!dto.state) {
+      throw new BadRequestException('El estado de OAuth es requerido.');
+    }
+
+    const cacheKey = this.buildGoogleStateCacheKey(dto.state);
+    const cached = await this.cacheManager.get<{ codeVerifier: string }>(cacheKey);
+
+    if (!cached || cached.codeVerifier !== dto.codeVerifier) {
+      throw new BadRequestException('El estado de OAuth es inválido o ha expirado.');
+    }
+
+    await this.cacheManager.del(cacheKey);
+
+    const codeVerifier = cached.codeVerifier;
     const redirectUri = this.resolveRedirectUri(dto.redirectUri);
 
     let tokenResponse;
@@ -83,7 +117,7 @@ export class OAuthService {
           client_id: this.getGoogleClientId(),
           client_secret: this.getGoogleClientSecret(),
           code: dto.code,
-          code_verifier: dto.codeVerifier,
+          code_verifier: codeVerifier,
           grant_type: 'authorization_code',
           redirect_uri: redirectUri,
         }).toString(),
