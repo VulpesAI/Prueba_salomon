@@ -73,6 +73,24 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+let currentSession: AuthSession | null = null
+let refreshSessionHandler: (() => Promise<void>) | null = null
+let unauthorizedSessionHandler: (() => Promise<void>) | null = null
+
+export const getCurrentAuthSession = () => currentSession
+
+export const requestSessionRefresh = async () => {
+  if (!refreshSessionHandler) {
+    throw new Error("No refresh session handler registered")
+  }
+
+  await refreshSessionHandler()
+}
+
+export const invalidateAuthSession = async () => {
+  await unauthorizedSessionHandler?.()
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<FirebaseUser | null>(null)
@@ -165,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearRefreshTimer()
     sessionRef.current = null
     setSession(null)
+    currentSession = null
   }, [clearRefreshTimer])
 
   const handleUnauthorizedSession = useCallback(async () => {
@@ -239,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       sessionRef.current = nextSession
       setSession(nextSession)
+      currentSession = nextSession
 
       if (Number.isFinite(nextSession.expiresAt)) {
         scheduleRefresh(nextSession.expiresAt)
@@ -299,13 +319,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshSessionRef.current = refreshSession
+    refreshSessionHandler = refreshSession
 
     return () => {
       if (refreshSessionRef.current === refreshSession) {
         refreshSessionRef.current = null
       }
+      if (refreshSessionHandler === refreshSession) {
+        refreshSessionHandler = null
+      }
     }
   }, [refreshSession])
+
+  useEffect(() => {
+    unauthorizedSessionHandler = handleUnauthorizedSession
+
+    return () => {
+      if (unauthorizedSessionHandler === handleUnauthorizedSession) {
+        unauthorizedSessionHandler = null
+      }
+    }
+  }, [handleUnauthorizedSession])
 
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
