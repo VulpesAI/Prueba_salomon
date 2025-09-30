@@ -22,11 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  type NotificationChannel,
-  type NotificationSeverity,
-  useDashboardNotifications,
-} from "@/hooks/dashboard/use-dashboard-notifications"
+import { useDashboardNotifications } from "@/hooks/dashboard/use-dashboard-notifications"
+import type {
+  NotificationChannel,
+  NotificationSeverity,
+} from "@/types/dashboard"
 import { AlertCircle, Bell, RefreshCcw } from "lucide-react"
 
 const channelConfig: Record<
