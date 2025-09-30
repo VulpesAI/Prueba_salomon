@@ -12,6 +12,8 @@ import {
 
 import { useRouter } from "next/navigation"
 
+import { configureApiClientAuth } from "@/lib/api-client"
+
 import {
   getFirebaseAuth,
   getGoogleAuthProvider,
@@ -45,7 +47,7 @@ type BackendSessionResponse = {
   user: BackendUser
 }
 
-type AuthSession = {
+export type AuthSession = {
   accessToken: string
   refreshToken: string
   tokenType: string
@@ -306,6 +308,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [refreshSession])
+
+  useEffect(() => {
+    configureApiClientAuth({
+      getSession: () => sessionRef.current,
+      refreshSession,
+      onUnauthorized: handleUnauthorizedSession,
+    })
+  }, [handleUnauthorizedSession, refreshSession])
 
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
