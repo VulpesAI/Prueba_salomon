@@ -50,9 +50,7 @@ export default function AuthenticatedLayoutClient({
       <HydrationBoundary state={state}>
         <AuthenticatedShell>{children}</AuthenticatedShell>
       </HydrationBoundary>
-      {process.env.NODE_ENV === "development" ? (
-        <ReactQueryDevtools buttonPosition="bottom-right" initialIsOpen={false} />
-      ) : null}
+      {process.env.NODE_ENV === "development" ? <ReactQueryDevtools /> : null}
     </QueryClientProvider>
   )
 }
