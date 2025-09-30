@@ -166,26 +166,29 @@ const getEnvVar = (name: string): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const getRequiredEnvVar = (name: string): string => {
-  const value = getEnvVar(name);
-  if (value) {
-    return value;
-  }
-
-  throw new Error(
-    `Missing required Firebase environment variable: ${name}. ` +
-      "Define it in your .env configuration to connect your Firebase project."
-  );
+const fallbackConfig: Required<FirebaseOptions> = {
+  apiKey: "AIzaSyCx_hhaofaGJDCtL01BKfB3-LJsg4lAxmQ",
+  authDomain: "prueba-salomon-56821.firebaseapp.com",
+  projectId: "prueba-salomon-56821",
+  storageBucket: "prueba-salomon-56821.firebasestorage.app",
+  messagingSenderId: "327391238339",
+  appId: "1:327391238339:web:f03e4b517b7478a5286a76",
+  measurementId: "G-DEQ9GDQDJH",
 };
 
 const firebaseConfig: FirebaseOptions = {
-  apiKey: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_API_KEY"),
-  authDomain: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"),
-  projectId: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_PROJECT_ID"),
-  storageBucket: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"),
-  messagingSenderId: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
-  appId: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_APP_ID"),
-  measurementId: getEnvVar("NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID"),
+  apiKey: getEnvVar("NEXT_PUBLIC_FIREBASE_API_KEY") ?? fallbackConfig.apiKey,
+  authDomain:
+    getEnvVar("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN") ?? fallbackConfig.authDomain,
+  projectId: getEnvVar("NEXT_PUBLIC_FIREBASE_PROJECT_ID") ?? fallbackConfig.projectId,
+  storageBucket:
+    getEnvVar("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET") ?? fallbackConfig.storageBucket,
+  messagingSenderId:
+    getEnvVar("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID") ??
+    fallbackConfig.messagingSenderId,
+  appId: getEnvVar("NEXT_PUBLIC_FIREBASE_APP_ID") ?? fallbackConfig.appId,
+  measurementId:
+    getEnvVar("NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID") ?? fallbackConfig.measurementId,
 };
 
 let firebaseApp: FirebaseApp | null = null;
