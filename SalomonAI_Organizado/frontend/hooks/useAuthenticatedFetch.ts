@@ -51,7 +51,7 @@ export const useAuthenticatedFetch = () => {
     return `${tokenType} ${currentSession.accessToken}`
   }, [sessionRef])
 
-  const headers = useMemo<Record<string, string>>(() => {
+  const headers = useMemo<HeadersInit>(() => {
     const authorization = buildAuthorizationHeader()
     if (!authorization) {
       return {}
