@@ -3,18 +3,11 @@
 ## 1. Flujo de autenticación y variables públicas de Next.js
 
 ### AuthProvider y ciclo de vida de sesión
-- `AuthProvider` inicializa el estado consultando `getFirebaseAuth()` y suscribiéndose a `onAuthStateChanged` cuando el componente se monta en el navegador. El `user` y la bandera `isLoading` se actualizan con cada cambio de sesión, y se corta la suscripción al desmontar el componente.【F:frontend/context/AuthContext.tsx†L36-L79】
-- El proveedor expone acciones básicas (`login`, `signup`, `loginWithGoogle`, `resetPassword`, `logout`) que resuelven dinámicamente la instancia de autenticación de Firebase antes de cada operación, garantizando que el SDK esté listo y que siempre se ejecute en cliente.【F:frontend/context/AuthContext.tsx†L81-L123】
-- Cualquier hook o componente que dependa de la sesión debe consumir `useAuth()`, que valida que el contexto se utilice dentro del árbol de `AuthProvider` para evitar estados inconsistentes.【F:frontend/context/AuthContext.tsx†L125-L130】
-
-### Carga dinámica del SDK de Firebase
-- `frontend/lib/firebase.ts` realiza la carga diferida del SDK compat de Firebase insertando etiquetas `<script>` sólo en entorno de navegador y reutilizándolas si ya existen. El helper `ensureFirebaseNamespace()` serializa la carga de scripts y reutiliza la misma promesa para evitar condiciones de carrera.【F:frontend/lib/firebase.ts†L69-L156】
-- Antes de inicializar una app se valida que la configuración cuente con todas las claves obligatorias; si faltan se lanza un error explícito. De esta forma se evitan inicializaciones parciales y se loguea una advertencia para diagnósticos en ambientes incompletos.【F:frontend/lib/firebase.ts†L158-L209】
-- Los helpers `getFirebaseApp`, `getFirebaseAuth` y `getGoogleAuthProvider` aseguran que las APIs sólo se usen en el navegador y que la instancia se cree una vez. Las llamadas repetidas reutilizan la instancia almacenada en memoria.【F:frontend/lib/firebase.ts†L218-L247】
-- La inicialización de Analytics se maneja de forma opcional: sólo se carga el script cuando la función es invocada y cualquier error durante la carga deja la función resolviendo `null` para no bloquear el resto del flujo.【F:frontend/lib/firebase.ts†L249-L281】
+- `AuthProvider` ahora expone un contexto estático sin dependencias de Firebase: siempre entrega `user`, `backendUser` y `session` nulos y marca la carga como finalizada desde el inicio.【F:frontend/context/AuthContext.tsx†L1-L57】
+- Las operaciones `login`, `signup`, `loginWithGoogle` y `resetPassword` lanzan un error informativo indicando que la autenticación vía Firebase fue deshabilitada, mientras que `logout` es un no-op seguro.【F:frontend/context/AuthContext.tsx†L29-L57】
+- Los componentes deben seguir consumiendo `useAuth()` para obtener el valor centralizado y mantener la validación de contexto, aunque hoy las acciones sólo sirven como placeholders hasta definir un nuevo flujo de autenticación.【F:frontend/context/AuthContext.tsx†L59-L66】
 
 ### Variables `NEXT_PUBLIC_*`
-- `NEXT_PUBLIC_FIREBASE_*` define las credenciales del proyecto y se combinan con un `fallbackConfig` para ambientes de demo. Todas las claves críticas (`apiKey`, `authDomain`, etc.) deben estar presentes para que `ensureFirebaseApp` funcione.【F:frontend/lib/firebase.ts†L158-L209】
 - `NEXT_PUBLIC_CONVERSATION_ENGINE_URL` centraliza la URL del motor conversacional usado tanto por `useConversationEngine` como por `useFinancialSummary`. Si no está definida, ambos hooks apuntan a `http://localhost:8002` durante el desarrollo.【F:frontend/hooks/useConversationEngine.ts†L77-L206】【F:frontend/hooks/useFinancialSummary.ts†L11-L35】
 - `NEXT_PUBLIC_VOICE_GATEWAY_URL` fija la base REST/WebSocket del gateway de voz, con fallback a `http://localhost:8100` para entornos locales.【F:frontend/hooks/useVoiceGateway.ts†L27-L134】
 - `NEXT_PUBLIC_API_URL` y `NEXT_PUBLIC_FINANCIAL_PROVIDER` controlan el dashboard: la primera señala al backend core (`http://localhost:3000` por defecto) y la segunda decide qué integración financiera se habilita (actualmente sólo Belvo).【F:frontend/app/dashboard/page.tsx†L205-L402】【F:frontend/app/dashboard/page.tsx†L498-L590】
@@ -40,7 +33,6 @@
 ### Administración de estado y ciclos de carga
 - El dashboard mantiene estados diferenciados para totales, cuentas, transacciones, categorías, insights, pronósticos, alertas, recomendaciones y notificaciones, cada uno con sus propias banderas de carga y error para granularidad en la UI.【F:frontend/app/dashboard/page.tsx†L175-L292】
 - `fetchSummaryAndAccounts()` centraliza la carga inicial y los refrescos de totales, transacciones, desglose por categoría y cuentas conectadas. Maneja cancelaciones mediante `AbortController`, normaliza respuestas parciales y reestablece los estados de error cuando corresponde.【F:frontend/app/dashboard/page.tsx†L292-L421】
-- `refreshAccountsAndTransactions()` encapsula la obtención del token de Firebase y reutiliza la función anterior para forzar un refresco tras acciones como la conexión bancaria.【F:frontend/app/dashboard/page.tsx†L422-L456】
 
 ### Filtros y búsqueda de transacciones
 - Los filtros controlan rangos de fechas, categoría y montos, además de una búsqueda textual. La lista filtrada se recalcula con `useMemo`, aplicando los filtros activos y validando que las fechas y montos sean correctos antes de incluir cada transacción.【F:frontend/app/dashboard/page.tsx†L1208-L1347】
@@ -66,8 +58,8 @@
 - Simula respuestas del backend cuando sea necesario levantando servicios mock o interceptando requests en el runner de E2E para cubrir estados de error (por ejemplo, fallos en `/dashboard/summary` o `POST /voice/speech`).
 
 ### Configuración de entornos
-- **Desarrollo local:** define `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CONVERSATION_ENGINE_URL`, `NEXT_PUBLIC_VOICE_GATEWAY_URL` y `NEXT_PUBLIC_FINANCIAL_PROVIDER`. Los hooks proveen valores por defecto (`localhost`) para acelerar la configuración, pero la autenticación sólo funcionará correctamente con credenciales válidas.【F:frontend/lib/firebase.ts†L158-L281】【F:frontend/hooks/useConversationEngine.ts†L77-L206】【F:frontend/hooks/useVoiceGateway.ts†L27-L141】
-- **QA/Staging:** utiliza proyectos de Firebase y endpoints de backend separados. Habilita Analytics llamando a `getFirebaseAnalytics()` dentro de `_app.tsx` o un efecto global si necesitas telemetría. Verifica que el dominio permita cargar el SDK de Belvo.
+- **Desarrollo local:** define `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CONVERSATION_ENGINE_URL`, `NEXT_PUBLIC_VOICE_GATEWAY_URL` y `NEXT_PUBLIC_FINANCIAL_PROVIDER`. Los hooks proveen valores por defecto (`localhost`) para acelerar la configuración del resto de la experiencia.【F:frontend/hooks/useConversationEngine.ts†L77-L206】【F:frontend/hooks/useVoiceGateway.ts†L27-L141】
+- **QA/Staging:** sincroniza las variables públicas con los servicios correspondientes (API core, motor conversacional, voice gateway y Belvo). Si se reincorpora un proveedor de autenticación, defínelo explícitamente en este entorno antes de habilitar el acceso a usuarios externos.
 - **Producción:** asegura que todas las variables `NEXT_PUBLIC_*` estén definidas en el entorno de despliegue (por ejemplo, variables de entorno en Vercel o contenedores). Configura HTTPS en los endpoints del motor conversacional y voice gateway para evitar bloqueos del navegador, y revisa los orígenes permitidos por Belvo.
 
 ---

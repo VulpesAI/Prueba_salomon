@@ -14,13 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import type { FirebaseUser } from "@/lib/firebase"
+import type { AuthUser } from "@/context/AuthContext"
 import { postLoginNavigation } from "@/src/config/post-login-navigation"
 import { flattenNavigation } from "./navigation-utils"
 import { Bell, LogOut, Search } from "lucide-react"
 
 type TopbarActionsProps = {
-  user: FirebaseUser
+  user: AuthUser
   onLogout?: () => Promise<void>
 }
 
@@ -29,8 +29,8 @@ const quickActions = flattenNavigation(postLoginNavigation)
   .map(({ item }) => item)
   .slice(0, 3)
 
-const getInitials = (user: FirebaseUser) => {
-  if (user.displayName) {
+const getInitials = (user: AuthUser) => {
+  if (user?.displayName) {
     return user.displayName
       .split(" ")
       .map((part) => part[0])
@@ -39,7 +39,7 @@ const getInitials = (user: FirebaseUser) => {
       .toUpperCase()
   }
 
-  if (user.email) {
+  if (user?.email) {
     return user.email.slice(0, 2).toUpperCase()
   }
 
@@ -86,12 +86,14 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="gap-2">
             <Avatar className="h-8 w-8">
-              {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.displayName ?? ""} /> : null}
+              {user?.photoURL ? (
+                <AvatarImage src={user.photoURL} alt={user.displayName ?? ""} />
+              ) : null}
               <AvatarFallback>{getInitials(user)}</AvatarFallback>
             </Avatar>
             <div className="hidden flex-col text-left leading-tight sm:flex">
-              <span className="text-sm font-medium">{user.displayName ?? "Usuario"}</span>
-              {user.email ? (
+              <span className="text-sm font-medium">{user?.displayName ?? "Usuario"}</span>
+              {user?.email ? (
                 <span className="text-xs text-muted-foreground">{user.email}</span>
               ) : null}
             </div>
