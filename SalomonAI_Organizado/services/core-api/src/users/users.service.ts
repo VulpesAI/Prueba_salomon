@@ -129,22 +129,26 @@ export class UsersService {
   }): Promise<User> {
     let user = await this.findByUid(firebaseUser.uid);
 
-    if (!user) {
-      // Si el usuario no existe, créalo
-      user = await this.createFromFirebase(firebaseUser);
-    } else {
-      // Si existe, actualiza la información
-      user.email = firebaseUser.email;
-      user.displayName = firebaseUser.displayName;
-      user.photoURL = firebaseUser.photoURL;
-      user.emailVerified = firebaseUser.emailVerified || false;
-      user.phoneNumber = firebaseUser.phoneNumber;
-      user.metadata = firebaseUser.metadata;
-      
-      user = await this.usersRepository.save(user);
+    if (!user && firebaseUser.email) {
+      // Si no encontramos por UID, intentar reconciliar por email para cuentas existentes
+      user = await this.findByEmail(firebaseUser.email);
     }
 
-    return user;
+    if (!user) {
+      // Si el usuario no existe, créalo
+      return this.createFromFirebase(firebaseUser);
+    }
+
+    // Si existe, actualiza la información y asegura que el UID quede sincronizado
+    user.uid = firebaseUser.uid;
+    user.email = firebaseUser.email;
+    user.displayName = firebaseUser.displayName;
+    user.photoURL = firebaseUser.photoURL;
+    user.emailVerified = firebaseUser.emailVerified || false;
+    user.phoneNumber = firebaseUser.phoneNumber;
+    user.metadata = firebaseUser.metadata;
+
+    return this.usersRepository.save(user);
   }
 
   /**
