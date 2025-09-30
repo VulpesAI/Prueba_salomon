@@ -113,6 +113,30 @@ services:
       timeout: 5s
       retries: 3
 
+  financial-connector:
+    build:
+      context: ./services/financial-connector
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8000"
+    volumes:
+      - ./services/financial-connector:/app
+    env_file:
+      - .env
+    environment:
+      - PORT=8000
+    depends_on:
+      core-api:
+        condition: service_started
+    networks:
+      - salomon-net
+    command: uvicorn server:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   conversation-engine:
     build:
       context: ./services/conversation-engine

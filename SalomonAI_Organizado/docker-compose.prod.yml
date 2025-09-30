@@ -114,6 +114,22 @@ services:
       restart_policy:
         condition: on-failure
 
+  financial-connector:
+    image: ${REGISTRY:-localhost}/salomon/financial-connector:prod
+    build:
+      context: ./services/financial-connector
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8000
+    depends_on:
+      core-api:
+        condition: service_started
+    networks:
+      - salomon-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+
   # Nginx como API Gateway y servidor estático
   nginx:
     image: nginx:alpine
