@@ -11,6 +11,7 @@ Este documento resume la topología declarada en [`docker-compose.yml`](../../do
 | `frontend` | Build `./frontend` (`npm run dev`) | `3001->3000` | — | `wget http://localhost:3000` | Aplicación Next.js para experiencia web; consume `core-api`, `conversation-engine` y `voice-gateway`. |
 | `parsing-engine` | Build `./services/parsing-engine` | — | `kafka`, `core-api` | — | Microservicio Python que procesa documentos publicados en Kafka y guarda resultados compartiendo volumen `/uploads`. |
 | `recommendation-engine` | Build `./services/recommendation-engine` | `8001->8000` | — | `curl http://localhost:8000/health` | API FastAPI que entrega recomendaciones financieras al `core-api`. |
+| `financial-connector` | Build `./services/financial-connector` | `8004->8000` | `core-api` (started) | `curl http://localhost:8000/health` | Conector FastAPI que orquesta sincronizaciones bancarias y cargas de archivos hacia Belvo. |
 | `conversation-engine` | Build `./services/conversation-engine` | `8002` | `core-api` (started) | `curl http://localhost:8002/health` | Motor conversacional que se comunica con `core-api` para obtener contexto vía `CORE_API_BASE_URL`. |
 | `forecasting-engine` | Build `./services/forecasting-engine` | `8003` | `postgres` (healthy) | `curl http://localhost:8003/health` | Servicio de pronósticos que lee/escribe en Postgres mediante URL configurables. |
 | `voice-gateway` | Build `./services/voice-gateway` | `8100` | `conversation-engine` | `curl http://localhost:8100/health` | Pasarela de voz que encapsula STT/TTS y delega lógica conversacional al `conversation-engine`. |
@@ -21,6 +22,7 @@ Este documento resume la topología declarada en [`docker-compose.yml`](../../do
 ### Notas de dependencia
 
 - `parsing-engine` necesita acceso al volumen `uploads_volume` para intercambiar archivos con `core-api`.
+- `financial-connector` expone los endpoints usados por las pantallas de cuentas, transacciones y dashboard para disparar sincronizaciones y cargas desde Belvo.
 - Los microservicios Python se conectan a Kafka (`kafka:9092`) para suscribirse a tópicos definidos en las variables de entorno.
 - `forecasting-engine` y `core-api` dependen de Postgres para persistencia; `core-api` también inicializa colecciones en Qdrant.
 
