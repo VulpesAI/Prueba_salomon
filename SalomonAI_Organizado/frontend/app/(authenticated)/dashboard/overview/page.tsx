@@ -43,12 +43,12 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { useDashboardIntelligence } from "@/hooks/dashboard/use-dashboard-intelligence"
+import { useDashboardNotifications } from "@/hooks/dashboard/use-dashboard-notifications"
+import { useDashboardOverview } from "@/hooks/dashboard/use-dashboard-overview"
 import type {
   NotificationHistoryItem,
   UserNotificationPreferences,
-} from "@/hooks/dashboard/use-dashboard-notifications"
-import { useDashboardNotifications } from "@/hooks/dashboard/use-dashboard-notifications"
-import { useDashboardOverview } from "@/hooks/dashboard/use-dashboard-overview"
+} from "@/types/dashboard"
 import {
   Activity,
   AlertTriangle,
