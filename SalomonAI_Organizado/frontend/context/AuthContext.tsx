@@ -18,7 +18,9 @@ import {
   getFirebaseAuth,
   getGoogleAuthProvider,
   type FirebaseAuth,
+  type FirebaseAuthProvider,
   type FirebaseUser,
+  type FirebaseUserCredential,
 } from "@/lib/firebase"
 
 type BackendUser = {
@@ -482,7 +484,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const auth = await getFirebaseAuth()
     const provider = await getGoogleAuthProvider()
     provider.setCustomParameters({ prompt: "select_account" })
-    const credential = await auth.signInWithPopup(provider)
+
+    let credential: FirebaseUserCredential | null = null
+
+    try {
+      credential = await auth.signInWithPopup(provider)
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code?: string }).code === "auth/popup-blocked"
+      ) {
+        const redirectCapableAuth = auth as FirebaseAuth & {
+          signInWithRedirect?: (
+            provider: FirebaseAuthProvider
+          ) => Promise<void>
+          getRedirectResult?: () => Promise<FirebaseUserCredential | null>
+        }
+
+        if (
+          typeof redirectCapableAuth.signInWithRedirect !== "function" ||
+          typeof redirectCapableAuth.getRedirectResult !== "function"
+        ) {
+          throw error
+        }
+
+        await redirectCapableAuth.signInWithRedirect(provider)
+        credential = await redirectCapableAuth.getRedirectResult()
+      } else {
+        throw error
+      }
+    }
+
+    if (!credential?.user) {
+      throw new Error("Google login failed to acquire credentials")
+    }
+
     setUser(credential.user)
 
     try {
