@@ -33,7 +33,6 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/dashboard/overview');
     } catch (err) {
       console.error('Firebase login error:', err);
       setError('No pudimos iniciar sesión con esas credenciales. Intenta nuevamente.');
@@ -48,7 +47,6 @@ export default function LoginPage() {
 
     try {
       await loginWithGoogle();
-      router.push('/dashboard/overview');
     } catch (err) {
       console.error('Google login error:', err);
       setError('No pudimos iniciar sesión con Google. Intenta de nuevo.');
