@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBPIgdQ9kZFyUEDfCyPsDgRyzyabvuLkmo",
-  authDomain: "prueba-salomon.firebaseapp.com",
-  projectId: "prueba-salomon",
-  storageBucket: "prueba-salomon.appspot.com",
-  messagingSenderId: "933892716551",
-  appId: "1:933892716551:web:cb3872e02fa775ad3b12a2",
-  measurementId: "G-KXWWZP4CMF"
+  apiKey: "AIzaSyCx_hhaofaGJDCtL01BKfB3-LJsg4lAxmQ",
+  authDomain: "prueba-salomon-56821.firebaseapp.com",
+  projectId: "prueba-salomon-56821",
+  storageBucket: "prueba-salomon-56821.firebasestorage.app",
+  messagingSenderId: "327391238339",
+  appId: "1:327391238339:web:f03e4b517b7478a5286a76",
+  measurementId: "G-DEQ9GDQDJH"
 };
 
 const app = initializeApp(firebaseConfig);
