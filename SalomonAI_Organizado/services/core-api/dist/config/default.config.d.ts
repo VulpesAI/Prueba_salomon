@@ -20,6 +20,14 @@ export declare const DEFAULT_CONFIG: {
         readonly url: "http://qdrant:6333";
         readonly collectionName: "transactions";
     };
+    readonly forecasting: {
+        readonly engineUrl: "http://forecasting-engine:8003";
+        readonly horizonDays: 30;
+    };
+    readonly recommendations: {
+        readonly engineUrl: "http://recommendation-engine:8004";
+        readonly timeoutMs: 8000;
+    };
     readonly api: {
         readonly globalPrefix: "api/v1";
         readonly corsOrigin: "http://localhost:3001";

@@ -8,13 +8,22 @@ const helmet_1 = require("helmet");
 const compression_1 = require("compression");
 const app_config_1 = require("./config/app.config");
 const nest_winston_1 = require("nest-winston");
+const tls_util_1 = require("./security/tls.util");
 async function bootstrap() {
+    const httpsOptions = await (0, tls_util_1.loadTlsOptionsFromEnv)();
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         bufferLogs: true,
+        ...(httpsOptions ? { httpsOptions } : {}),
     });
     const configService = app.get(config_1.ConfigService);
     const logger = app.get(nest_winston_1.WINSTON_MODULE_NEST_PROVIDER);
     app.useLogger(logger);
+    if (httpsOptions) {
+        logger.log('🔐 TLS 1.3 habilitado con certificados gestionados vía KMS.');
+    }
+    else {
+        logger.warn('TLS no habilitado. Se ejecutará sobre HTTP hasta que se configuren certificados.');
+    }
     app.use((0, helmet_1.default)({
         contentSecurityPolicy: {
             directives: {

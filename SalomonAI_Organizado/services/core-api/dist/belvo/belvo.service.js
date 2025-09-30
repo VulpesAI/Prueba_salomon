@@ -64,6 +64,28 @@ let BelvoService = class BelvoService {
             throw new common_1.HttpException(`Error creando link bancario: ${error.response?.data?.message || error.message}`, common_1.HttpStatus.BAD_REQUEST);
         }
     }
+    async createWidgetSession(externalId, scopes = [
+        'read_institutions',
+        'write_links',
+        'read_links',
+        'write_accounts',
+        'read_accounts',
+        'write_transactions',
+        'read_transactions',
+    ]) {
+        try {
+            const config = this.getRequestConfig();
+            const payload = {
+                scopes,
+                ...(externalId ? { external_id: externalId } : {}),
+            };
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.baseUrl}/api/token/`, payload, config));
+            return response.data;
+        }
+        catch (error) {
+            throw new common_1.HttpException(`Error creando sesión de widget: ${error.response?.data?.message || error.message}`, common_1.HttpStatus.BAD_REQUEST);
+        }
+    }
     async getAccounts(linkId) {
         try {
             const config = this.getRequestConfig();

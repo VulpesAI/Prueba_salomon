@@ -24,6 +24,14 @@ exports.default = (0, config_1.registerAs)('app', () => ({
         url: process.env.QDRANT_URL || default_config_1.DEFAULT_CONFIG.qdrant.url,
         collectionName: process.env.QDRANT_COLLECTION || default_config_1.DEFAULT_CONFIG.qdrant.collectionName,
     },
+    forecasting: {
+        engineUrl: process.env.FORECASTING_ENGINE_URL || default_config_1.DEFAULT_CONFIG.forecasting.engineUrl,
+        horizonDays: parseInt(process.env.FORECASTING_DEFAULT_HORIZON_DAYS ?? '', 10) || default_config_1.DEFAULT_CONFIG.forecasting.horizonDays,
+    },
+    recommendations: {
+        engineUrl: process.env.RECOMMENDATION_ENGINE_URL || default_config_1.DEFAULT_CONFIG.recommendations.engineUrl,
+        timeoutMs: parseInt(process.env.RECOMMENDATION_ENGINE_TIMEOUT_MS ?? '', 10) || default_config_1.DEFAULT_CONFIG.recommendations.timeoutMs,
+    },
     api: {
         globalPrefix: default_config_1.DEFAULT_CONFIG.api.globalPrefix,
         corsOrigin: process.env.FRONTEND_URL || default_config_1.DEFAULT_CONFIG.api.corsOrigin,

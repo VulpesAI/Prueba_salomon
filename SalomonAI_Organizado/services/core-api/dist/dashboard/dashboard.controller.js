@@ -16,9 +16,16 @@ exports.DashboardController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const financial_movements_service_1 = require("../financial-movements/financial-movements.service");
+const financial_forecasts_service_1 = require("../financial-forecasts/financial-forecasts.service");
+const goals_service_1 = require("../goals/goals.service");
+const recommendations_service_1 = require("./recommendations.service");
+const submit_recommendation_feedback_dto_1 = require("./dto/submit-recommendation-feedback.dto");
 let DashboardController = class DashboardController {
-    constructor(financialMovementsService) {
+    constructor(financialMovementsService, financialForecastsService, goalsService, recommendationsService) {
         this.financialMovementsService = financialMovementsService;
+        this.financialForecastsService = financialForecastsService;
+        this.goalsService = goalsService;
+        this.recommendationsService = recommendationsService;
     }
     async getDashboardSummary(req) {
         const userId = req.user.id;
@@ -52,6 +59,7 @@ let DashboardController = class DashboardController {
             return acc;
         }, {});
         const weeklyTrends = this.calculateWeeklyTrends(movements);
+        const goalsOverview = await this.goalsService.getDashboardOverview(userId);
         return {
             summary: {
                 totalIncome,
@@ -65,6 +73,7 @@ let DashboardController = class DashboardController {
             },
             categories: categoryBreakdown,
             trends: weeklyTrends,
+            goals: goalsOverview,
             recentTransactions: movements
                 .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime())
                 .slice(0, 10)
@@ -77,6 +86,10 @@ let DashboardController = class DashboardController {
                 currency: m.currency,
             })),
         };
+    }
+    async getGoalsOverview(req) {
+        const userId = req.user.id;
+        return this.goalsService.getDashboardOverview(userId);
     }
     async getMovements(req, page, limit, category, startDate, endDate) {
         const userId = req.user.id;
@@ -98,6 +111,35 @@ let DashboardController = class DashboardController {
             })),
             pagination: result.meta,
         };
+    }
+    async getForecasts(req) {
+        const userId = req.user.id;
+        const summary = await this.financialForecastsService.getForecastSummary(userId);
+        if (!summary) {
+            return {
+                modelType: 'none',
+                generatedAt: null,
+                horizonDays: 0,
+                historyDays: 0,
+                forecasts: [],
+                trend: {
+                    direction: 'stable',
+                    change: 0,
+                    changePercentage: 0,
+                },
+            };
+        }
+        return summary;
+    }
+    async getPersonalizedRecommendations(req, refresh) {
+        const userId = req.user.id;
+        const shouldRefresh = (refresh ?? 'false').toLowerCase() === 'true';
+        return this.recommendationsService.getPersonalizedRecommendations(userId, shouldRefresh);
+    }
+    async submitRecommendationFeedback(req, payload) {
+        const userId = req.user.id;
+        await this.recommendationsService.sendFeedback(userId, payload);
+        return { status: 'received' };
     }
     async getSpendingAnalysis(req, months) {
         const userId = req.user.id;
@@ -185,6 +227,14 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], DashboardController.prototype, "getDashboardSummary", null);
 __decorate([
+    (0, common_1.Get)('goals'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "getGoalsOverview", null);
+__decorate([
     (0, common_1.Get)('movements'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Request)()),
@@ -198,6 +248,32 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], DashboardController.prototype, "getMovements", null);
 __decorate([
+    (0, common_1.Get)('forecasts'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "getForecasts", null);
+__decorate([
+    (0, common_1.Get)('recommendations/personalized'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('refresh')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "getPersonalizedRecommendations", null);
+__decorate([
+    (0, common_1.Post)('recommendations/feedback'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, submit_recommendation_feedback_dto_1.SubmitRecommendationFeedbackDto]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "submitRecommendationFeedback", null);
+__decorate([
     (0, common_1.Get)('spending-analysis'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Request)()),
@@ -208,6 +284,9 @@ __decorate([
 ], DashboardController.prototype, "getSpendingAnalysis", null);
 exports.DashboardController = DashboardController = __decorate([
     (0, common_1.Controller)('dashboard'),
-    __metadata("design:paramtypes", [financial_movements_service_1.FinancialMovementsService])
+    __metadata("design:paramtypes", [financial_movements_service_1.FinancialMovementsService,
+        financial_forecasts_service_1.FinancialForecastsService,
+        goals_service_1.GoalsService,
+        recommendations_service_1.RecommendationsService])
 ], DashboardController);
 //# sourceMappingURL=dashboard.controller.js.map

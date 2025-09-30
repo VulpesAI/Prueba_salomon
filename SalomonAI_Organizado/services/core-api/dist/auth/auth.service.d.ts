@@ -1,16 +1,31 @@
-import { JwtService } from '@nestjs/jwt';
-import { UserService } from '../users/user.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { UserService } from '../users/user.service';
+import { TokenService, TokenPair } from './token.service';
+import { SiemLoggerService } from '../security/siem-logger.service';
 export declare class AuthService {
     private readonly userService;
-    private readonly jwtService;
-    constructor(userService: UserService, jwtService: JwtService);
-    validateUser(email: string, pass: string): Promise<any>;
+    private readonly tokenService;
+    private readonly siemLogger;
+    constructor(userService: UserService, tokenService: TokenService, siemLogger: SiemLoggerService);
+    private sanitizeUser;
+    validateUser(email: string, password: string, mfaToken?: string): Promise<any>;
     login(user: {
-        email: string;
         id: string;
+        email: string;
+        roles?: string[];
+        mfaEnabled?: boolean;
     }): Promise<{
-        access_token: string;
+        user: {
+            id: string;
+            email: string;
+            roles?: string[];
+            mfaEnabled?: boolean;
+        };
+        accessToken: string;
+        refreshToken: string;
+        tokenType: "Bearer";
+        expiresIn: number;
+        refreshTokenExpiresAt: string;
     }>;
     generateJwtToken(payload: {
         id: string;
@@ -18,50 +33,16 @@ export declare class AuthService {
         uid?: string;
         roles?: string[];
     }): Promise<string>;
-    register(createUserDto: CreateUserDto): Promise<{
-        id: string;
-        uid: string;
-        email: string;
-        fullName: string;
-        displayName: string;
-        photoURL: string;
-        emailVerified: boolean;
-        phoneNumber: string;
-        metadata: {
-            creationTime?: string;
-            lastSignInTime?: string;
-        };
-        roles: string[];
-        isActive: boolean;
-        preferences: {
-            currency?: string;
-            timezone?: string;
-            language?: string;
-            notifications?: {
-                email?: boolean;
-                push?: boolean;
-                sms?: boolean;
-            };
-            privacy?: {
-                shareData?: boolean;
-                analytics?: boolean;
-            };
-        };
-        profile: {
-            dateOfBirth?: string;
-            occupation?: string;
-            income?: number;
-            financialGoals?: string[];
-            riskTolerance?: "low" | "medium" | "high";
-            investmentExperience?: "none" | "basic" | "intermediate" | "advanced";
-        };
-        createdAt: Date;
-        updatedAt: Date;
-        movements: import("../financial-movements/entities/financial-movement.entity").FinancialMovement[];
-        classificationRules: import("../classification-rules/entities/user-classification-rule.entity").UserClassificationRule[];
-        notifications: import("../notifications/entities/notification.entity").Notification[];
-        transactions: import("../transactions/entities/transaction.entity").Transaction[];
-        accounts: FinancialAccount[];
-        bankConnections: import("../belvo/entities/bank-connection.entity").BankConnection[];
+    register(createUserDto: CreateUserDto): Promise<any>;
+    initiateMfaEnrollment(userId: string): Promise<{
+        secret: string;
+        otpauthUrl: string;
+    }>;
+    verifyMfaEnrollment(userId: string, token: string): Promise<{
+        backupCodes: string[];
+    }>;
+    disableMfa(userId: string, token?: string, backupCode?: string): Promise<void>;
+    refreshTokens(refreshToken: string): Promise<TokenPair & {
+        user: any;
     }>;
 }

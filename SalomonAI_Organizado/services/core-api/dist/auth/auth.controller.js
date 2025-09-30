@@ -19,6 +19,11 @@ const local_auth_guard_1 = require("./local-auth.guard");
 const create_user_dto_1 = require("../users/dto/create-user.dto");
 const firebase_admin_service_1 = require("../firebase/firebase-admin.service");
 const users_service_1 = require("../users/users.service");
+const jwt_auth_guard_1 = require("./jwt-auth.guard");
+const verify_mfa_dto_1 = require("./dto/verify-mfa.dto");
+const disable_mfa_dto_1 = require("./dto/disable-mfa.dto");
+const refresh_token_dto_1 = require("./dto/refresh-token.dto");
+const login_user_dto_1 = require("./dto/login-user.dto");
 let AuthController = class AuthController {
     constructor(authService, firebaseAdminService, usersService) {
         this.authService = authService;
@@ -28,8 +33,21 @@ let AuthController = class AuthController {
     async register(createUserDto) {
         return this.authService.register(createUserDto);
     }
-    async login(req) {
+    async login(req, _loginDto) {
         return this.authService.login(req.user);
+    }
+    async refreshTokens(dto) {
+        return this.authService.refreshTokens(dto.refreshToken);
+    }
+    async setupMfa(req) {
+        return this.authService.initiateMfaEnrollment(req.user.id);
+    }
+    async verifyMfa(req, dto) {
+        return this.authService.verifyMfaEnrollment(req.user.id, dto.token);
+    }
+    async disableMfa(req, dto) {
+        await this.authService.disableMfa(req.user.id, dto.token, dto.backupCode);
+        return { message: 'MFA desactivado correctamente' };
     }
     async firebaseLogin(authHeader) {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -51,25 +69,15 @@ let AuthController = class AuthController {
                     lastSignInTime: firebaseUser.metadata.lastSignInTime,
                 },
             });
-            const jwtToken = await this.authService.generateJwtToken({
+            const session = await this.authService.login({
                 id: user.id,
                 email: user.email,
-                uid: user.uid,
                 roles: user.roles,
+                mfaEnabled: user.mfaEnabled,
             });
             return {
-                access_token: jwtToken,
-                user: {
-                    id: user.id,
-                    uid: user.uid,
-                    email: user.email,
-                    displayName: user.displayName,
-                    photoURL: user.photoURL,
-                    emailVerified: user.emailVerified,
-                    phoneNumber: user.phoneNumber,
-                    roles: user.roles,
-                    preferences: user.preferences,
-                },
+                ...session,
+                access_token: session.accessToken,
             };
         }
         catch (error) {
@@ -88,14 +96,16 @@ let AuthController = class AuthController {
             return {
                 valid: true,
                 uid: decodedToken.uid,
-                user: user ? {
-                    id: user.id,
-                    email: user.email,
-                    displayName: user.displayName,
-                    photoURL: user.photoURL,
-                    emailVerified: user.emailVerified,
-                    roles: user.roles,
-                } : null,
+                user: user
+                    ? {
+                        id: user.id,
+                        email: user.email,
+                        displayName: user.displayName,
+                        photoURL: user.photoURL,
+                        emailVerified: user.emailVerified,
+                        roles: user.roles,
+                    }
+                    : null,
             };
         }
         catch (error) {
@@ -119,10 +129,45 @@ __decorate([
     (0, common_1.UseGuards)(local_auth_guard_1.LocalAuthGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, login_user_dto_1.LoginUserDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('token/refresh'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [refresh_token_dto_1.RefreshTokenDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "refreshTokens", null);
+__decorate([
+    (0, common_1.Post)('mfa/setup'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "login", null);
+], AuthController.prototype, "setupMfa", null);
+__decorate([
+    (0, common_1.Post)('mfa/verify'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, verify_mfa_dto_1.VerifyMfaDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "verifyMfa", null);
+__decorate([
+    (0, common_1.Post)('mfa/disable'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, disable_mfa_dto_1.DisableMfaDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "disableMfa", null);
 __decorate([
     (0, common_1.Post)('firebase/login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),

@@ -57,6 +57,32 @@ let BelvoController = class BelvoController {
             },
         };
     }
+    async createWidgetToken(req) {
+        const session = await this.belvoService.createWidgetSession(req.user.id);
+        return {
+            token: session.access,
+            refreshToken: session.refresh ?? null,
+            expiresIn: session.expires_in ?? null,
+        };
+    }
+    async createConnectionFromWidget(req, body) {
+        if (!body?.linkId) {
+            throw new common_1.BadRequestException('linkId es requerido');
+        }
+        const connection = await this.bankConnectionService.createConnectionFromLink(req.user.id, body.linkId);
+        return {
+            connection: {
+                id: connection.id,
+                institutionName: connection.institutionName,
+                institutionType: connection.institutionType,
+                status: connection.status,
+                accountsCount: connection.accountsCount,
+                createdAt: connection.createdAt,
+                lastAccessedAt: connection.lastAccessedAt,
+                isHealthy: connection.isHealthy,
+            },
+        };
+    }
     async getUserConnections(req) {
         const connections = await this.bankConnectionService.getUserConnections(req.user.id);
         return {
@@ -194,6 +220,21 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], BelvoController.prototype, "createConnection", null);
+__decorate([
+    (0, common_1.Post)('widget/token'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], BelvoController.prototype, "createWidgetToken", null);
+__decorate([
+    (0, common_1.Post)('widget/connections'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], BelvoController.prototype, "createConnectionFromWidget", null);
 __decorate([
     (0, common_1.Get)('connections'),
     __param(0, (0, common_1.Request)()),

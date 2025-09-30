@@ -8,12 +8,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClassificationModule = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
 const cache_manager_1 = require("@nestjs/cache-manager");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const schedule_1 = require("@nestjs/schedule");
 const throttler_1 = require("@nestjs/throttler");
 const classification_service_1 = require("./classification.service");
+const classification_label_entity_1 = require("./entities/classification-label.entity");
 const classification_controller_1 = require("./classification.controller");
+const financial_movement_entity_1 = require("../financial-movements/entities/financial-movement.entity");
+const kafka_module_1 = require("../kafka/kafka.module");
 const nlp_module_1 = require("../nlp/nlp.module");
 const qdrant_module_1 = require("../qdrant/qdrant.module");
 let ClassificationModule = class ClassificationModule {
@@ -24,6 +28,8 @@ exports.ClassificationModule = ClassificationModule = __decorate([
         imports: [
             nlp_module_1.NlpModule,
             qdrant_module_1.QdrantModule,
+            kafka_module_1.KafkaModule,
+            typeorm_1.TypeOrmModule.forFeature([classification_label_entity_1.ClassificationLabel, financial_movement_entity_1.FinancialMovement]),
             cache_manager_1.CacheModule.register({
                 ttl: 300,
                 max: 100,

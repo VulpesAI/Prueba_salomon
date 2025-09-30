@@ -7,6 +7,10 @@ export declare class FinancialMovement {
     transactionDate: Date;
     category: string;
     embedding: number[];
+    classificationConfidence?: number;
+    classificationModelVersion?: string;
+    classificationReviewedAt?: Date;
+    classificationMetadata?: Record<string, any>;
     user: User;
     createdAt: Date;
     updatedAt: Date;

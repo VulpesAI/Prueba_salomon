@@ -28,6 +28,22 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Notification.prototype, "read", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 20, default: 'in_app' }),
+    __metadata("design:type", String)
+], Notification.prototype, "channel", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'event_type', type: 'varchar', length: 120, nullable: true }),
+    __metadata("design:type", String)
+], Notification.prototype, "eventType", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 20, default: 'info' }),
+    __metadata("design:type", String)
+], Notification.prototype, "severity", void 0);
+__decorate([
+    (0, typeorm_1.Column)('jsonb', { nullable: true }),
+    __metadata("design:type", Object)
+], Notification.prototype, "metadata", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, (user) => user.notifications, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'user_id' }),
     __metadata("design:type", user_entity_1.User)

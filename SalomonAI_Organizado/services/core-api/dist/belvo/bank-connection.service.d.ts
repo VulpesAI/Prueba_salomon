@@ -20,6 +20,7 @@ export declare class BankConnectionService {
     private readonly financialMovementsService;
     constructor(bankConnectionRepository: Repository<BankConnection>, belvoService: BelvoService, financialMovementsService: FinancialMovementsService);
     createConnection(dto: CreateBankConnectionDto): Promise<BankConnection>;
+    createConnectionFromLink(userId: string, linkId: string): Promise<BankConnection>;
     getUserConnections(userId: string): Promise<BankConnection[]>;
     getConnection(connectionId: string, userId: string): Promise<BankConnection>;
     syncAccounts(connectionId: string): Promise<void>;

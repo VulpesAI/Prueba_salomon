@@ -16,6 +16,7 @@ export declare class BankConnection {
         institutionWebsite?: string;
         institutionPrimaryColor?: string;
         belvoInstitutionData?: any;
+        belvoLinkStatus?: any;
         lastSyncResults?: {
             accountsSynced: number;
             transactionsSynced: number;

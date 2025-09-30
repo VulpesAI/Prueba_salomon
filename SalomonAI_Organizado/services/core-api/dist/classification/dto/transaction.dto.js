@@ -150,6 +150,15 @@ __decorate([
 ], CorrectClassificationDto.prototype, "incorrectCategory", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
+        description: 'Identificador del movimiento financiero asociado a la corrección',
+        example: '8dd43a82-ffef-4b6b-92b7-62f3d899a4d2',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)('4', { message: 'El identificador del movimiento debe ser un UUID válido' }),
+    __metadata("design:type", String)
+], CorrectClassificationDto.prototype, "movementId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
         description: 'Notas adicionales sobre la corrección',
         example: 'Era ropa, no entretenimiento',
         maxLength: 200,
