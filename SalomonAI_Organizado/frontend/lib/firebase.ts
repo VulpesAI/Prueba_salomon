@@ -156,45 +156,36 @@ const ensureFirebaseNamespace = async (): Promise<FirebaseNamespace> => {
   return firebaseNamespacePromise;
 };
 
-const fallbackConfig: FirebaseOptions = {
-  apiKey: "AIzaSyCx_hhaofaGJDCtL01BKfB3-LJsg4lAxmQ",
-  authDomain: "prueba-salomon-56821.firebaseapp.com",
-  projectId: "prueba-salomon-56821",
-  storageBucket: "prueba-salomon-56821.firebasestorage.app",
-  messagingSenderId: "327391238339",
-  appId: "1:327391238339:web:f03e4b517b7478a5286a76",
-  measurementId: "G-DEQ9GDQDJH",
+const getEnvVar = (name: string): string | undefined => {
+  const value = process.env[name];
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const getRequiredEnvVar = (name: string): string => {
+  const value = getEnvVar(name);
+  if (value) {
+    return value;
+  }
+
+  throw new Error(
+    `Missing required Firebase environment variable: ${name}. ` +
+      "Define it in your .env configuration to connect your Firebase project."
+  );
 };
 
 const firebaseConfig: FirebaseOptions = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? fallbackConfig.apiKey,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? fallbackConfig.authDomain,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? fallbackConfig.projectId,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? fallbackConfig.storageBucket,
-  messagingSenderId:
-    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? fallbackConfig.messagingSenderId,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? fallbackConfig.appId,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? fallbackConfig.measurementId,
-};
-
-const requiredKeys: (keyof FirebaseOptions)[] = [
-  "apiKey",
-  "authDomain",
-  "projectId",
-  "storageBucket",
-  "messagingSenderId",
-  "appId",
-];
-
-const hasValidConfig = requiredKeys.every((key) => {
-  const value = firebaseConfig[key];
-  return typeof value === "string" && value.length > 0;
-});
-
-const warnIfConfigMissing = () => {
-  if (!hasValidConfig) {
-    console.warn("Firebase configuration is incomplete. Check your environment variables.");
-  }
+  apiKey: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_API_KEY"),
+  authDomain: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"),
+  projectId: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_PROJECT_ID"),
+  storageBucket: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"),
+  messagingSenderId: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
+  appId: getRequiredEnvVar("NEXT_PUBLIC_FIREBASE_APP_ID"),
+  measurementId: getEnvVar("NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID"),
 };
 
 let firebaseApp: FirebaseApp | null = null;
@@ -203,12 +194,6 @@ let firebaseAnalytics: FirebaseAnalytics | null = null;
 
 const ensureFirebaseApp = async (): Promise<FirebaseApp> => {
   if (!firebaseApp) {
-    warnIfConfigMissing();
-
-    if (!hasValidConfig) {
-      throw new Error("Firebase configuration is incomplete. Check your environment variables.");
-    }
-
     const firebase = await ensureFirebaseNamespace();
     firebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
   }
