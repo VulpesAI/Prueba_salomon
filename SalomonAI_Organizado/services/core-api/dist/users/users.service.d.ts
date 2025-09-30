@@ -3,12 +3,13 @@ import { User } from './entities/user.entity';
 export declare class UsersService {
     private readonly usersRepository;
     constructor(usersRepository: Repository<User>);
+    private readonly userRelations;
     findByUid(uid: string): Promise<User | null>;
     findByEmail(email: string): Promise<User | null>;
     findById(id: string): Promise<User | null>;
     createFromFirebase(firebaseUser: {
         uid: string;
-        email: string;
+        email?: string | null;
         displayName?: string;
         photoURL?: string;
         emailVerified?: boolean;
@@ -17,12 +18,12 @@ export declare class UsersService {
             creationTime?: string;
             lastSignInTime?: string;
         };
-    }): Promise<User>;
+    }, repository?: Repository<User>): Promise<User>;
     update(id: string, updateData: Partial<User>): Promise<User>;
     updateLastSignIn(uid: string, lastSignInTime: string): Promise<void>;
     syncWithFirebase(firebaseUser: {
         uid: string;
-        email: string;
+        email?: string | null;
         displayName?: string;
         photoURL?: string;
         emailVerified?: boolean;
