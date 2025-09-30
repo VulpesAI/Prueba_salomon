@@ -24,19 +24,40 @@ let UsersService = class UsersService {
     async findByUid(uid) {
         return this.usersRepository.findOne({
             where: { uid },
-            relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+            relations: [
+                'movements',
+                'classificationRules',
+                'notifications',
+                'transactions',
+                'goals',
+                'authTokens',
+            ],
         });
     }
     async findByEmail(email) {
         return this.usersRepository.findOne({
             where: { email },
-            relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+            relations: [
+                'movements',
+                'classificationRules',
+                'notifications',
+                'transactions',
+                'goals',
+                'authTokens',
+            ],
         });
     }
     async findById(id) {
         return this.usersRepository.findOne({
             where: { id },
-            relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+            relations: [
+                'movements',
+                'classificationRules',
+                'notifications',
+                'transactions',
+                'goals',
+                'authTokens',
+            ],
         });
     }
     async createFromFirebase(firebaseUser) {
