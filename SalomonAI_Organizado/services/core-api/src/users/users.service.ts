@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 
 @Injectable()
@@ -10,13 +10,21 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
   ) {}
 
+  private readonly userRelations = [
+    'bankAccounts',
+    'financialMovements',
+    'classificationRules',
+    'notifications',
+    'transactions',
+  ] as const;
+
   /**
    * Buscar usuario por Firebase UID
    */
   async findByUid(uid: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { uid },
-      relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+      relations: [...this.userRelations],
     });
   }
 
@@ -26,7 +34,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email },
-      relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+      relations: [...this.userRelations],
     });
   }
 
@@ -36,34 +44,43 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { id },
-      relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+      relations: [...this.userRelations],
     });
   }
 
   /**
    * Crear un nuevo usuario desde Firebase
    */
-  async createFromFirebase(firebaseUser: {
-    uid: string;
-    email: string;
-    displayName?: string;
-    photoURL?: string;
-    emailVerified?: boolean;
-    phoneNumber?: string;
-    metadata?: {
-      creationTime?: string;
-      lastSignInTime?: string;
-    };
-  }): Promise<User> {
-    const user = this.usersRepository.create({
+  async createFromFirebase(
+    firebaseUser: {
+      uid: string;
+      email?: string | null;
+      displayName?: string;
+      photoURL?: string;
+      emailVerified?: boolean;
+      phoneNumber?: string;
+      metadata?: {
+        creationTime?: string;
+        lastSignInTime?: string;
+      };
+    },
+    repository: Repository<User> = this.usersRepository,
+  ): Promise<User> {
+    const email = firebaseUser.email?.trim();
+
+    if (!email) {
+      throw new Error('Firebase user email is required to create an account.');
+    }
+
+    const user = repository.create({
       uid: firebaseUser.uid,
-      email: firebaseUser.email,
-      displayName: firebaseUser.displayName,
+      email,
+      displayName: firebaseUser.displayName ?? email,
       photoURL: firebaseUser.photoURL,
-      emailVerified: firebaseUser.emailVerified || false,
+      emailVerified: firebaseUser.emailVerified ?? false,
       phoneNumber: firebaseUser.phoneNumber,
       metadata: firebaseUser.metadata,
-      fullName: firebaseUser.displayName,
+      fullName: firebaseUser.displayName ?? email,
       roles: ['user'],
       isActive: true,
       preferences: {
@@ -82,7 +99,7 @@ export class UsersService {
       },
     });
 
-    return this.usersRepository.save(user);
+    return repository.save(user);
   }
 
   /**
@@ -117,7 +134,7 @@ export class UsersService {
    */
   async syncWithFirebase(firebaseUser: {
     uid: string;
-    email: string;
+    email?: string | null;
     displayName?: string;
     photoURL?: string;
     emailVerified?: boolean;
@@ -127,24 +144,63 @@ export class UsersService {
       lastSignInTime?: string;
     };
   }): Promise<User> {
-    let user = await this.findByUid(firebaseUser.uid);
-
-    if (!user) {
-      // Si el usuario no existe, créalo
-      user = await this.createFromFirebase(firebaseUser);
-    } else {
-      // Si existe, actualiza la información
-      user.email = firebaseUser.email;
-      user.displayName = firebaseUser.displayName;
-      user.photoURL = firebaseUser.photoURL;
-      user.emailVerified = firebaseUser.emailVerified || false;
-      user.phoneNumber = firebaseUser.phoneNumber;
-      user.metadata = firebaseUser.metadata;
-      
-      user = await this.usersRepository.save(user);
+    if (!firebaseUser?.uid) {
+      throw new Error('Firebase user UID is required to sync the account.');
     }
 
-    return user;
+    const email = firebaseUser.email?.trim();
+
+    return this.usersRepository.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(User);
+
+      const loadUser = async (where: FindOptionsWhere<User>) =>
+        repository.findOne({
+          where,
+          relations: [...this.userRelations],
+        });
+
+      let user = await loadUser({ uid: firebaseUser.uid });
+
+      if (!user && email) {
+        user = await loadUser({ email });
+      }
+
+      if (!user) {
+        return this.createFromFirebase({ ...firebaseUser, email: email ?? firebaseUser.email }, repository);
+      }
+
+      user.uid = firebaseUser.uid;
+
+      if (email) {
+        user.email = email;
+      }
+
+      if (typeof firebaseUser.displayName !== 'undefined') {
+        user.displayName = firebaseUser.displayName ?? user.displayName;
+        user.fullName = firebaseUser.displayName ?? user.fullName;
+      }
+
+      if (typeof firebaseUser.photoURL !== 'undefined') {
+        user.photoURL = firebaseUser.photoURL ?? user.photoURL;
+      }
+
+      if (typeof firebaseUser.emailVerified !== 'undefined') {
+        user.emailVerified = firebaseUser.emailVerified;
+      }
+
+      if (typeof firebaseUser.phoneNumber !== 'undefined') {
+        user.phoneNumber = firebaseUser.phoneNumber ?? user.phoneNumber;
+      }
+
+      if (firebaseUser.metadata) {
+        user.metadata = {
+          ...(user.metadata ?? {}),
+          ...firebaseUser.metadata,
+        };
+      }
+
+      return repository.save(user);
+    });
   }
 
   /**
