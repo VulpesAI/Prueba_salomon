@@ -85,19 +85,39 @@ let UsersService = class UsersService {
     }
     async syncWithFirebase(firebaseUser) {
         let user = await this.findByUid(firebaseUser.uid);
+        if (!user && firebaseUser.email) {
+            user = await this.findByEmail(firebaseUser.email);
+        }
         if (!user) {
-            user = await this.createFromFirebase(firebaseUser);
+            return this.createFromFirebase(firebaseUser);
         }
-        else {
-            user.email = firebaseUser.email;
-            user.displayName = firebaseUser.displayName;
-            user.photoURL = firebaseUser.photoURL;
-            user.emailVerified = firebaseUser.emailVerified || false;
-            user.phoneNumber = firebaseUser.phoneNumber;
-            user.metadata = firebaseUser.metadata;
-            user = await this.usersRepository.save(user);
+        user.uid = firebaseUser.uid;
+        user.email = firebaseUser.email;
+        user.displayName = firebaseUser.displayName;
+        user.photoURL = firebaseUser.photoURL;
+        user.emailVerified = firebaseUser.emailVerified || false;
+        user.phoneNumber = firebaseUser.phoneNumber;
+        user.metadata = firebaseUser.metadata;
+        try {
+            return await this.usersRepository.save(user);
         }
-        return user;
+        catch (error) {
+            const errorCode = error?.code ?? error?.driverError?.code;
+            if (errorCode === '23505' && firebaseUser.email) {
+                const existingByEmail = await this.findByEmail(firebaseUser.email);
+                if (existingByEmail) {
+                    existingByEmail.uid = firebaseUser.uid;
+                    existingByEmail.email = firebaseUser.email;
+                    existingByEmail.displayName = firebaseUser.displayName;
+                    existingByEmail.photoURL = firebaseUser.photoURL;
+                    existingByEmail.emailVerified = firebaseUser.emailVerified || false;
+                    existingByEmail.phoneNumber = firebaseUser.phoneNumber;
+                    existingByEmail.metadata = firebaseUser.metadata;
+                    return this.usersRepository.save(existingByEmail);
+                }
+            }
+            throw error;
+        }
     }
     async deactivate(id) {
         await this.usersRepository.update(id, { isActive: false });
