@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
+    console.error("Failed to persist authentication session", error)
     return NextResponse.json({ error: "Invalid request" }, { status: 400 })
   }
 }
