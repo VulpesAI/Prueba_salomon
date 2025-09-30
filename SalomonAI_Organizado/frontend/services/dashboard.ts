@@ -105,7 +105,7 @@ export const getDashboardIntelligence = async ({ signal }: RequestOptions = {}) 
   } catch (error) {
     logFallbackWarning("Falling back to mock dashboard intelligence data", error)
 
-    return {
+    const fallbackResponse: DashboardIntelligenceResponse = {
       forecastSummary: {
         modelType: "prophet_v1",
         generatedAt: new Date().toISOString(),
@@ -196,6 +196,8 @@ export const getDashboardIntelligence = async ({ signal }: RequestOptions = {}) 
         },
       ],
     }
+
+    return fallbackResponse
   }
 }
 
