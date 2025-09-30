@@ -21,8 +21,12 @@ export async function loginWithGoogle() {
     const user = result.user;
     const token = await user.getIdToken();
     return { user, token };
-  } catch (error: any) {
-    console.error("Google sign-in error:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Google sign-in error:", error.message);
+    } else {
+      console.error("Google sign-in error:", error);
+    }
     throw error;
   }
 }
