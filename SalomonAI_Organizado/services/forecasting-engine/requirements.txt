@@ -1,6 +1,7 @@
 fastapi==0.115.2
 uvicorn[standard]==0.30.6
-pydantic==1.10.18
+pydantic==2.10.4
+pydantic-settings==2.6.1
 sqlalchemy==2.0.36
 pandas==2.2.3
 numpy==1.26.4

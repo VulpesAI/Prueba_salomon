@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ROOT_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings for the forecasting engine."""
+
+    model_config = SettingsConfigDict(env_prefix="FORECASTING_", env_file=ROOT_ENV_PATH, extra="allow")
 
     database_url: str = Field(
         default="postgresql+psycopg://salomon_user:salomon_password@postgres:5432/salomon_db",
@@ -26,13 +32,10 @@ class Settings(BaseSettings):
         description="Minimum number of days required in the historical series to attempt a statistical model.",
     )
 
-    class Config:
-        env_prefix = "FORECASTING_"
-        case_sensitive = False
-
 
 @lru_cache()
 def get_settings() -> Settings:
     """Return a cached instance of Settings."""
 
     return Settings()
+

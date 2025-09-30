@@ -19,8 +19,10 @@ from .models import (
     IntentDetectionResponse,
 )
 from .nlu import SpanishNLU
+from .settings import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 logging.basicConfig(level=logging.INFO)
 
 
@@ -31,9 +33,13 @@ def json_event(chunk: ChatChunk) -> bytes:
 @asynccontextmanager
 def lifespan(app: FastAPI):
     nlu = SpanishNLU()
-    core_client = CoreAPIClient()
+    core_client = CoreAPIClient(
+        base_url=settings.core_api_base_url,
+        timeout=settings.request_timeout_seconds,
+    )
     app.state.nlu = nlu
     app.state.core_client = core_client
+    app.state.settings = settings
     yield
 
 
@@ -44,7 +50,7 @@ def get_services(app: FastAPI = Depends()) -> Dict[str, object]:
 app = FastAPI(title="SalomonAI Conversation Engine", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

@@ -1,18 +1,21 @@
-import os
 import json
 import time
 from kafka import KafkaConsumer
 from kafka.errors import NoBrokersAvailable
 import pandas as pd
 
+from .settings import get_settings
+
+settings = get_settings()
+
 # --- Kafka Configuration ---
-KAFKA_BROKER_URL = os.environ.get("KAFKA_BROKER_URL", "kafka:9092")
-KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "salomon.documents.new")
-GROUP_ID = "parsing-engine-group"
+KAFKA_BROKER_URL = settings.kafka_broker_url
+KAFKA_TOPIC = settings.kafka_topic
+GROUP_ID = settings.consumer_group_id
 
 def create_consumer():
     """Creates and returns a Kafka consumer, retrying on connection failure."""
-    retries = 5
+    retries = settings.connection_retries
     while retries > 0:
         try:
             print(f"Attempting to connect to Kafka at {KAFKA_BROKER_URL}...")
@@ -26,9 +29,11 @@ def create_consumer():
             print("Successfully connected to Kafka.")
             return consumer
         except NoBrokersAvailable:
-            print(f"Could not connect to Kafka. Retrying in 5 seconds... ({retries-1} retries left)")
+            print(
+                f"Could not connect to Kafka. Retrying in {settings.retry_delay_seconds} seconds... ({retries-1} retries left)"
+            )
             retries -= 1
-            time.sleep(5)
+            time.sleep(settings.retry_delay_seconds)
     print("Failed to connect to Kafka after several retries. Exiting.")
     return None
 

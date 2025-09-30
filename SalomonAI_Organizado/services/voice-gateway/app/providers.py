@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from abc import ABC, abstractmethod
 from typing import Dict
 
+from .settings import get_settings
+
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 _SILENCE_WAV_BASE64 = (
     "UklGRkQDAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YSADAAAAAAAAAAAAAAAAAAAAAA"
@@ -61,7 +63,7 @@ class MockTTSClient(BaseTTSClient):
 
 
 def get_stt_client() -> BaseSTTClient:
-    provider = os.getenv("VOICE_STT_PROVIDER", "mock").lower()
+    provider = settings.stt_provider.lower()
     if provider == "mock":
         return MockSTTClient()
     logger.warning("STT provider '%s' no implementado, usando Mock", provider)
@@ -69,7 +71,7 @@ def get_stt_client() -> BaseSTTClient:
 
 
 def get_tts_client() -> BaseTTSClient:
-    provider = os.getenv("VOICE_TTS_PROVIDER", "mock").lower()
+    provider = settings.tts_provider.lower()
     if provider == "mock":
         return MockTTSClient()
     logger.warning("TTS provider '%s' no implementado, usando Mock", provider)

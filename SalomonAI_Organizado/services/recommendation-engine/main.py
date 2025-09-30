@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import os
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -15,8 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from sklearn.cluster import KMeans
 
+from .settings import get_settings
 
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+settings = get_settings()
+logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 logger = logging.getLogger("recommendation-engine")
 
 
@@ -659,30 +660,30 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-pipeline_mode = os.getenv("PIPELINE_MODE", "api").lower()
-financial_movements_url = os.getenv("FINANCIAL_MOVEMENTS_API_URL", "http://financial-movements:8002/api/v1/categorized")
-kafka_bootstrap = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
-kafka_topic = os.getenv("KAFKA_TRANSACTIONS_TOPIC", "financial.movements.categorized")
-pipeline_interval = int(os.getenv("PIPELINE_REFRESH_SECONDS", "300"))
+pipeline_mode = settings.pipeline_mode.lower()
+financial_movements_url = settings.financial_movements_api_url
+kafka_bootstrap = settings.kafka_bootstrap_servers
+kafka_topic = settings.kafka_transactions_topic
+pipeline_interval = settings.pipeline_refresh_seconds
 
 feature_builder = FeatureBuilder()
 feature_store = FeatureStore()
 recommendation_store = RecommendationStore()
-model_manager = RecommendationModelManager(n_clusters=int(os.getenv("PIPELINE_CLUSTER_COUNT", "4")))
+model_manager = RecommendationModelManager(n_clusters=settings.pipeline_cluster_count)
 transaction_fetcher = TransactionFetcher(
     mode=pipeline_mode,
     api_url=financial_movements_url,
     kafka_bootstrap=kafka_bootstrap,
     kafka_topic=kafka_topic,
-    timeout=float(os.getenv("PIPELINE_API_TIMEOUT", "15")),
-    kafka_batch_size=int(os.getenv("PIPELINE_KAFKA_BATCH", "500")),
+    timeout=settings.pipeline_api_timeout,
+    kafka_batch_size=settings.pipeline_kafka_batch,
 )
 recommendation_pipeline = RecommendationPipeline(
     fetcher=transaction_fetcher,
@@ -853,11 +854,10 @@ async def generate_recommendation(transaction: TransactionData) -> Recommendatio
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", "8000"))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=port,
+        port=settings.port,
         reload=True,
         log_level="info",
     )
