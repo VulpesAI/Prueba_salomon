@@ -167,13 +167,13 @@ const getEnvVar = (name: string): string | undefined => {
 };
 
 const fallbackConfig: Required<FirebaseOptions> = {
-  apiKey: "AIzaSyCx_hhaofaGJDCtL01BKfB3-LJsg4lAxmQ",
-  authDomain: "prueba-salomon-56821.firebaseapp.com",
-  projectId: "prueba-salomon-56821",
-  storageBucket: "prueba-salomon-56821.firebasestorage.app",
-  messagingSenderId: "327391238339",
-  appId: "1:327391238339:web:f03e4b517b7478a5286a76",
-  measurementId: "G-DEQ9GDQDJH",
+  apiKey: "AIzaSyCGuUfWuw-AjYQGWBpZPrPnulkKAZCz_Y0",
+  authDomain: "gen-lang-client-0516565338.firebaseapp.com",
+  projectId: "gen-lang-client-0516565338",
+  storageBucket: "gen-lang-client-0516565338.appspot.com",
+  messagingSenderId: "238194040857",
+  appId: "1:238194040857:web:0d9c659382fe7049c88a88",
+  measurementId: "",
 };
 
 const firebaseConfig: FirebaseOptions = {
