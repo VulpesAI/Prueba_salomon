@@ -214,7 +214,7 @@ export const getDashboardNotifications = async ({
   } catch (error) {
     logFallbackWarning("Falling back to mock dashboard notifications", error)
 
-    return {
+    const fallbackResponse: DashboardNotificationsResponse = {
       notifications: [
         {
           id: "notif_1",
@@ -249,6 +249,8 @@ export const getDashboardNotifications = async ({
         mutedEvents: [{ key: "marketing", until: null }],
       },
     }
+
+    return fallbackResponse
   }
 }
 
