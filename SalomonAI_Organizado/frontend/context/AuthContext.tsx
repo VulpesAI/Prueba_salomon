@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const normalizedApiBaseUrl = useMemo(
-    () => apiBaseUrl.replace(/\/+$/, ""),
+    () => apiBaseUrl.trim().replace(/\/+$/, ""),
     [apiBaseUrl]
   )
 
