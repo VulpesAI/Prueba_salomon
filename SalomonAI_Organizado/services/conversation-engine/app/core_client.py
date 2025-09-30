@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Dict, Optional
 
 import httpx
 
 from .models import FinancialInsight, FinancialSummary, IntentCandidate, IntentResolution
+from .settings import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 _FALLBACK_SUMMARY = FinancialSummary(
@@ -33,9 +34,9 @@ _FALLBACK_SUMMARY = FinancialSummary(
 class CoreAPIClient:
     """Minimal async client to communicate with the NestJS core-api service."""
 
-    def __init__(self, base_url: Optional[str] = None, timeout: float = 10.0) -> None:
-        self.base_url = base_url or os.getenv("CORE_API_BASE_URL")
-        self.timeout = timeout
+    def __init__(self, base_url: Optional[str] = None, timeout: float | None = None) -> None:
+        self.base_url = base_url or settings.core_api_base_url
+        self.timeout = timeout or settings.request_timeout_seconds
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Optional[Dict[str, Any]]:
         if not self.base_url:

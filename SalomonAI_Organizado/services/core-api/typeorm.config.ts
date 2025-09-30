@@ -1,11 +1,7 @@
 import { DataSource } from 'typeorm';
-import * as path from 'path';
-import * as dotenv from 'dotenv';
+import { loadRootEnv } from './src/config/env.loader';
 
-const nodeEnv = process.env.NODE_ENV ?? 'development';
-const envFile = nodeEnv === 'production' ? '.env' : '.env.development';
-
-dotenv.config({ path: path.resolve(__dirname, envFile) });
+loadRootEnv();
 
 const host = process.env.POSTGRES_HOST ?? process.env.DATABASE_HOST ?? 'postgres';
 const portValue = process.env.POSTGRES_PORT ?? process.env.DATABASE_PORT;

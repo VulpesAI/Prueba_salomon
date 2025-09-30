@@ -9,6 +9,8 @@ services:
       - qdrant_data:/qdrant/storage
     networks:
       - salomon-net
+    env_file:
+      - .env
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
       interval: 30s
@@ -26,6 +28,8 @@ services:
       - uploads_volume:/uploads # Volumen para compartir archivos con el parser
     env_file:
       - .env
+    environment:
+      PORT: ${CORE_API_PORT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,12 +61,10 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
-      - NEXT_PUBLIC_CONVERSATION_ENGINE_URL=http://localhost:8002
-      - NEXT_PUBLIC_VOICE_GATEWAY_URL=http://localhost:8100
-      - PORT=3000
+      PORT: ${FRONTEND_PORT}
     networks:
       - salomon-net
     deploy:
@@ -123,18 +125,13 @@ services:
       - ./services/financial-connector:/app
     env_file:
       - .env
-    environment:
-      - PORT=8000
-    depends_on:
-      core-api:
-        condition: service_started
     networks:
       - salomon-net
     command: uvicorn server:app --host 0.0.0.0 --port 8000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
+      interval: 15s
+      timeout: 5s
       retries: 3
 
   conversation-engine:
@@ -145,13 +142,12 @@ services:
       - "8002:8002"
     env_file:
       - .env
-    environment:
-      - CORE_API_BASE_URL=http://core-api:3000
+    networks:
+      - salomon-net
     depends_on:
       core-api:
         condition: service_started
-    networks:
-      - salomon-net
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s
@@ -167,14 +163,15 @@ services:
     env_file:
       - .env
     environment:
-      - FORECASTING_DATABASE_URL=${FORECASTING_DATABASE_URL:-postgresql+psycopg://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@postgres:5432/$${POSTGRES_DB}}
-      - FORECASTING_DEFAULT_MODEL=${FORECASTING_DEFAULT_MODEL:-auto}
-      - FORECASTING_DEFAULT_HORIZON_DAYS=${FORECASTING_DEFAULT_HORIZON_DAYS:-30}
+      FORECASTING_DATABASE_URL: ${FORECASTING_DATABASE_URL}
+      FORECASTING_DEFAULT_MODEL: ${FORECASTING_DEFAULT_MODEL}
+      FORECASTING_DEFAULT_HORIZON_DAYS: ${FORECASTING_DEFAULT_HORIZON_DAYS}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - salomon-net
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8003
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -189,13 +186,11 @@ services:
       - "8100:8100"
     env_file:
       - .env
-    environment:
-      - VOICE_STT_PROVIDER=${VOICE_STT_PROVIDER:-mock}
-      - VOICE_TTS_PROVIDER=${VOICE_TTS_PROVIDER:-mock}
-    depends_on:
-      - conversation-engine
     networks:
       - salomon-net
+    depends_on:
+      - conversation-engine
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8100
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
       interval: 30s
@@ -223,9 +218,11 @@ services:
     image: confluentinc/cp-zookeeper:7.3.2
     networks:
       - salomon-net
+    env_file:
+      - .env
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_CLIENT_PORT}
+      ZOOKEEPER_TICK_TIME: ${ZOOKEEPER_TICK_TIME}
 
   kafka:
     image: confluentinc/cp-kafka:7.3.2
@@ -233,6 +230,17 @@ services:
       - salomon-net
     depends_on:
       - zookeeper
+    env_file:
+      - .env
+    environment:
+      KAFKA_BROKER_ID: ${KAFKA_BROKER_ID}
+      KAFKA_ZOOKEEPER_CONNECT: ${KAFKA_ZOOKEEPER_CONNECT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: ${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP}
+      KAFKA_ADVERTISED_LISTENERS: ${KAFKA_ADVERTISED_LISTENERS}
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR}
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: ${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS}
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: ${KAFKA_TRANSACTION_STATE_LOG_MIN_ISR}
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: ${KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR}
     healthcheck:
       test: "cub kafka-ready -b localhost:9092 1 1"
       interval: 10s
@@ -241,15 +249,6 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
 networks:
   salomon-net:

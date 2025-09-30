@@ -17,15 +17,17 @@ from .models import (
     VoiceTranscriptionResponse,
 )
 from .providers import BaseSTTClient, BaseTTSClient, get_stt_client, get_tts_client
+from .settings import get_settings
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+settings = get_settings()
+logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 
 
 app = FastAPI(title="SalomonAI Voice Gateway", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

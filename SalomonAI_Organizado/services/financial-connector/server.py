@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
-import os
 import json
 
 app = FastAPI(
@@ -12,10 +11,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
+from .settings import get_settings
+
+settings = get_settings()
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -123,11 +126,10 @@ async def get_supported_formats():
     return [".csv", ".xlsx", ".xls", ".pdf"]
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
     uvicorn.run(
-        "server:app", 
-        host="0.0.0.0", 
-        port=port, 
+        "server:app",
+        host="0.0.0.0",
+        port=settings.port,
         reload=True,
         log_level="info"
     )
