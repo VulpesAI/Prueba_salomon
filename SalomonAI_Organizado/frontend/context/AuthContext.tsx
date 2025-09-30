@@ -15,10 +15,16 @@ import { useRouter } from "next/navigation"
 import { configureApiClientAuth } from "@/lib/api-client"
 
 import {
+  createUserWithEmailAndPassword,
   getFirebaseAuth,
   getGoogleAuthProvider,
-  type FirebaseAuth,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
   type FirebaseUser,
+  updateProfile,
 } from "@/lib/firebase"
 
 type BackendUser = {
@@ -177,8 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false)
 
     try {
-      const auth = await getFirebaseAuth()
-      await auth.signOut()
+      const auth = getFirebaseAuth()
+      await signOut(auth)
     } catch (error) {
       console.error("Failed to sign out after unauthorized session", error)
     }
@@ -345,16 +351,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let isMounted = true
-    let unsubscribe: ReturnType<FirebaseAuth["onAuthStateChanged"]> | undefined
+    let unsubscribe: ReturnType<typeof onAuthStateChanged> | undefined
 
     ;(async () => {
       try {
-        const auth = await getFirebaseAuth()
+        const auth = getFirebaseAuth()
         if (!isMounted) {
           return
         }
 
-        unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (!isMounted) {
             return
           }
@@ -416,8 +422,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const auth = await getFirebaseAuth()
-      const credential = await auth.signInWithEmailAndPassword(email, password)
+      const auth = getFirebaseAuth()
+      const credential = await signInWithEmailAndPassword(auth, email, password)
       setUser(credential.user)
 
       try {
@@ -426,7 +432,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emitTelemetryEvent("auth.login.exchange_error", {
           message: error instanceof Error ? error.message : "unknown",
         })
-        await auth.signOut()
+        await signOut(auth)
         throw error
       }
     },
@@ -435,11 +441,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(
     async (email: string, password: string, displayName?: string) => {
-      const auth = await getFirebaseAuth()
-      const credential = await auth.createUserWithEmailAndPassword(email, password)
+      const auth = getFirebaseAuth()
+      const credential = await createUserWithEmailAndPassword(auth, email, password)
 
       if (displayName && credential.user) {
-        await credential.user.updateProfile({ displayName })
+        await updateProfile(credential.user, { displayName })
       }
 
       setUser(credential.user)
@@ -450,7 +456,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emitTelemetryEvent("auth.signup.exchange_error", {
           message: error instanceof Error ? error.message : "unknown",
         })
-        await auth.signOut()
+        await signOut(auth)
         throw error
       }
     },
@@ -458,10 +464,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const loginWithGoogle = useCallback(async () => {
-    const auth = await getFirebaseAuth()
-    const provider = await getGoogleAuthProvider()
+    const auth = getFirebaseAuth()
+    const provider = getGoogleAuthProvider()
     provider.setCustomParameters({ prompt: "select_account" })
-    const credential = await auth.signInWithPopup(provider)
+    const credential = await signInWithPopup(auth, provider)
     setUser(credential.user)
 
     try {
@@ -470,18 +476,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       emitTelemetryEvent("auth.google.exchange_error", {
         message: error instanceof Error ? error.message : "unknown",
       })
-      await auth.signOut()
+      await signOut(auth)
       throw error
     }
   }, [exchangeFirebaseUser, emitTelemetryEvent])
 
   const resetPassword = useCallback(async (email: string) => {
-    const auth = await getFirebaseAuth()
-    await auth.sendPasswordResetEmail(email)
+    const auth = getFirebaseAuth()
+    await sendPasswordResetEmail(auth, email)
   }, [])
 
   const logout = useCallback(async () => {
-    const auth = await getFirebaseAuth()
+    const auth = getFirebaseAuth()
     try {
       if (sessionRef.current?.accessToken) {
         await fetch(`${apiBaseUrl}/auth/logout`, {
@@ -496,7 +502,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       await clearSessionCookies()
       clearSessionState()
-      await auth.signOut()
+      await signOut(auth)
     }
   }, [apiBaseUrl, clearSessionCookies, clearSessionState])
 
