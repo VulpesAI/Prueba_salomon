@@ -90,6 +90,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   )
 
+  const normalizedApiBaseUrl = useMemo(
+    () => apiBaseUrl.replace(/\/+$/, ""),
+    [apiBaseUrl]
+  )
+
+  const buildApiUrl = useCallback(
+    (path: string) => {
+      const normalizedPath = path.startsWith("/") ? path : `/${path}`
+      return `${normalizedApiBaseUrl}/api/v1${normalizedPath}`
+    },
+    [normalizedApiBaseUrl]
+  )
+
   const emitTelemetryEvent = useCallback(
     (event: string, detail?: Record<string, unknown>) => {
       if (typeof window !== "undefined") {
@@ -266,7 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const response = await fetch(`${apiBaseUrl}/auth/token/refresh`, {
+      const response = await fetch(buildApiUrl("/auth/token/refresh"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -293,7 +306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await handleUnauthorizedSession()
     }
   }, [
-    apiBaseUrl,
+    buildApiUrl,
     applyBackendSession,
     emitTelemetryEvent,
     handleUnauthorizedSession,
@@ -320,7 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
       const idToken = await firebaseUser.getIdToken()
-      const response = await fetch(`${apiBaseUrl}/auth/firebase/login`, {
+      const response = await fetch(buildApiUrl("/auth/firebase/login"), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${idToken}`,
@@ -336,7 +349,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const nextSession = await applyBackendSession(payload, firebaseUser.uid)
       return nextSession.backendUser
     },
-    [apiBaseUrl, applyBackendSession, emitTelemetryEvent]
+    [buildApiUrl, applyBackendSession, emitTelemetryEvent]
   )
 
   useEffect(() => {
@@ -484,7 +497,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const auth = await getFirebaseAuth()
     try {
       if (sessionRef.current?.accessToken) {
-        await fetch(`${apiBaseUrl}/auth/logout`, {
+        await fetch(buildApiUrl("/auth/logout"), {
           method: "POST",
           headers: {
             Authorization: `Bearer ${sessionRef.current.accessToken}`,
@@ -498,7 +511,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearSessionState()
       await auth.signOut()
     }
-  }, [apiBaseUrl, clearSessionCookies, clearSessionState])
+  }, [buildApiUrl, clearSessionCookies, clearSessionState])
 
   const value = useMemo(
     () => ({
