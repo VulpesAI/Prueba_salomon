@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
 } from "react"
 
 import { useRouter } from "next/navigation"
@@ -19,7 +20,7 @@ import {
   type FirebaseUser,
 } from "@/lib/firebase"
 
-type BackendUser = {
+export type BackendUser = {
   id: string
   email: string
   roles: string[]
@@ -45,7 +46,7 @@ type BackendSessionResponse = {
   user: BackendUser
 }
 
-type AuthSession = {
+export type AuthSession = {
   accessToken: string
   refreshToken: string
   tokenType: string
@@ -59,6 +60,7 @@ type AuthContextType = {
   user: FirebaseUser | null
   backendUser: BackendUser | null
   session: AuthSession | null
+  sessionRef: MutableRefObject<AuthSession | null>
   isLoading: boolean
   login: (email: string, password: string) => Promise<BackendUser>
   signup: (
@@ -69,6 +71,10 @@ type AuthContextType = {
   loginWithGoogle: () => Promise<BackendUser>
   resetPassword: (email: string) => Promise<void>
   logout: () => Promise<void>
+  refreshSession: () => Promise<void>
+  forceRefreshSession: () => Promise<void>
+  invalidateSession: () => Promise<void>
+  emitTelemetryEvent: (event: string, detail?: Record<string, unknown>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -307,6 +313,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshSession])
 
+  const forceRefreshSession = useCallback(async () => {
+    if (refreshSessionRef.current) {
+      await refreshSessionRef.current()
+      return
+    }
+
+    await refreshSession()
+  }, [refreshSession])
+
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
       const idToken = await firebaseUser.getIdToken()
@@ -479,30 +494,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           headers: {
             Authorization: `Bearer ${sessionRef.current.accessToken}`,
           },
-        }).catch((error) => {
-          console.warn("Failed to notify backend logout", error)
         })
+          .then((response) => {
+            if (!response.ok) {
+              emitTelemetryEvent("auth.logout.backend_failed", {
+                status: response.status,
+              })
+            }
+          })
+          .catch((error) => {
+            emitTelemetryEvent("auth.logout.backend_error", {
+              message: error instanceof Error ? error.message : "unknown",
+            })
+            console.warn("Failed to notify backend logout", error)
+          })
       }
     } finally {
       await clearSessionCookies()
       clearSessionState()
       await auth.signOut()
     }
-  }, [apiBaseUrl, clearSessionCookies, clearSessionState])
+  }, [
+    apiBaseUrl,
+    clearSessionCookies,
+    clearSessionState,
+    emitTelemetryEvent,
+  ])
+
+  const invalidateSession = useCallback(async () => {
+    await handleUnauthorizedSession()
+  }, [handleUnauthorizedSession])
 
   const value = useMemo(
     () => ({
       user,
       backendUser: session?.backendUser ?? null,
       session,
+      sessionRef,
       isLoading,
       login,
       signup,
       loginWithGoogle,
       resetPassword,
       logout,
+      refreshSession,
+      forceRefreshSession,
+      invalidateSession,
+      emitTelemetryEvent,
     }),
-    [user, session, isLoading, login, signup, loginWithGoogle, resetPassword, logout]
+    [
+      user,
+      session,
+      sessionRef,
+      isLoading,
+      login,
+      signup,
+      loginWithGoogle,
+      resetPassword,
+      logout,
+      refreshSession,
+      forceRefreshSession,
+      invalidateSession,
+      emitTelemetryEvent,
+    ]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

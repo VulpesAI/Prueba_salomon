@@ -1,12 +1,12 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 
-import { AuthProvider } from "@/context/AuthContext";
+import { Providers } from "@/app/providers";
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <AuthProvider>
+    <Providers>
       <Component {...pageProps} />
-    </AuthProvider>
+    </Providers>
   );
 }
