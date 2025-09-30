@@ -16,7 +16,14 @@ export class UsersService {
   async findByUid(uid: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { uid },
-      relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+      relations: [
+        'movements',
+        'classificationRules',
+        'notifications',
+        'transactions',
+        'goals',
+        'authTokens',
+      ],
     });
   }
 
@@ -26,7 +33,14 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email },
-      relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+      relations: [
+        'movements',
+        'classificationRules',
+        'notifications',
+        'transactions',
+        'goals',
+        'authTokens',
+      ],
     });
   }
 
@@ -36,7 +50,14 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { id },
-      relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+      relations: [
+        'movements',
+        'classificationRules',
+        'notifications',
+        'transactions',
+        'goals',
+        'authTokens',
+      ],
     });
   }
 
