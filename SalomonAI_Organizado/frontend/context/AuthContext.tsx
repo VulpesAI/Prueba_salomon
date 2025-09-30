@@ -99,21 +99,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (path: string) => {
       const normalizedPath = path.startsWith("/") ? path : `/${path}`
       const trimmedBaseUrl = normalizedApiBaseUrl.replace(/\/+$/, "")
-      const lowerTrimmedBaseUrl = trimmedBaseUrl.toLowerCase()
 
-      if (lowerTrimmedBaseUrl.endsWith("/api/v1")) {
-        return `${trimmedBaseUrl}${normalizedPath}`
-      }
+      const baseUrl = /\/api\/v\d+$/i.test(trimmedBaseUrl)
+        ? trimmedBaseUrl
+        : /\/api$/i.test(trimmedBaseUrl)
+          ? `${trimmedBaseUrl}/v1`
+          : `${trimmedBaseUrl}/api/v1`
 
-      if (/\/api\/v\d+$/i.test(trimmedBaseUrl)) {
-        return `${trimmedBaseUrl}${normalizedPath}`
-      }
-
-      if (lowerTrimmedBaseUrl.endsWith("/api")) {
-        return `${trimmedBaseUrl}/v1${normalizedPath}`
-      }
-
-      return `${trimmedBaseUrl}/api/v1${normalizedPath}`
+      return `${baseUrl}${normalizedPath}`
     },
     [normalizedApiBaseUrl]
   )
