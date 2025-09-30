@@ -104,6 +104,8 @@ export class AuthController {
         email: user.email,
         roles: user.roles,
         mfaEnabled: user.mfaEnabled,
+        isActive: user.isActive,
+        uid: user.uid,
       });
 
       return {

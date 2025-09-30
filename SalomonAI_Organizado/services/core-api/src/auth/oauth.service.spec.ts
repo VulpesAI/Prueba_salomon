@@ -1,6 +1,6 @@
 import { CacheModule } from '@nestjs/cache-manager';
-import { BadRequestException } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import { OAuthService } from './oauth.service';
 import { TokenService } from './token.service';
@@ -13,6 +13,7 @@ import type { Cache } from 'cache-manager';
 describe('OAuthService', () => {
   let service: OAuthService;
   let cache: Cache;
+  let moduleRef: TestingModule;
 
   const configService = {
     get: jest.fn((key: string, defaultValue?: string) => {
@@ -32,6 +33,7 @@ describe('OAuthService', () => {
 
   const tokenService = {
     issueTokenPair: jest.fn(),
+    revokeTokensForUser: jest.fn(),
   } as unknown as TokenService;
 
   const siemLogger = {
@@ -41,7 +43,7 @@ describe('OAuthService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    const moduleRef = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       imports: [CacheModule.register()],
       providers: [
         OAuthService,
@@ -59,6 +61,7 @@ describe('OAuthService', () => {
   afterEach(async () => {
     jest.restoreAllMocks();
     await cache.reset?.();
+    await moduleRef.close();
   });
 
   it('stores state and codeVerifier when generating the authorization URL', async () => {
@@ -115,6 +118,7 @@ describe('OAuthService', () => {
       expect.objectContaining({ id: 'user-id', email: 'user@example.com' }),
     );
     expect(await cache.get(`oauth:google:${stateData.state}`)).toBeUndefined();
+    expect(tokenService.revokeTokensForUser).not.toHaveBeenCalled();
   });
 
   it('rejects the callback when the state is missing or invalid', async () => {
@@ -135,5 +139,52 @@ describe('OAuthService', () => {
         state: 'unknown-state',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects the callback when the user is inactive', async () => {
+    const stateData = await service.generateGoogleAuthorizationUrl();
+
+    jest.spyOn(axios, 'post').mockResolvedValue({
+      data: {
+        access_token: 'access',
+        refresh_token: 'refresh',
+        expires_in: 3600,
+        id_token: 'id-token',
+      },
+    });
+
+    jest.spyOn(axios, 'get').mockResolvedValue({
+      data: {
+        email: 'user@example.com',
+        name: 'User Example',
+        given_name: 'User',
+        picture: 'http://example.com/avatar.png',
+        sub: 'google-sub',
+      },
+    });
+
+    (userService.upsertOAuthUser as jest.Mock).mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      fullName: 'User Example',
+      roles: ['user'],
+      uid: 'uid-123',
+      isActive: false,
+    });
+
+    (tokenService.revokeTokensForUser as jest.Mock).mockResolvedValue(undefined);
+
+    await expect(
+      service.handleGoogleCallback({
+        code: 'auth-code',
+        codeVerifier: stateData.codeVerifier,
+        redirectUri: 'http://localhost/override',
+        state: stateData.state,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(tokenService.issueTokenPair).not.toHaveBeenCalled();
+    expect(tokenService.revokeTokensForUser).toHaveBeenCalledWith('user-id');
+    expect(await cache.get(`oauth:google:${stateData.state}`)).toBeUndefined();
   });
 });

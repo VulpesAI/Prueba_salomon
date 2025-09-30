@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
@@ -150,6 +151,20 @@ export class OAuthService {
       provider: 'google',
       subject: profile.sub,
     });
+
+    if (user.isActive === false) {
+      await Promise.all([
+        this.tokenService.revokeTokensForUser(user.id),
+        this.siemLogger.logSecurityEvent({
+          type: 'AUTH_OAUTH_BLOCKED',
+          severity: 'high',
+          userId: user.id,
+          metadata: { provider: 'google', subject: profile.sub, reason: 'USER_INACTIVE' },
+        }),
+      ]);
+
+      throw new UnauthorizedException('Cuenta desactivada');
+    }
 
     const tokens = await this.tokenService.issueTokenPair({
       id: user.id,

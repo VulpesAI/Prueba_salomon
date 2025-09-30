@@ -33,6 +33,22 @@ export class AuthService {
     return rest;
   }
 
+  private async ensureActiveUser(user: { id: string; email: string; isActive?: boolean }) {
+    if (user?.isActive === false) {
+      await Promise.all([
+        this.tokenService.revokeTokensForUser(user.id),
+        this.siemLogger.logSecurityEvent({
+          type: 'AUTH_LOGIN_BLOCKED',
+          severity: 'high',
+          userId: user.id,
+          metadata: { email: user.email, reason: 'USER_INACTIVE' },
+        }),
+      ]);
+
+      throw new UnauthorizedException({ message: 'Cuenta desactivada', reason: 'USER_INACTIVE' });
+    }
+  }
+
   async validateUser(email: string, password: string, mfaToken?: string): Promise<any> {
     const user = await this.userService.findByEmail(email);
     if (!user || !user.passwordHash) {
@@ -43,6 +59,8 @@ export class AuthService {
       });
       return null;
     }
+
+    await this.ensureActiveUser(user);
 
     const passwordMatches = await bcrypt.compare(password, user.passwordHash);
     if (!passwordMatches) {
@@ -98,7 +116,16 @@ export class AuthService {
     return this.sanitizeUser(user);
   }
 
-  async login(user: { id: string; email: string; roles?: string[]; mfaEnabled?: boolean }) {
+  async login(user: {
+    id: string;
+    email: string;
+    roles?: string[];
+    mfaEnabled?: boolean;
+    isActive?: boolean;
+    uid?: string;
+  }) {
+    await this.ensureActiveUser(user);
+
     const tokens = await this.tokenService.issueTokenPair(user);
 
     await this.siemLogger.logSecurityEvent({
@@ -218,6 +245,8 @@ export class AuthService {
   async refreshTokens(refreshToken: string): Promise<TokenPair & { user: any }> {
     const { tokens, user } = await this.tokenService.rotateRefreshToken(refreshToken);
     const sanitized = this.sanitizeUser(user);
+
+    await this.ensureActiveUser(sanitized);
 
     await this.siemLogger.logSecurityEvent({
       type: 'AUTH_TOKENS_REFRESHED',
