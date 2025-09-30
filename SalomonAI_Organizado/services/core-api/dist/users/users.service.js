@@ -20,35 +20,46 @@ const user_entity_1 = require("./entities/user.entity");
 let UsersService = class UsersService {
     constructor(usersRepository) {
         this.usersRepository = usersRepository;
+        this.userRelations = [
+            'bankAccounts',
+            'financialMovements',
+            'classificationRules',
+            'notifications',
+            'transactions',
+        ];
     }
     async findByUid(uid) {
         return this.usersRepository.findOne({
             where: { uid },
-            relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+            relations: [...this.userRelations],
         });
     }
     async findByEmail(email) {
         return this.usersRepository.findOne({
             where: { email },
-            relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+            relations: [...this.userRelations],
         });
     }
     async findById(id) {
         return this.usersRepository.findOne({
             where: { id },
-            relations: ['bankAccounts', 'financialMovements', 'classificationRules', 'notifications', 'transactions'],
+            relations: [...this.userRelations],
         });
     }
-    async createFromFirebase(firebaseUser) {
-        const user = this.usersRepository.create({
+    async createFromFirebase(firebaseUser, repository = this.usersRepository) {
+        const email = firebaseUser.email?.trim();
+        if (!email) {
+            throw new Error('Firebase user email is required to create an account.');
+        }
+        const user = repository.create({
             uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
+            email,
+            displayName: firebaseUser.displayName ?? email,
             photoURL: firebaseUser.photoURL,
-            emailVerified: firebaseUser.emailVerified || false,
+            emailVerified: firebaseUser.emailVerified ?? false,
             phoneNumber: firebaseUser.phoneNumber,
             metadata: firebaseUser.metadata,
-            fullName: firebaseUser.displayName,
+            fullName: firebaseUser.displayName ?? email,
             roles: ['user'],
             isActive: true,
             preferences: {
@@ -66,7 +77,7 @@ let UsersService = class UsersService {
                 },
             },
         });
-        return this.usersRepository.save(user);
+        return repository.save(user);
     }
     async update(id, updateData) {
         const user = await this.findById(id);
@@ -84,40 +95,48 @@ let UsersService = class UsersService {
         });
     }
     async syncWithFirebase(firebaseUser) {
-        let user = await this.findByUid(firebaseUser.uid);
-        if (!user && firebaseUser.email) {
-            user = await this.findByEmail(firebaseUser.email);
+        if (!firebaseUser?.uid) {
+            throw new Error('Firebase user UID is required to sync the account.');
         }
-        if (!user) {
-            return this.createFromFirebase(firebaseUser);
-        }
-        user.uid = firebaseUser.uid;
-        user.email = firebaseUser.email;
-        user.displayName = firebaseUser.displayName;
-        user.photoURL = firebaseUser.photoURL;
-        user.emailVerified = firebaseUser.emailVerified || false;
-        user.phoneNumber = firebaseUser.phoneNumber;
-        user.metadata = firebaseUser.metadata;
-        try {
-            return await this.usersRepository.save(user);
-        }
-        catch (error) {
-            const errorCode = error?.code ?? error?.driverError?.code;
-            if (errorCode === '23505' && firebaseUser.email) {
-                const existingByEmail = await this.findByEmail(firebaseUser.email);
-                if (existingByEmail) {
-                    existingByEmail.uid = firebaseUser.uid;
-                    existingByEmail.email = firebaseUser.email;
-                    existingByEmail.displayName = firebaseUser.displayName;
-                    existingByEmail.photoURL = firebaseUser.photoURL;
-                    existingByEmail.emailVerified = firebaseUser.emailVerified || false;
-                    existingByEmail.phoneNumber = firebaseUser.phoneNumber;
-                    existingByEmail.metadata = firebaseUser.metadata;
-                    return this.usersRepository.save(existingByEmail);
-                }
+        const email = firebaseUser.email?.trim();
+        return this.usersRepository.manager.transaction(async (manager) => {
+            const repository = manager.getRepository(user_entity_1.User);
+            const loadUser = async (where) => repository.findOne({
+                where,
+                relations: [...this.userRelations],
+            });
+            let user = await loadUser({ uid: firebaseUser.uid });
+            if (!user && email) {
+                user = await loadUser({ email });
             }
-            throw error;
-        }
+            if (!user) {
+                return this.createFromFirebase({ ...firebaseUser, email: email ?? firebaseUser.email }, repository);
+            }
+            user.uid = firebaseUser.uid;
+            if (email) {
+                user.email = email;
+            }
+            if (typeof firebaseUser.displayName !== 'undefined') {
+                user.displayName = firebaseUser.displayName ?? user.displayName;
+                user.fullName = firebaseUser.displayName ?? user.fullName;
+            }
+            if (typeof firebaseUser.photoURL !== 'undefined') {
+                user.photoURL = firebaseUser.photoURL ?? user.photoURL;
+            }
+            if (typeof firebaseUser.emailVerified !== 'undefined') {
+                user.emailVerified = firebaseUser.emailVerified;
+            }
+            if (typeof firebaseUser.phoneNumber !== 'undefined') {
+                user.phoneNumber = firebaseUser.phoneNumber ?? user.phoneNumber;
+            }
+            if (firebaseUser.metadata) {
+                user.metadata = {
+                    ...(user.metadata ?? {}),
+                    ...firebaseUser.metadata,
+                };
+            }
+            return repository.save(user);
+        });
     }
     async deactivate(id) {
         await this.usersRepository.update(id, { isActive: false });
