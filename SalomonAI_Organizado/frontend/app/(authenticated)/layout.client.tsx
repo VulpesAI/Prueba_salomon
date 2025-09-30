@@ -3,7 +3,7 @@
 import { useState } from "react"
 
 import {
-  Hydrate,
+  HydrationBoundary,
   QueryClient,
   QueryClientProvider,
   type DehydratedState,
@@ -47,12 +47,10 @@ export default function AuthenticatedLayoutClient({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Hydrate state={state}>
+      <HydrationBoundary state={state}>
         <AuthenticatedShell>{children}</AuthenticatedShell>
-      </Hydrate>
-      {process.env.NODE_ENV === "development" ? (
-        <ReactQueryDevtools buttonPosition="bottom-right" initialIsOpen={false} />
-      ) : null}
+      </HydrationBoundary>
+      {process.env.NODE_ENV === "development" ? <ReactQueryDevtools /> : null}
     </QueryClientProvider>
   )
 }

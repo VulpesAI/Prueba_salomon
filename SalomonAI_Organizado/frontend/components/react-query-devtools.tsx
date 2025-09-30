@@ -12,12 +12,8 @@ const headerStyles = "mb-2 flex items-center justify-between text-sm font-medium
 const listStyles = "max-h-64 overflow-auto space-y-2 text-xs"
 
 export function ReactQueryDevtools() {
-  const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
-
-  if (process.env.NODE_ENV !== "development") {
-    return null
-  }
+  const [isOpen, setIsOpen] = useState(false)
 
   const queriesSnapshot = useMemo(() => {
     const queries = queryClient.getQueryCache().findAll()
@@ -28,6 +24,10 @@ export function ReactQueryDevtools() {
       state: query.state,
     }))
   }, [queryClient])
+
+  if (process.env.NODE_ENV !== "development") {
+    return null
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
