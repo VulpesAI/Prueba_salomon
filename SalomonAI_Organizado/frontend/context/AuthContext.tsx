@@ -91,14 +91,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const normalizedApiBaseUrl = useMemo(
-    () => apiBaseUrl.replace(/\/+$/, ""),
+    () => apiBaseUrl.trim().replace(/\/+$/, ""),
     [apiBaseUrl]
   )
 
   const buildApiUrl = useCallback(
     (path: string) => {
       const normalizedPath = path.startsWith("/") ? path : `/${path}`
-      return `${normalizedApiBaseUrl}/api/v1${normalizedPath}`
+      const trimmedBaseUrl = normalizedApiBaseUrl.replace(/\/+$/, "")
+      const lowerTrimmedBaseUrl = trimmedBaseUrl.toLowerCase()
+
+      if (lowerTrimmedBaseUrl.endsWith("/api/v1")) {
+        return `${trimmedBaseUrl}${normalizedPath}`
+      }
+
+      if (/\/api\/v\d+$/i.test(trimmedBaseUrl)) {
+        return `${trimmedBaseUrl}${normalizedPath}`
+      }
+
+      if (lowerTrimmedBaseUrl.endsWith("/api")) {
+        return `${trimmedBaseUrl}/v1${normalizedPath}`
+      }
+
+      return `${trimmedBaseUrl}/api/v1${normalizedPath}`
     },
     [normalizedApiBaseUrl]
   )
