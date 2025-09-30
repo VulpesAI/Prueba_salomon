@@ -46,6 +46,9 @@ let FirebaseAdminService = class FirebaseAdminService {
     getAuth() {
         return this.app.auth();
     }
+    getMessaging() {
+        return this.app.messaging();
+    }
     async verifyIdToken(idToken) {
         try {
             return await this.getAuth().verifyIdToken(idToken);

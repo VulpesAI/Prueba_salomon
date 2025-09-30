@@ -15,8 +15,8 @@ const financial_movement_entity_1 = require("../../financial-movements/entities/
 const user_classification_rule_entity_1 = require("../../classification-rules/entities/user-classification-rule.entity");
 const notification_entity_1 = require("../../notifications/entities/notification.entity");
 const transaction_entity_1 = require("../../transactions/entities/transaction.entity");
-const financial_account_entity_1 = require("../../financial-accounts/entities/financial-account.entity");
-const bank_connection_entity_1 = require("../../belvo/entities/bank-connection.entity");
+const financial_goal_entity_1 = require("../../goals/entities/financial-goal.entity");
+const auth_token_entity_1 = require("../../auth/entities/auth-token.entity");
 let User = class User {
 };
 exports.User = User;
@@ -69,6 +69,30 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "isActive", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'mfa_enabled', default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "mfaEnabled", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'mfa_secret', nullable: true, select: false }),
+    __metadata("design:type", String)
+], User.prototype, "mfaSecret", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'mfa_temp_secret', nullable: true, select: false }),
+    __metadata("design:type", String)
+], User.prototype, "mfaTempSecret", void 0);
+__decorate([
+    (0, typeorm_1.Column)('json', { name: 'mfa_backup_codes', nullable: true, select: false }),
+    __metadata("design:type", Array)
+], User.prototype, "mfaBackupCodes", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'last_mfa_at', type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "lastMfaAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)('json', { name: 'oauth_providers', nullable: true }),
+    __metadata("design:type", Array)
+], User.prototype, "oauthProviders", void 0);
+__decorate([
     (0, typeorm_1.Column)('json', { nullable: true }),
     __metadata("design:type", Object)
 ], User.prototype, "preferences", void 0);
@@ -101,13 +125,13 @@ __decorate([
     __metadata("design:type", Array)
 ], User.prototype, "transactions", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => financial_account_entity_1.FinancialAccount, (account) => account.user),
+    (0, typeorm_1.OneToMany)(() => financial_goal_entity_1.FinancialGoal, goal => goal.user),
     __metadata("design:type", Array)
-], User.prototype, "accounts", void 0);
+], User.prototype, "goals", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => bank_connection_entity_1.BankConnection, (connection) => connection.user),
+    (0, typeorm_1.OneToMany)(() => auth_token_entity_1.AuthToken, token => token.user),
     __metadata("design:type", Array)
-], User.prototype, "bankConnections", void 0);
+], User.prototype, "authTokens", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

@@ -19,11 +19,13 @@ const typeorm_2 = require("typeorm");
 const transaction_entity_1 = require("./entities/transaction.entity");
 const financial_account_entity_1 = require("./entities/financial-account.entity");
 const classification_service_1 = require("../classification/classification.service");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let TransactionsService = class TransactionsService {
-    constructor(transactionRepository, accountRepository, classificationService) {
+    constructor(transactionRepository, accountRepository, classificationService, eventEmitter) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.classificationService = classificationService;
+        this.eventEmitter = eventEmitter;
     }
     async create(createTransactionDto) {
         const account = await this.accountRepository.findOne({
@@ -44,6 +46,10 @@ let TransactionsService = class TransactionsService {
             status: 'COMPLETED',
         });
         await this.transactionRepository.save(transaction);
+        this.eventEmitter.emit('transactions.created', {
+            userId: createTransactionDto.userId,
+            transaction,
+        });
         const amountChange = createTransactionDto.type === 'EXPENSE' ? -createTransactionDto.amount : createTransactionDto.amount;
         await this.accountRepository.update(account.id, {
             balance: account.balance + amountChange,
@@ -142,6 +148,7 @@ exports.TransactionsService = TransactionsService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(financial_account_entity_1.FinancialAccount)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        classification_service_1.ClassificationService])
+        classification_service_1.ClassificationService,
+        event_emitter_1.EventEmitter2])
 ], TransactionsService);
 //# sourceMappingURL=transactions.service.js.map

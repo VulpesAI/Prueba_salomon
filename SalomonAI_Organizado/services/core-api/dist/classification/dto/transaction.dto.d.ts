@@ -14,6 +14,7 @@ export declare class CorrectClassificationDto {
     readonly description: string;
     readonly correctCategory: TransactionCategory;
     readonly incorrectCategory?: TransactionCategory;
+    readonly movementId?: string;
     readonly notes?: string;
 }
 export declare class ClassificationResultDto {

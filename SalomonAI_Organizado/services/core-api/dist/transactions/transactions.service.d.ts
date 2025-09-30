@@ -2,6 +2,7 @@ import { Repository } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { FinancialAccount } from './entities/financial-account.entity';
 import { ClassificationService } from '../classification/classification.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 interface CreateTransactionDto {
     amount: number;
     description: string;
@@ -33,7 +34,8 @@ export declare class TransactionsService {
     private transactionRepository;
     private accountRepository;
     private classificationService;
-    constructor(transactionRepository: Repository<Transaction>, accountRepository: Repository<FinancialAccount>, classificationService: ClassificationService);
+    private readonly eventEmitter;
+    constructor(transactionRepository: Repository<Transaction>, accountRepository: Repository<FinancialAccount>, classificationService: ClassificationService, eventEmitter: EventEmitter2);
     create(createTransactionDto: CreateTransactionDto): Promise<Transaction>;
     findAll(userId: string, filters?: TransactionFilters): Promise<Transaction[]>;
     update(id: string, userId: string, updateTransactionDto: UpdateTransactionDto): Promise<Transaction>;

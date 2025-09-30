@@ -97,16 +97,19 @@ let ClassificationController = ClassificationController_1 = class Classification
             }, common_1.HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
-    async correctClassification(dto) {
+    async correctClassification(dto, req) {
         try {
             this.logger.debug(`🔧 Corrigiendo: "${dto.description}" -> ${dto.correctCategory}`);
-            await this.classificationService.correctClassification(dto);
+            const userId = req?.user?.id;
+            const correctionResult = await this.classificationService.correctClassification(dto, { userId });
             this.logger.debug(`✅ Corrección aplicada exitosamente`);
             this.eventEmitter.emit('api.correction.success', {
                 description: dto.description,
                 correctCategory: dto.correctCategory,
                 incorrectCategory: dto.incorrectCategory,
                 notes: dto.notes,
+                movementId: dto.movementId,
+                labelId: correctionResult.label.id,
                 timestamp: new Date(),
             });
             return {
@@ -116,8 +119,15 @@ let ClassificationController = ClassificationController_1 = class Classification
                     description: dto.description,
                     correctCategory: dto.correctCategory,
                     previousCategory: dto.incorrectCategory,
-                    modelVersion: '3.0',
+                    modelVersion: correctionResult.modelVersion,
                     notes: dto.notes,
+                    movementId: dto.movementId,
+                },
+                retraining: {
+                    queued: correctionResult.retrainingQueued,
+                    topic: correctionResult.kafkaTopic,
+                    labelId: correctionResult.label.id,
+                    movementId: correctionResult.label.movementId,
                 }
             };
         }
@@ -339,7 +349,14 @@ __decorate([
                     description: 'Compra ropa en mall',
                     correctCategory: 'VESTUARIO',
                     previousCategory: 'ENTRETENIMIENTO',
-                    modelVersion: '3.0'
+                    modelVersion: '3.0',
+                    movementId: '8dd43a82-ffef-4b6b-92b7-62f3d899a4d2'
+                },
+                retraining: {
+                    queued: true,
+                    topic: 'classification.corrections',
+                    labelId: '0cbe3b3e-7a11-4eb0-8acd-27c665c4e7ab',
+                    movementId: '8dd43a82-ffef-4b6b-92b7-62f3d899a4d2'
                 }
             }
         }
@@ -349,8 +366,9 @@ __decorate([
         description: 'Datos de corrección inválidos',
     }),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [transaction_dto_1.CorrectClassificationDto]),
+    __metadata("design:paramtypes", [transaction_dto_1.CorrectClassificationDto, Object]),
     __metadata("design:returntype", Promise)
 ], ClassificationController.prototype, "correctClassification", null);
 __decorate([

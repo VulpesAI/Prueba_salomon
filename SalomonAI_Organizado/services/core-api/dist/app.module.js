@@ -30,6 +30,12 @@ const transactions_module_1 = require("./transactions/transactions.module");
 const health_module_1 = require("./health/health.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const belvo_module_1 = require("./belvo/belvo.module");
+const financial_forecasts_module_1 = require("./financial-forecasts/financial-forecasts.module");
+const alerts_module_1 = require("./alerts/alerts.module");
+const notifications_module_1 = require("./notifications/notifications.module");
+const goals_module_1 = require("./goals/goals.module");
+const security_module_1 = require("./security/security.module");
+const privacy_module_1 = require("./privacy/privacy.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -72,6 +78,10 @@ exports.AppModule = AppModule = __decorate([
             firebase_module_1.FirebaseModule,
             dashboard_module_1.DashboardModule,
             belvo_module_1.BelvoModule,
+            financial_forecasts_module_1.FinancialForecastsModule,
+            alerts_module_1.AlertsModule,
+            notifications_module_1.NotificationsModule,
+            goals_module_1.GoalsModule,
             transactions_module_1.TransactionsModule,
             classification_module_1.ClassificationModule,
             classification_rules_module_1.ClassificationRulesModule,
@@ -79,6 +89,8 @@ exports.AppModule = AppModule = __decorate([
             kafka_module_1.KafkaModule,
             qdrant_module_1.QdrantModule,
             health_module_1.HealthModule,
+            security_module_1.SecurityModule,
+            privacy_module_1.PrivacyModule,
         ],
         controllers: [],
         providers: [],

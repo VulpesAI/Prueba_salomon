@@ -27,6 +27,17 @@ export declare class UserController {
         };
         roles: string[];
         isActive: boolean;
+        mfaEnabled: boolean;
+        mfaSecret?: string | null;
+        mfaTempSecret?: string | null;
+        mfaBackupCodes?: string[] | null;
+        lastMfaAt?: Date | null;
+        oauthProviders?: {
+            provider: string;
+            subject: string;
+            picture?: string;
+            lastLoginAt?: string;
+        }[];
         preferences: {
             currency?: string;
             timezone?: string;
@@ -35,6 +46,11 @@ export declare class UserController {
                 email?: boolean;
                 push?: boolean;
                 sms?: boolean;
+                pushTokens?: string[];
+                mutedEvents?: {
+                    key: string;
+                    until?: string;
+                }[];
             };
             privacy?: {
                 shareData?: boolean;
@@ -55,8 +71,8 @@ export declare class UserController {
         classificationRules: import("../classification-rules/entities/user-classification-rule.entity").UserClassificationRule[];
         notifications: import("../notifications/entities/notification.entity").Notification[];
         transactions: import("../transactions/entities/transaction.entity").Transaction[];
-        accounts: FinancialAccount[];
-        bankConnections: import("../belvo/entities/bank-connection.entity").BankConnection[];
+        goals: import("../goals/entities/financial-goal.entity").FinancialGoal[];
+        authTokens: import("../auth/entities/auth-token.entity").AuthToken[];
     };
     updateProfile(user: User, updateUserDto: UpdateUserDto): Promise<User>;
     deleteAccount(user: User): Promise<void>;

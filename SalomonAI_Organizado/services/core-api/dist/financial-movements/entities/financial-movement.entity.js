@@ -44,6 +44,22 @@ __decorate([
     __metadata("design:type", Array)
 ], FinancialMovement.prototype, "embedding", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'classification_confidence', type: 'decimal', precision: 5, scale: 4, nullable: true }),
+    __metadata("design:type", Number)
+], FinancialMovement.prototype, "classificationConfidence", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'classification_model_version', type: 'varchar', length: 50, nullable: true }),
+    __metadata("design:type", String)
+], FinancialMovement.prototype, "classificationModelVersion", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'classification_reviewed_at', type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], FinancialMovement.prototype, "classificationReviewedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'classification_metadata', type: 'jsonb', nullable: true }),
+    __metadata("design:type", Object)
+], FinancialMovement.prototype, "classificationMetadata", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, (user) => user.movements, { nullable: false, onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'user_id' }),
     __metadata("design:type", user_entity_1.User)

@@ -1,4 +1,5 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Request } from 'express';
 import { ClassificationService } from './classification.service';
 import { ClassifyTransactionDto, TrainTransactionDto, CorrectClassificationDto, ClassificationResultDto } from './dto/transaction.dto';
 export declare class ClassificationController {
@@ -17,7 +18,7 @@ export declare class ClassificationController {
             confidence?: number;
         };
     }>;
-    correctClassification(dto: CorrectClassificationDto): Promise<{
+    correctClassification(dto: CorrectClassificationDto, req: Request): Promise<{
         success: boolean;
         message: string;
         correction: {
@@ -26,6 +27,13 @@ export declare class ClassificationController {
             previousCategory?: string;
             modelVersion: string;
             notes?: string;
+            movementId?: string;
+        };
+        retraining: {
+            queued: boolean;
+            topic: string;
+            labelId: string;
+            movementId?: string;
         };
     }>;
     getModelMetrics(): Promise<{

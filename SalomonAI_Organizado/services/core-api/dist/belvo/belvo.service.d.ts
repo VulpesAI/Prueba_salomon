@@ -77,6 +77,11 @@ export declare class BelvoService {
     private getRequestConfig;
     getInstitutions(countryCode?: string): Promise<BelvoInstitution[]>;
     createLink(institution: string, username: string, password: string, externalId?: string): Promise<BelvoLink>;
+    createWidgetSession(externalId?: string, scopes?: string[]): Promise<{
+        access: string;
+        refresh?: string;
+        expires_in?: number;
+    }>;
     getAccounts(linkId: string): Promise<BelvoAccount[]>;
     getTransactions(linkId: string, dateFrom?: string, dateTo?: string, accountId?: string): Promise<BelvoTransaction[]>;
     getBalances(linkId: string, accountId?: string): Promise<any[]>;

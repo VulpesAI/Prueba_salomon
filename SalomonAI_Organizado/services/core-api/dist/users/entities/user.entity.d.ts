@@ -2,8 +2,8 @@ import { FinancialMovement } from '../../financial-movements/entities/financial-
 import { UserClassificationRule } from '../../classification-rules/entities/user-classification-rule.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
-import { FinancialAccount } from '../../financial-accounts/entities/financial-account.entity';
-import { BankConnection } from '../../belvo/entities/bank-connection.entity';
+import { FinancialGoal } from '../../goals/entities/financial-goal.entity';
+import { AuthToken } from '../../auth/entities/auth-token.entity';
 export declare class User {
     id: string;
     uid: string;
@@ -20,6 +20,17 @@ export declare class User {
     };
     roles: string[];
     isActive: boolean;
+    mfaEnabled: boolean;
+    mfaSecret?: string | null;
+    mfaTempSecret?: string | null;
+    mfaBackupCodes?: string[] | null;
+    lastMfaAt?: Date | null;
+    oauthProviders?: {
+        provider: string;
+        subject: string;
+        picture?: string;
+        lastLoginAt?: string;
+    }[];
     preferences: {
         currency?: string;
         timezone?: string;
@@ -28,6 +39,11 @@ export declare class User {
             email?: boolean;
             push?: boolean;
             sms?: boolean;
+            pushTokens?: string[];
+            mutedEvents?: {
+                key: string;
+                until?: string;
+            }[];
         };
         privacy?: {
             shareData?: boolean;
@@ -48,6 +64,6 @@ export declare class User {
     classificationRules: UserClassificationRule[];
     notifications: Notification[];
     transactions: Transaction[];
-    accounts: FinancialAccount[];
-    bankConnections: BankConnection[];
+    goals: FinancialGoal[];
+    authTokens: AuthToken[];
 }

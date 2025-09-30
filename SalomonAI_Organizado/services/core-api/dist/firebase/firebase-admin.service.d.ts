@@ -8,6 +8,7 @@ export declare class FirebaseAdminService implements OnModuleInit {
     onModuleInit(): void;
     getApp(): admin.app.App;
     getAuth(): admin.auth.Auth;
+    getMessaging(): admin.messaging.Messaging;
     verifyIdToken(idToken: string): Promise<admin.auth.DecodedIdToken>;
     getUserByUid(uid: string): Promise<admin.auth.UserRecord>;
     createCustomToken(uid: string, additionalClaims?: object): Promise<string>;

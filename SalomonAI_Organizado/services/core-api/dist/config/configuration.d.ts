@@ -20,6 +20,14 @@ declare const _default: (() => {
         url: string;
         collectionName: string;
     };
+    forecasting: {
+        engineUrl: string;
+        horizonDays: number;
+    };
+    recommendations: {
+        engineUrl: string;
+        timeoutMs: number;
+    };
     api: {
         globalPrefix: "api/v1";
         corsOrigin: string;
@@ -45,6 +53,14 @@ declare const _default: (() => {
     qdrant: {
         url: string;
         collectionName: string;
+    };
+    forecasting: {
+        engineUrl: string;
+        horizonDays: number;
+    };
+    recommendations: {
+        engineUrl: string;
+        timeoutMs: number;
     };
     api: {
         globalPrefix: "api/v1";

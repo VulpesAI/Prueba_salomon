@@ -31,6 +31,25 @@ export declare class BelvoController {
             isHealthy: boolean;
         };
     }>;
+    createWidgetToken(req: any): Promise<{
+        token: string;
+        refreshToken: string;
+        expiresIn: number;
+    }>;
+    createConnectionFromWidget(req: any, body: {
+        linkId?: string;
+    }): Promise<{
+        connection: {
+            id: string;
+            institutionName: string;
+            institutionType: string;
+            status: string;
+            accountsCount: number;
+            createdAt: Date;
+            lastAccessedAt: Date;
+            isHealthy: boolean;
+        };
+    }>;
     getUserConnections(req: any): Promise<{
         connections: {
             id: string;
@@ -71,6 +90,7 @@ export declare class BelvoController {
                 institutionWebsite?: string;
                 institutionPrimaryColor?: string;
                 belvoInstitutionData?: any;
+                belvoLinkStatus?: any;
                 lastSyncResults?: {
                     accountsSynced: number;
                     transactionsSynced: number;

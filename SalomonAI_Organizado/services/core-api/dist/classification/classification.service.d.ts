@@ -1,24 +1,39 @@
 import { OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Repository } from 'typeorm';
 import { ClassifyTransactionDto, TrainTransactionDto, CorrectClassificationDto, ClassificationResultDto } from './dto/transaction.dto';
 import { NlpService } from '../nlp/nlp.service';
 import { QdrantService } from '../qdrant/qdrant.service';
+import { KafkaService } from '../kafka/kafka.service';
+import { ClassificationLabel } from './entities/classification-label.entity';
+import { FinancialMovement } from '../financial-movements/entities/financial-movement.entity';
 export declare class ClassificationService implements OnModuleInit {
     private readonly nlpService;
     private readonly qdrantService;
     private readonly eventEmitter;
+    private readonly kafkaService;
+    private readonly configService;
+    private readonly labelRepository;
+    private readonly movementRepository;
     private readonly logger;
     private readonly COLLECTION_NAME;
     private readonly SIMILARITY_THRESHOLD;
     private readonly MIN_CONFIDENCE_THRESHOLD;
     private readonly BATCH_SIZE;
+    private readonly MODEL_VERSION;
+    private readonly targetAccuracy;
+    private readonly minLabelsForRetraining;
+    private readonly retrainingTopic;
+    private readonly correctionTopic;
     private totalClassifications;
     private correctPredictions;
     private readonly classificationHistory;
     private readonly classificationCache;
     private readonly maxCacheSize;
     private readonly fallbackRules;
-    constructor(nlpService: NlpService, qdrantService: QdrantService, eventEmitter: EventEmitter2);
+    constructor(nlpService: NlpService, qdrantService: QdrantService, eventEmitter: EventEmitter2, kafkaService: KafkaService, configService: ConfigService, labelRepository: Repository<ClassificationLabel>, movementRepository: Repository<FinancialMovement>);
+    private getNumberConfig;
     onModuleInit(): Promise<void>;
     private initializeModel;
     private loadInitialTrainingData;
@@ -27,12 +42,23 @@ export declare class ClassificationService implements OnModuleInit {
     private applyAmountBasedAdjustments;
     private determineFallbackClassification;
     trainModel(dto: TrainTransactionDto): Promise<void>;
-    correctClassification(dto: CorrectClassificationDto): Promise<void>;
+    correctClassification(dto: CorrectClassificationDto, context?: {
+        userId?: string;
+    }): Promise<{
+        label: ClassificationLabel;
+        retrainingQueued: boolean;
+        kafkaTopic: string;
+        modelVersion: string;
+    }>;
     private generateCacheKey;
     private saveToCache;
     private recordClassification;
     private recordCorrection;
+    private updateMovementFromCorrection;
+    private enqueueCorrectionEvent;
+    private enqueueRetrainingBatch;
     performDailyMaintenance(): Promise<void>;
+    orchestrateScheduledRetraining(): Promise<void>;
     getModelMetrics(): {
         totalClassifications: number;
         accuracy: number;
