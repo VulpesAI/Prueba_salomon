@@ -3,10 +3,10 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { CreateUserDto } from '../users/dto/create-user.dto';
-import { UserService } from '../users/user.service';
 import { TokenService, TokenPair } from './token.service';
 import { SiemLoggerService } from '../security/siem-logger.service';
 import {
@@ -16,11 +16,16 @@ import {
   normalizeMfaToken,
   verifyTotpToken,
 } from './utils/totp.util';
+import {
+  USER_ACCOUNTS_SERVICE,
+  UserAccountsService,
+} from '../users/interfaces/user-accounts.interface';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userService: UserService,
+    @Inject(USER_ACCOUNTS_SERVICE)
+    private readonly userService: UserAccountsService,
     private readonly tokenService: TokenService,
     private readonly siemLogger: SiemLoggerService,
   ) {}

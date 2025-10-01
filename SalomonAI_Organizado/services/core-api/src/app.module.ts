@@ -31,10 +31,11 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { GoalsModule } from './goals/goals.module';
 import { SecurityModule } from './security/security.module';
 import { PrivacyModule } from './privacy/privacy.module';
-import { validateEnv, isStrictEnv } from './config/env.validation';
+import { validateEnv, isStrictEnv, EnvStrictnessMode } from './config/env.validation';
 
 const envVars = validateEnv(process.env);
 const strictMode = isStrictEnv(envVars);
+const envMode: EnvStrictnessMode = strictMode ? 'strict' : 'minimal';
 
 const isDatabaseConfigured =
   strictMode ||
@@ -48,6 +49,8 @@ const isQdrantConfigured = strictMode || Boolean(envVars.QDRANT_URL?.toString().
 const isRecommendationsConfigured =
   strictMode || Boolean(envVars.RECOMMENDATION_ENGINE_URL?.toString().trim());
 
+const authModules = [AuthModule.register({ mode: envMode }), UserModule.register({ mode: envMode })];
+
 const databaseModules = isDatabaseConfigured
   ? [
       TypeOrmModule.forRootAsync({
@@ -55,8 +58,7 @@ const databaseModules = isDatabaseConfigured
         inject: [ConfigService],
         useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
       }),
-      AuthModule,
-      UserModule,
+      ...authModules,
       BelvoModule,
       FinancialForecastsModule,
       AlertsModule,
@@ -67,7 +69,7 @@ const databaseModules = isDatabaseConfigured
       ClassificationRulesModule,
       PrivacyModule,
     ]
-  : [];
+  : authModules;
 
 const dashboardModules = isDatabaseConfigured
   ? [DashboardModule.register({ recommendationsEnabled: isRecommendationsConfigured })]

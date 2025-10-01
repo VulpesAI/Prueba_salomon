@@ -2,9 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import {
+  FirebaseUserPayload,
+  UserDirectoryService,
+} from './interfaces/user-directory.interface';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements UserDirectoryService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -64,18 +68,7 @@ export class UsersService {
   /**
    * Crear un nuevo usuario desde Firebase
    */
-  async createFromFirebase(firebaseUser: {
-    uid: string;
-    email: string;
-    displayName?: string;
-    photoURL?: string;
-    emailVerified?: boolean;
-    phoneNumber?: string;
-    metadata?: {
-      creationTime?: string;
-      lastSignInTime?: string;
-    };
-  }): Promise<User> {
+  async createFromFirebase(firebaseUser: FirebaseUserPayload): Promise<User> {
     const user = this.usersRepository.create({
       uid: firebaseUser.uid,
       email: firebaseUser.email,
@@ -136,18 +129,7 @@ export class UsersService {
   /**
    * Sincronizar usuario con datos de Firebase
    */
-  async syncWithFirebase(firebaseUser: {
-    uid: string;
-    email: string;
-    displayName?: string;
-    photoURL?: string;
-    emailVerified?: boolean;
-    phoneNumber?: string;
-    metadata?: {
-      creationTime?: string;
-      lastSignInTime?: string;
-    };
-  }): Promise<User> {
+  async syncWithFirebase(firebaseUser: FirebaseUserPayload): Promise<User> {
     let user = await this.findByUid(firebaseUser.uid);
 
     if (!user && firebaseUser.email) {

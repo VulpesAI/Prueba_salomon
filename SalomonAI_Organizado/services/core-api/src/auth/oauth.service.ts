@@ -10,10 +10,13 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { randomBytes, randomUUID, createHash } from 'crypto';
 import type { Cache } from 'cache-manager';
-import { UserService } from '../users/user.service';
 import { TokenService } from './token.service';
 import { SiemLoggerService } from '../security/siem-logger.service';
 import { GoogleOAuthCallbackDto } from './dto/google-oauth.dto';
+import {
+  USER_ACCOUNTS_SERVICE,
+  UserAccountsService,
+} from '../users/interfaces/user-accounts.interface';
 
 const GOOGLE_AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -30,7 +33,8 @@ const base64UrlEncode = (buffer: Buffer) =>
 export class OAuthService {
   constructor(
     private readonly configService: ConfigService,
-    private readonly userService: UserService,
+    @Inject(USER_ACCOUNTS_SERVICE)
+    private readonly userService: UserAccountsService,
     private readonly tokenService: TokenService,
     private readonly siemLogger: SiemLoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,

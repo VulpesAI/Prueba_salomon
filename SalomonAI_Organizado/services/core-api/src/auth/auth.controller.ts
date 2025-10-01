@@ -8,25 +8,30 @@ import {
   HttpStatus,
   Headers,
   UnauthorizedException,
+  Inject,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
-import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { VerifyMfaDto } from './dto/verify-mfa.dto';
 import { DisableMfaDto } from './dto/disable-mfa.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { FirebaseLoginDto } from './dto/firebase-login.dto';
+import {
+  USER_DIRECTORY_SERVICE,
+  UserDirectoryService,
+} from '../users/interfaces/user-directory.interface';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly firebaseAdminService: FirebaseAdminService,
-    private readonly usersService: UsersService,
+    @Inject(USER_DIRECTORY_SERVICE)
+    private readonly usersService: UserDirectoryService,
   ) {}
 
   private extractBearerToken(authHeader?: string): string | null {
