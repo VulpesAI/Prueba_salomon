@@ -18,6 +18,17 @@
    - Google: ✅ Habilitar (opcional pero recomendado)
    - Otros providers: Según necesidad
 
+#### Dominios autorizados
+
+1. Ve a **Authentication → Settings → Authorized domains**.
+2. Agrega los dominios utilizados en desarrollo y producción:
+   - `localhost`
+   - `127.0.0.1`
+   - `0.0.0.0` (si se expone el frontend localmente desde contenedores)
+   - `<tu-app>.vercel.app` (dominio de despliegue principal en Vercel)
+   - Cualquier dominio personalizado que hayas configurado en Vercel.
+3. Guarda los cambios y, si tienes múltiples ambientes en Vercel (preview, producción), repite el proceso para cada dominio asociado.
+
 ### 3. Configurar Firestore Database (Opcional)
 
 1. **Ve a Firestore Database**
@@ -64,6 +75,8 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu-proyecto.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef...
 ```
+
+> **Nota:** `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` debe finalizar en `.firebaseapp.com` y `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` en `.appspot.com`. Si los dominios no cumplen con esos sufijos, Firebase rechazará la autenticación y la carga del SDK.
 
 #### Backend (.env):
 ```bash
@@ -117,9 +130,12 @@ npm run start:dev
 
 ### Verificar conexión Firebase Admin (Backend):
 ```bash
-curl -X POST http://localhost:3001/auth/firebase/verify \
-  -H "Authorization: Bearer TU_FIREBASE_TOKEN"
+curl -X POST http://localhost:3001/auth/firebase-login \
+  -H "Content-Type: application/json" \
+  -d '{ "idToken": "TU_FIREBASE_TOKEN" }'
 ```
+
+> También puedes enviar el token en el header: `-H "Authorization: Bearer TU_FIREBASE_TOKEN"`. Ambos formatos son aceptados por el backend.
 
 ### Verificar autenticación (Frontend):
 - Abrir http://localhost:3000

@@ -280,7 +280,7 @@ Ver [Anexo A](#anexo-a-variables-de-entorno-y-configuraciones-clave) para detall
 ### Contratos clave (REST)
 | Endpoint | Método | Descripción | Autenticación |
 | --- | --- | --- | --- |
-| `/auth/firebase/login` | POST | Intercambia token Firebase por JWT interno | Firebase ID Token.
+| `/auth/firebase-login` | POST | Intercambia token Firebase por JWT interno | `idToken` en body (`{ "idToken": "<token>" }`) o header `Authorization: Bearer`.
 | `/users/me` | GET | Recupera perfil combinado | JWT.
 | `/belvo/institutions` | GET | Lista instituciones disponibles | JWT + rol válido.
 | `/belvo/link` | POST | Crea link de institución | JWT.

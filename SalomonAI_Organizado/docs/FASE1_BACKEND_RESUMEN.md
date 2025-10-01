@@ -31,7 +31,7 @@
 
 ### 🎛️ Controladores de Autenticación
 - **Registro y login tradicional**: Mantenido para compatibilidad
-- **Login con Firebase**: Endpoint `/auth/firebase/login`
+- **Login con Firebase**: Endpoint `/auth/firebase-login` (acepta `idToken` en body `{ "idToken": "<token>" }` o en header `Authorization: Bearer`)
 - **Verificación de tokens**: Endpoint `/auth/firebase/verify`
 - **Generación de JWT internos**: Para sesiones del backend
 
@@ -126,7 +126,7 @@ DATABASE_NAME=salomonai_db
 ### Autenticación
 - `POST /auth/register` - Registro tradicional
 - `POST /auth/login` - Login tradicional
-- `POST /auth/firebase/login` - Login con Firebase
+- `POST /auth/firebase-login` - Login con Firebase (body `{ "idToken": "<token>" }` o header `Authorization: Bearer <token>`)
 - `POST /auth/firebase/verify` - Verificar token Firebase
 
 ### Usuarios

@@ -14,7 +14,7 @@ Este documento describe los módulos clave del servicio **core-api** y detalla s
 | `POST` | `/api/v1/auth/mfa/setup` | `JwtAuthGuard` | Genera secreto temporal y URL OTP para enrolamiento MFA. | — |
 | `POST` | `/api/v1/auth/mfa/verify` | `JwtAuthGuard` | Confirma MFA usando TOTP/códigos de respaldo y devuelve códigos generados. | `VerifyMfaDto` (token). |
 | `POST` | `/api/v1/auth/mfa/disable` | `JwtAuthGuard` | Desactiva MFA validando TOTP o código de respaldo. | `DisableMfaDto` (token, backupCode). |
-| `POST` | `/api/v1/auth/firebase/login` | — | Intercambia un token Firebase por sesión JWT interna. | Header `Authorization: Bearer <firebaseIdToken>`. |
+| `POST` | `/api/v1/auth/firebase-login` | — | Intercambia un token Firebase por sesión JWT interna. | Acepta `idToken` en body (`{ "idToken": "<token>" }`) o header `Authorization: Bearer <firebaseIdToken>`. |
 | `POST` | `/api/v1/auth/firebase/verify` | — | Valida un token Firebase y retorna datos del usuario sincronizado. | Header `Authorization: Bearer <firebaseIdToken>`. |
 
 ### Flujos destacados
@@ -22,13 +22,13 @@ Este documento describe los módulos clave del servicio **core-api** y detalla s
 1. **Autenticación local**: `LocalAuthGuard` invoca `AuthService.validateUser`, que verifica password con bcrypt, exige MFA cuando corresponde y genera eventos SIEM según resultado (`AUTH_LOGIN_FAILED`, `AUTH_MFA_REQUIRED`, etc.).【F:services/core-api/src/auth/auth.controller.ts†L33-L65】【F:services/core-api/src/auth/auth.service.ts†L24-L126】
 2. **Emisión de tokens**: `AuthService.login` utiliza `TokenService.issueTokenPair` para crear access/refresh tokens, registrando actividad en el SIEM (`AUTH_TOKENS_ISSUED`). Los refresh tokens se almacenan con hash y rotación controlada.【F:services/core-api/src/auth/auth.service.ts†L128-L152】【F:services/core-api/src/auth/token.service.ts†L21-L136】
 3. **MFA**: El enrolamiento genera un secreto base32, URL OTP y códigos de respaldo; la verificación mueve el secreto temporal a definitivo y persiste códigos hasheados. Deshabilitar MFA exige token o backup code válido.【F:services/core-api/src/auth/auth.service.ts†L154-L225】
-4. **Federación Firebase**: Los endpoints `firebase/login` y `firebase/verify` usan `FirebaseAdminService` para validar tokens y sincronizar usuarios (`UsersService.syncWithFirebase`), devolviendo un JWT interno para acceso subsecuente.【F:services/core-api/src/auth/auth.controller.ts†L67-L165】【F:services/core-api/src/users/users.service.ts†L52-L114】
+4. **Federación Firebase**: Los endpoints `firebase-login` y `firebase/verify` usan `FirebaseAdminService` para validar tokens y sincronizar usuarios (`UsersService.syncWithFirebase`), devolviendo un JWT interno para acceso subsecuente. El intercambio acepta el `idToken` tanto en el body (`{ "idToken": "<token>" }`) como en el header `Authorization`.【F:services/core-api/src/auth/auth.controller.ts†L67-L165】【F:services/core-api/src/users/users.service.ts†L52-L114】
 
 ### Requisitos de autenticación
 
 - Endpoints de MFA y refresco requieren JWT emitido por la plataforma (header `Authorization: Bearer <token>`).
 - `auth/login` espera credenciales básicas y, si MFA está activo, el campo `totp`.
-- Integraciones Firebase requieren tokens ID firmados por Firebase en el header `Authorization`.
+- Integraciones Firebase requieren tokens ID firmados por Firebase, que pueden enviarse en el header `Authorization` o en el body como `{ "idToken": "<token>" }` según el endpoint.
 
 ### Ejemplos
 
