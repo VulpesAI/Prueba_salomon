@@ -13,7 +13,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FinancialMovementsService } from '../financial-movements/financial-movements.service';
 import { FinancialForecastsService } from '../financial-forecasts/financial-forecasts.service';
 import { GoalsService } from '../goals/goals.service';
-import { RecommendationsService } from './recommendations.service';
+import { Inject } from '@nestjs/common';
+import { RECOMMENDATIONS_SERVICE, RecommendationsPort } from './recommendations.tokens';
 import { SubmitRecommendationFeedbackDto } from './dto/submit-recommendation-feedback.dto';
 
 @Controller('dashboard')
@@ -22,7 +23,8 @@ export class DashboardController {
     private readonly financialMovementsService: FinancialMovementsService,
     private readonly financialForecastsService: FinancialForecastsService,
     private readonly goalsService: GoalsService,
-    private readonly recommendationsService: RecommendationsService,
+    @Inject(RECOMMENDATIONS_SERVICE)
+    private readonly recommendationsService: RecommendationsPort,
   ) {}
 
   /**

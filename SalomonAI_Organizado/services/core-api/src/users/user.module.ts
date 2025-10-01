@@ -7,13 +7,11 @@ import { UsersService } from './users.service';
 import { UserController } from './user.controller';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
-import { KafkaModule } from '../kafka/kafka.module';
 import { FirebaseModule } from '../firebase/firebase.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]), // Provee el repositorio de User
-    KafkaModule, // Provee el KafkaService
     HttpModule, // Provee el HttpService
     ConfigModule, // Provee el ConfigService
     FirebaseModule, // Provee Firebase Admin SDK

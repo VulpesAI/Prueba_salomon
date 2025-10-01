@@ -18,6 +18,7 @@ import {
   UploadedFile,
   UseGuards,
   FileTypeValidator,
+  Inject,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,7 +28,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { firstValueFrom } from 'rxjs';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { KafkaService } from '../kafka/kafka.service';
+import { KAFKA_SERVICE, KafkaProducerService } from '../kafka/kafka.tokens';
 import { QueryDto } from './dto/query.dto';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -40,7 +41,8 @@ export class UserController {
   private readonly logger = new Logger(UserController.name);
   constructor(
     private readonly userService: UserService,
-    private readonly kafkaService: KafkaService,
+    @Inject(KAFKA_SERVICE)
+    private readonly kafkaService: KafkaProducerService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {}

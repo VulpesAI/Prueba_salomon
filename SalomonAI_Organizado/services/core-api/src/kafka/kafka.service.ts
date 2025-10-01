@@ -1,9 +1,10 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Kafka, Producer, ProducerRecord } from 'kafkajs';
+import { KafkaProducerService } from './kafka.tokens';
 
 @Injectable()
-export class KafkaService implements OnModuleInit, OnModuleDestroy {
+export class KafkaService implements OnModuleInit, OnModuleDestroy, KafkaProducerService {
   private kafka: Kafka;
   private producer: Producer;
   private isConnected = false;

@@ -5,6 +5,7 @@ import { AxiosError } from 'axios';
 import { firstValueFrom } from 'rxjs';
 
 import { SubmitRecommendationFeedbackDto } from './dto/submit-recommendation-feedback.dto';
+import { RecommendationsPort } from './recommendations.tokens';
 
 export interface RecommendationItem {
   id: string;
@@ -25,7 +26,7 @@ export interface PersonalizedRecommendations {
 }
 
 @Injectable()
-export class RecommendationsService {
+export class RecommendationsService implements RecommendationsPort {
   private readonly logger = new Logger(RecommendationsService.name);
   private readonly timeout: number;
 

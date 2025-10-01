@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { QdrantService } from '../qdrant/qdrant.service';
+import { QDRANT_SERVICE, QdrantVectorService } from '../qdrant/qdrant.tokens';
 import { CreateFinancialMovementDto } from './dto/create-financial-movement.dto';
 import { UpdateFinancialMovementDto } from './dto/update-financial-movement.dto';
 import { FinancialMovement } from './entities/financial-movement.entity';
@@ -31,7 +31,8 @@ export class FinancialMovementsService {
     private readonly movementRepository: Repository<FinancialMovement>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly qdrantService: QdrantService,
+    @Inject(QDRANT_SERVICE)
+    private readonly qdrantService: QdrantVectorService,
   ) {}
 
   async create(dto: CreateFinancialMovementDto): Promise<FinancialMovement> {

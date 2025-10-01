@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,8 +12,8 @@ import {
   ClassificationResultDto 
 } from './dto/transaction.dto';
 import { NlpService } from '../nlp/nlp.service';
-import { QdrantService } from '../qdrant/qdrant.service';
-import { KafkaService } from '../kafka/kafka.service';
+import { QDRANT_SERVICE, QdrantVectorService } from '../qdrant/qdrant.tokens';
+import { KAFKA_SERVICE, KafkaProducerService } from '../kafka/kafka.tokens';
 import { TransactionCategory } from '../transactions/enums/transaction-category.enum';
 import { TransactionClassification } from '../nlp/interfaces/transaction-classification.interface';
 import { ClassificationLabel, ClassificationLabelSource, ClassificationLabelStatus } from './entities/classification-label.entity';
@@ -68,9 +68,11 @@ export class ClassificationService implements OnModuleInit {
 
   constructor(
     private readonly nlpService: NlpService,
-    private readonly qdrantService: QdrantService,
+    @Inject(QDRANT_SERVICE)
+    private readonly qdrantService: QdrantVectorService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly kafkaService: KafkaService,
+    @Inject(KAFKA_SERVICE)
+    private readonly kafkaService: KafkaProducerService,
     private readonly configService: ConfigService,
     @InjectRepository(ClassificationLabel)
     private readonly labelRepository: Repository<ClassificationLabel>,

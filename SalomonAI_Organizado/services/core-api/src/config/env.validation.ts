@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const envSchema = z
+const baseEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().default(3000),
@@ -24,7 +24,9 @@ export const envSchema = z
     FORECASTING_DEFAULT_MODEL: z.string().default('auto'),
     FORECASTING_DATABASE_URL: z.string().min(1).optional(),
   })
-  .superRefine((data, ctx) => {
+  .passthrough();
+
+export const envSchema = baseEnvSchema.superRefine((data, ctx) => {
     if (!data.STRICT_ENV) {
       return;
     }
@@ -54,8 +56,7 @@ export const envSchema = z
         });
       }
     });
-  })
-  .passthrough();
+  });
 
 export type EnvVars = z.infer<typeof envSchema>;
 
