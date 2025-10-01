@@ -19,6 +19,7 @@ import { VerifyMfaDto } from './dto/verify-mfa.dto';
 import { DisableMfaDto } from './dto/disable-mfa.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { FirebaseLoginDto } from './dto/firebase-login.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -27,6 +28,52 @@ export class AuthController {
     private readonly firebaseAdminService: FirebaseAdminService,
     private readonly usersService: UsersService,
   ) {}
+
+  private extractBearerToken(authHeader?: string): string | null {
+    if (!authHeader) {
+      return null;
+    }
+
+    const matches = authHeader.match(/^Bearer\s+(.+)$/i);
+    return matches ? matches[1].trim() : null;
+  }
+
+  private async handleFirebaseLogin(idToken: string) {
+    try {
+      const decodedToken = await this.firebaseAdminService.verifyIdToken(idToken);
+      const firebaseUser = await this.firebaseAdminService.getUserByUid(decodedToken.uid);
+
+      const user = await this.usersService.syncWithFirebase({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        emailVerified: firebaseUser.emailVerified,
+        phoneNumber: firebaseUser.phoneNumber,
+        metadata: {
+          creationTime: firebaseUser.metadata.creationTime,
+          lastSignInTime: firebaseUser.metadata.lastSignInTime,
+        },
+      });
+
+      const session = await this.authService.login({
+        id: user.id,
+        email: user.email,
+        roles: user.roles,
+        mfaEnabled: user.mfaEnabled,
+        isActive: user.isActive,
+        uid: user.uid,
+      });
+
+      return {
+        ...session,
+        access_token: session.accessToken,
+      };
+    } catch (error) {
+      console.error('Error en login Firebase:', error);
+      throw new UnauthorizedException('Token Firebase inválido');
+    }
+  }
 
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
@@ -68,54 +115,28 @@ export class AuthController {
   /**
    * Login con Firebase Token
    */
-  @Post('firebase/login')
+  @Post('firebase-login')
   @HttpCode(HttpStatus.OK)
-  async firebaseLogin(@Headers('authorization') authHeader: string) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  async firebaseLogin(@Body() body: FirebaseLoginDto, @Headers('authorization') authHeader?: string) {
+    const idToken = body?.idToken ?? this.extractBearerToken(authHeader);
+
+    if (!idToken) {
       throw new UnauthorizedException('Token Firebase requerido');
     }
 
-    const firebaseToken = authHeader.substring(7); // Remover "Bearer "
+    return this.handleFirebaseLogin(idToken);
+  }
 
-    try {
-      // Verificar el token con Firebase Admin
-      const decodedToken = await this.firebaseAdminService.verifyIdToken(firebaseToken);
-      
-      // Obtener información del usuario de Firebase
-      const firebaseUser = await this.firebaseAdminService.getUserByUid(decodedToken.uid);
-      
-      // Sincronizar o crear usuario en nuestra base de datos
-      const user = await this.usersService.syncWithFirebase({
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        photoURL: firebaseUser.photoURL,
-        emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber,
-        metadata: {
-          creationTime: firebaseUser.metadata.creationTime,
-          lastSignInTime: firebaseUser.metadata.lastSignInTime,
-        },
-      });
+  @Post('firebase/login')
+  @HttpCode(HttpStatus.OK)
+  async firebaseLoginAlias(@Headers('authorization') authHeader: string) {
+    const idToken = this.extractBearerToken(authHeader);
 
-      // Generar JWT interno para nuestra aplicación
-      const session = await this.authService.login({
-        id: user.id,
-        email: user.email,
-        roles: user.roles,
-        mfaEnabled: user.mfaEnabled,
-        isActive: user.isActive,
-        uid: user.uid,
-      });
-
-      return {
-        ...session,
-        access_token: session.accessToken,
-      };
-    } catch (error) {
-      console.error('Error en login Firebase:', error);
-      throw new UnauthorizedException('Token Firebase inválido');
+    if (!idToken) {
+      throw new UnauthorizedException('Token Firebase requerido');
     }
+
+    return this.handleFirebaseLogin(idToken);
   }
 
   /**
