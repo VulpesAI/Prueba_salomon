@@ -5,6 +5,7 @@
 ### AuthProvider y ciclo de vida de sesión
 - `AuthProvider` inicializa el estado consultando `getFirebaseAuth()` y suscribiéndose a `onAuthStateChanged` cuando el componente se monta en el navegador. El `user` y la bandera `isLoading` se actualizan con cada cambio de sesión, y se corta la suscripción al desmontar el componente.【F:frontend/context/AuthContext.tsx†L36-L79】
 - El proveedor expone acciones básicas (`login`, `signup`, `loginWithGoogle`, `resetPassword`, `logout`) que resuelven dinámicamente la instancia de autenticación de Firebase antes de cada operación, garantizando que el SDK esté listo y que siempre se ejecute en cliente.【F:frontend/context/AuthContext.tsx†L81-L123】
+- Tras obtener el `idToken` de Firebase, el contexto intercambia la sesión con el backend mediante `POST /auth/firebase-login`, enviando `{ "idToken": "<token>" }` en el body (o el mismo token en `Authorization: Bearer`). La respuesta incluye los JWT internos que se cachean en `localStorage` para llamadas posteriores al core-api.【F:frontend/context/AuthContext.tsx†L403-L476】
 - Cualquier hook o componente que dependa de la sesión debe consumir `useAuth()`, que valida que el contexto se utilice dentro del árbol de `AuthProvider` para evitar estados inconsistentes.【F:frontend/context/AuthContext.tsx†L125-L130】
 
 ### Carga dinámica del SDK de Firebase
