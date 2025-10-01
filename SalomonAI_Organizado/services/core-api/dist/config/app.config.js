@@ -76,7 +76,7 @@ const setupGlobalPrefix = (app, configService) => {
 };
 exports.setupGlobalPrefix = setupGlobalPrefix;
 const setupCors = (app, configService) => {
-    const corsOrigins = configService.get('CORS_ORIGIN', 'http://localhost:3001');
+    const corsOrigins = configService.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001');
     app.enableCors({
         origin: corsOrigins.split(','),
         credentials: true,

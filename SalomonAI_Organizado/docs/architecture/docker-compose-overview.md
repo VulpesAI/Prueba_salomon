@@ -63,7 +63,7 @@ Las variables provienen de [`docker-compose.yml`](../../docker-compose.yml), [`d
 ### Frontend y experiencia de usuario
 
 - `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CONVERSATION_ENGINE_URL`, `NEXT_PUBLIC_VOICE_GATEWAY_URL`: URLs públicas para que el frontend acceda a servicios internos.
-- `CORS_ORIGIN`: origen permitido para llamadas hacia `core-api`.
+- `ALLOWED_ORIGINS`: lista separada por comas con los dominios autorizados para `core-api` (localhost, dominio en Vercel `https://prueba-salomon.vercel.app` y dominio personalizado).
 
 ### Motores especializados
 
