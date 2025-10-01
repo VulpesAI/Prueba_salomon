@@ -52,7 +52,7 @@ const firebaseSecretsSatisfied = (): {
   };
 };
 
-const run = () => {
+const run = (): number => {
   loadRootEnv();
 
   const validationResult = envSchema.safeParse(process.env);
@@ -125,8 +125,15 @@ const run = () => {
     console.log('\n✅ Validación de esquema completada sin errores.');
   }
 
+  const missingCriticalItems: string[] = [];
+  const jwtSecretPresent = hasValue(process.env.JWT_SECRET);
+
+  if (!jwtSecretPresent) {
+    missingCriticalItems.push('JWT_SECRET');
+  }
+
   const requiredForMinimal: { name: string; present: boolean; detail?: string }[] = [
-    { name: 'JWT_SECRET', present: hasValue(process.env.JWT_SECRET) },
+    { name: 'JWT_SECRET', present: jwtSecretPresent },
     {
       name: 'ALLOWED_ORIGINS',
       present: hasValue(process.env.ALLOWED_ORIGINS),
@@ -165,6 +172,14 @@ const run = () => {
   }
 
   console.log('\nConsejo: ejecuta este script después de cargar tus variables para verificar el impacto en la configuración.');
+  if (missingCriticalItems.length) {
+    console.log(`\n❌ Resumen: faltan variables críticas -> ${formatList(missingCriticalItems)}.`);
+    return 1;
+  }
+
+  console.log('\n✅ Resumen: todas las variables críticas están configuradas.');
+  return 0;
 };
 
-run();
+const exitCode = run();
+process.exit(exitCode);
