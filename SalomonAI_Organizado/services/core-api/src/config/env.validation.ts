@@ -28,7 +28,12 @@ const baseEnvSchema = z
     POSTGRES_USER: optionalNonEmptyString(),
     POSTGRES_PASSWORD: optionalNonEmptyString(),
     POSTGRES_DB: optionalNonEmptyString(),
-    JWT_SECRET: z.string().min(1),
+    JWT_SECRET: z
+      .string({
+        required_error:
+          'JWT_SECRET is required. Generate one with: openssl rand -base64 32',
+      })
+      .min(1, 'JWT_SECRET is required. Generate one with: openssl rand -base64 32'),
     JWT_EXPIRES_IN: z.string().default('24h'),
     KAFKA_BROKER: z.string().default('kafka:9092'),
     KAFKA_CLIENT_ID: z.string().default('salomon-api'),
