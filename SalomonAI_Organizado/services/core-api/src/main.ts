@@ -57,7 +57,7 @@ async function bootstrap() {
     next();
   });
 
-  const port = configService.get('API_PORT', 3000);
+  const port = Number(process.env.PORT ?? configService.get('API_PORT', 3000));
   
   // Graceful shutdown
   process.on('SIGINT', async () => {
