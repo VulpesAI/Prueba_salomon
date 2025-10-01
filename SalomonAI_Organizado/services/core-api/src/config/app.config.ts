@@ -78,7 +78,12 @@ export const setupGlobalPrefix = (app: INestApplication, configService: ConfigSe
 };
 
 export const setupCors = (app: INestApplication, configService: ConfigService) => {
-  const corsOrigins = configService.get<string>('CORS_ORIGIN', 'http://localhost:3001');
+  const corsOrigins = configService.get<string>(
+    'ALLOWED_ORIGINS',
+    'http://localhost:3000,http://localhost:3001',
+  );
+  // The list is expected to include localhost for development, the Vercel deployment domain
+  // (https://prueba-salomon.vercel.app), and any custom production domain, separated by commas.
   app.enableCors({
     origin: corsOrigins.split(','),
     credentials: true,
