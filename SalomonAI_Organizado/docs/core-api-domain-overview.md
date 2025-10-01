@@ -299,6 +299,11 @@ Respuesta (resumida):
 | **Forecasting engine** | Generación de series temporales y tendencias financieras. | `configuration.ts` carga `FORECASTING_ENGINE_URL` y `FORECASTING_DEFAULT_HORIZON_DAYS`, usados por `FinancialForecastsService` y el scheduler. |【F:services/core-api/src/config/configuration.ts†L1-L33】【F:services/core-api/src/financial-forecasts/financial-forecasts.service.ts†L34-L63】|
 | **SIEM externo** | Auditoría de eventos de seguridad (login, MFA, rotación tokens). | `SiemLoggerService` envía eventos al endpoint `SIEM_ENDPOINT` con token opcional `SIEM_TOKEN`. |【F:services/core-api/src/security/siem-logger.service.ts†L1-L40】|
 
+### Configuración de CORS
+
+- Define `ALLOWED_ORIGINS` con los dominios autorizados separados por comas. Debe incluir `http://localhost:3000`, `https://prueba-salomon.vercel.app` y cualquier dominio personalizado que se requiera habilitar.
+- `CORS_ORIGIN` permanece como valor de respaldo durante la transición, pero está deprecado y se eliminará en futuras versiones.
+
 ## Eventos de seguridad y SIEM
 
 - El módulo `auth` registra eventos de intentos fallidos, éxitos, enrolamiento MFA y revocación de tokens, permitiendo monitoreo de amenazas y cumplimiento SOC2/ISO 27001.【F:services/core-api/src/auth/auth.service.ts†L26-L219】【F:services/core-api/src/auth/token.service.ts†L94-L136】
