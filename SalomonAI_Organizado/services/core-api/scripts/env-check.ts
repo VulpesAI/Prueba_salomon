@@ -18,24 +18,38 @@ const toBoolean = (value: unknown): boolean => {
   return false;
 };
 
-const firebaseSecretsSatisfied = (): { configured: boolean; missing: string[] } => {
+const firebaseSecretsSatisfied = (): {
+  minimalConfigured: boolean;
+  missingMinimal: string[];
+  optionalMissing: string[];
+  usingServiceAccountKey: boolean;
+} => {
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (hasValue(serviceAccountKey)) {
-    return { configured: true, missing: [] };
+    return { minimalConfigured: true, missingMinimal: [], optionalMissing: [], usingServiceAccountKey: true };
   }
 
-  const firebaseKeys = [
+  const firebaseMinimalKeys: (keyof NodeJS.ProcessEnv)[] = [
     'FIREBASE_PROJECT_ID',
-    'FIREBASE_PRIVATE_KEY_ID',
-    'FIREBASE_PRIVATE_KEY',
     'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_PRIVATE_KEY',
+  ];
+  const firebaseOptionalKeys: (keyof NodeJS.ProcessEnv)[] = [
+    'FIREBASE_PRIVATE_KEY_ID',
     'FIREBASE_CLIENT_ID',
     'FIREBASE_CLIENT_CERT_URL',
     'FIREBASE_DATABASE_URL',
   ];
 
-  const missing = firebaseKeys.filter((key) => !hasValue(process.env[key]));
-  return { configured: missing.length === 0, missing };
+  const missingMinimal = firebaseMinimalKeys.filter((key) => !hasValue(process.env[key])) as string[];
+  const optionalMissing = firebaseOptionalKeys.filter((key) => !hasValue(process.env[key])) as string[];
+
+  return {
+    minimalConfigured: missingMinimal.length === 0,
+    missingMinimal,
+    optionalMissing,
+    usingServiceAccountKey: false,
+  };
 };
 
 const run = () => {
@@ -119,11 +133,11 @@ const run = () => {
       detail: 'Puedes usar CORS_ORIGIN como respaldo solo si ALLOWED_ORIGINS no está disponible.',
     },
     {
-      name: 'Credenciales de Firebase',
-      present: firebaseStatus.configured,
-      detail: firebaseStatus.configured
+      name: 'Credenciales de Firebase (modo mínimo)',
+      present: firebaseStatus.minimalConfigured,
+      detail: firebaseStatus.minimalConfigured
         ? undefined
-        : `Faltan: ${formatList(firebaseStatus.missing)}`,
+        : `Requeridas para modo mínimo: ${formatList(firebaseStatus.missingMinimal)}`,
     },
   ];
 
@@ -142,6 +156,13 @@ const run = () => {
       console.log(`      ${dependency.reason}`);
     }
   });
+
+  if (firebaseStatus.usingServiceAccountKey) {
+    console.log('\nℹ️  Firebase: Se detectó FIREBASE_SERVICE_ACCOUNT_KEY, se omite la verificación de claves individuales.');
+  } else if (firebaseStatus.optionalMissing.length) {
+    console.log('\nℹ️  Firebase: Claves opcionales ausentes (requeridas para modo completo o características avanzadas):');
+    firebaseStatus.optionalMissing.forEach((key) => console.log(`  - ${key}`));
+  }
 
   console.log('\nConsejo: ejecuta este script después de cargar tus variables para verificar el impacto en la configuración.');
 };
