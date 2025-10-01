@@ -1,28 +1,49 @@
 import { z } from 'zod';
 
+const emptyStringToUndefined = (value: unknown) => {
+  if (typeof value === 'string' && value.trim().length === 0) {
+    return undefined;
+  }
+  return value;
+};
+
+const optionalNonEmptyString = () =>
+  z.preprocess(emptyStringToUndefined, z.string().min(1)).optional();
+
+const optionalUrlOrNonEmptyString = () =>
+  z
+    .preprocess(
+      emptyStringToUndefined,
+      z.union([z.string().url(), z.string().min(1)]),
+    )
+    .optional();
+
 const baseEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().default(3000),
     STRICT_ENV: z.coerce.boolean().default(false),
-    POSTGRES_HOST: z.string().min(1).optional(),
+    POSTGRES_HOST: optionalNonEmptyString(),
     POSTGRES_PORT: z.coerce.number().default(5432),
-    POSTGRES_USER: z.string().min(1).optional(),
-    POSTGRES_PASSWORD: z.string().min(1).optional(),
-    POSTGRES_DB: z.string().min(1).optional(),
+    POSTGRES_USER: optionalNonEmptyString(),
+    POSTGRES_PASSWORD: optionalNonEmptyString(),
+    POSTGRES_DB: optionalNonEmptyString(),
     JWT_SECRET: z.string().min(1),
     JWT_EXPIRES_IN: z.string().default('24h'),
     KAFKA_BROKER: z.string().default('kafka:9092'),
     KAFKA_CLIENT_ID: z.string().default('salomon-api'),
-    QDRANT_URL: z.string().url().or(z.string().min(1)).optional(),
+    QDRANT_URL: optionalUrlOrNonEmptyString(),
     QDRANT_COLLECTION: z.string().default('transactions'),
-    FRONTEND_URL: z.string().url().or(z.string().min(1)).optional(),
-    RECOMMENDATION_ENGINE_URL: z.string().url().or(z.string().min(1)).optional(),
+    FRONTEND_URL: optionalUrlOrNonEmptyString(),
+    RECOMMENDATION_ENGINE_URL: optionalUrlOrNonEmptyString(),
     RECOMMENDATION_ENGINE_TIMEOUT_MS: z.coerce.number().default(8000),
-    FORECASTING_ENGINE_URL: z.string().url().or(z.string().min(1)).optional(),
+    FORECASTING_ENGINE_URL: optionalUrlOrNonEmptyString(),
     FORECASTING_DEFAULT_HORIZON_DAYS: z.coerce.number().default(30),
     FORECASTING_DEFAULT_MODEL: z.string().default('auto'),
-    FORECASTING_DATABASE_URL: z.string().min(1).optional(),
+    FORECASTING_DATABASE_URL: optionalNonEmptyString(),
+    FIREBASE_PROJECT_ID: z.string().min(1),
+    FIREBASE_CLIENT_EMAIL: z.string().email(),
+    FIREBASE_PRIVATE_KEY: z.string().min(1),
   })
   .passthrough();
 
