@@ -4,7 +4,7 @@ This directory contains the backend Core API service for the SalomonAI platform.
 
 ## Deployment
 
-When deploying this service to Firebase App Hosting or Cloud Run, ensure the server listens on the port defined by the `PORT` environment variable provided by the hosting platform. Both Firebase App Hosting and Cloud Run default this variable to `8080`, so the application must not hard-code an alternative port.
+When deploying this service to Firebase App Hosting or Cloud Run, ensure the server listens on the port defined by the `PORT` environment variable provided by the hosting platform. Both services inject `PORT=8080` into the runtime, so the application must not hard-code an alternative port.
 
 Example command to start the compiled application locally in a way that matches these platforms:
 
@@ -22,3 +22,13 @@ The API can operate in two strictness modes controlled by the `STRICT_ENV` envir
 - **minimal** (`STRICT_ENV=false`): skips the database requirement and registers in-memory implementations for user management and refresh token persistence. Firebase authentication continues to function and `/auth/firebase-login` will return a JWT + refresh token pair backed by the in-memory stores.
 
 This makes it possible to run lightweight environments (for demos or tests) without provisioning Postgres. Switching back to strict mode automatically restores the TypeORM-backed services.
+
+### Variables mínimas necesarias
+
+Para iniciar en modo mínimo (`STRICT_ENV=false`) debes definir:
+
+- `JWT_SECRET`: la firma de los tokens emitidos por la API.
+- `ALLOWED_ORIGINS`: lista de orígenes permitidos para CORS (usa `CORS_ORIGIN` solo como respaldo temporal).
+- Secretos `FIREBASE_*`: ya sea el JSON completo en `FIREBASE_SERVICE_ACCOUNT_KEY` o cada campo individual (`FIREBASE_PROJECT_ID`, `FIREBASE_PRIVATE_KEY_ID`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_CLIENT_ID`, `FIREBASE_CLIENT_CERT_URL`, `FIREBASE_DATABASE_URL`).
+
+Ejecuta `npm run env:check` para revisar rápidamente si faltan valores y qué dependencias opcionales se activarán en ese modo.
