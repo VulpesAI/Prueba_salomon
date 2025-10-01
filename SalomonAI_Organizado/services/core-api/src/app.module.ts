@@ -8,10 +8,10 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { WinstonModule } from 'nest-winston';
 import { configModuleOptions } from './config/config.module-options';
 import { createLoggerConfig } from './config/logger.config';
-import { 
-  createDatabaseConfig, 
-  createCacheConfig, 
-  createThrottlerConfig 
+import {
+  createDatabaseConfig,
+  createCacheConfig,
+  createThrottlerConfig,
 } from './config/app.config';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './users/user.module';
@@ -31,6 +31,47 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { GoalsModule } from './goals/goals.module';
 import { SecurityModule } from './security/security.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { validateEnv, isStrictEnv } from './config/env.validation';
+
+const envVars = validateEnv(process.env);
+const strictMode = isStrictEnv(envVars);
+
+const isDatabaseConfigured =
+  strictMode ||
+  ['POSTGRES_HOST', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'].every((key) => {
+    const value = (envVars as Record<string, unknown>)[key];
+    return typeof value === 'string' ? value.trim().length > 0 : value !== undefined && value !== null;
+  });
+
+const isKafkaConfigured = strictMode || Boolean(process.env.KAFKA_BROKER?.trim());
+const isQdrantConfigured = strictMode || Boolean(envVars.QDRANT_URL?.toString().trim());
+const isRecommendationsConfigured =
+  strictMode || Boolean(envVars.RECOMMENDATION_ENGINE_URL?.toString().trim());
+
+const databaseModules = isDatabaseConfigured
+  ? [
+      TypeOrmModule.forRootAsync({
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+      }),
+      AuthModule,
+      UserModule,
+      BelvoModule,
+      FinancialForecastsModule,
+      AlertsModule,
+      NotificationsModule,
+      GoalsModule,
+      TransactionsModule,
+      ClassificationModule,
+      ClassificationRulesModule,
+      PrivacyModule,
+    ]
+  : [];
+
+const dashboardModules = isDatabaseConfigured
+  ? [DashboardModule.register({ recommendationsEnabled: isRecommendationsConfigured })]
+  : [];
 
 @Module({
   imports: [
@@ -42,13 +83,6 @@ import { PrivacyModule } from './privacy/privacy.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => createLoggerConfig(configService),
-    }),
-    
-    // Database
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
     }),
     
     // Cache Management
@@ -81,26 +115,16 @@ import { PrivacyModule } from './privacy/privacy.module';
     }),
 
     // Feature Modules
-    AuthModule,
-    UserModule,
     FirebaseModule,
-    DashboardModule,
-    BelvoModule,
-    FinancialForecastsModule,
-    AlertsModule,
-    NotificationsModule,
-    GoalsModule,
-    TransactionsModule,
-    ClassificationModule,
-    ClassificationRulesModule,
     NlpModule,
 
     // Infrastructure Modules
-    KafkaModule,
-    QdrantModule,
+    KafkaModule.register({ enabled: isKafkaConfigured }),
+    QdrantModule.register({ enabled: isQdrantConfigured }),
     HealthModule,
     SecurityModule,
-    PrivacyModule,
+    ...databaseModules,
+    ...dashboardModules,
   ],
   controllers: [],
   providers: [],

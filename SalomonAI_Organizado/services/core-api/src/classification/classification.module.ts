@@ -8,9 +8,7 @@ import { ClassificationService } from './classification.service';
 import { ClassificationLabel } from './entities/classification-label.entity';
 import { ClassificationController } from './classification.controller';
 import { FinancialMovement } from '../financial-movements/entities/financial-movement.entity';
-import { KafkaModule } from '../kafka/kafka.module';
 import { NlpModule } from '../nlp/nlp.module';
-import { QdrantModule } from '../qdrant/qdrant.module';
 
 /**
  * Módulo avanzado de clasificación con capacidades modernas
@@ -21,8 +19,6 @@ import { QdrantModule } from '../qdrant/qdrant.module';
   imports: [
     // Módulos core
     NlpModule, 
-    QdrantModule,
-    KafkaModule,
     TypeOrmModule.forFeature([ClassificationLabel, FinancialMovement]),
 
     // Cache para mejorar performance

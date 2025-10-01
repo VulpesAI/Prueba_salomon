@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { QdrantVectorService } from './qdrant.tokens';
 
 interface CollectionConfig {
   size: number;
@@ -14,7 +15,7 @@ interface SearchConfig {
 }
 
 @Injectable()
-export class QdrantService implements OnModuleInit {
+export class QdrantService implements OnModuleInit, QdrantVectorService {
   private readonly logger = new Logger(QdrantService.name);
   private client: QdrantClient;
 
