@@ -1,6 +1,5 @@
 import { Controller, Get, Optional } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
 import { InjectConnection } from '@nestjs/typeorm';
 import { Connection } from 'typeorm';
 
@@ -8,47 +7,24 @@ import { Connection } from 'typeorm';
 @Controller('health')
 export class HealthController {
   constructor(
-    private readonly configService: ConfigService,
     @Optional() @InjectConnection() private readonly connection?: Connection,
   ) {}
 
   @Get()
   @ApiOperation({ summary: 'Health check endpoint' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Service is healthy',
     schema: {
       type: 'object',
       properties: {
-        status: { type: 'string', example: 'ok' },
-        timestamp: { type: 'string', example: '2025-07-31T13:00:00.000Z' },
-        uptime: { type: 'number', example: 3600 },
-        environment: { type: 'string', example: 'production' },
-        version: { type: 'string', example: '1.0.0' },
-        services: {
-          type: 'object',
-          properties: {
-            database: { type: 'string', example: 'connected' },
-            qdrant: { type: 'string', example: 'connected' },
-          }
-        }
-      }
-    }
-  })
-  async getHealth() {
-    const dbStatus = await this.checkDatabase();
-    
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: this.configService.get('NODE_ENV', 'development'),
-      version: '1.0.0',
-      services: {
-        database: dbStatus === true ? 'connected' : dbStatus === false ? 'disconnected' : 'not_configured',
-        qdrant: 'connected', // TODO: Implementar check de Qdrant
+        ok: { type: 'boolean', example: true },
       },
-    };
+      required: ['ok'],
+    },
+  })
+  getHealth() {
+    return { ok: true };
   }
 
   @Get('ready')
