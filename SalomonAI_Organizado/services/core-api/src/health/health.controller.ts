@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Optional } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { InjectConnection } from '@nestjs/typeorm';
@@ -9,7 +9,7 @@ import { Connection } from 'typeorm';
 export class HealthController {
   constructor(
     private readonly configService: ConfigService,
-    @InjectConnection() private readonly connection: Connection,
+    @Optional() @InjectConnection() private readonly connection?: Connection,
   ) {}
 
   @Get()
@@ -45,7 +45,7 @@ export class HealthController {
       environment: this.configService.get('NODE_ENV', 'development'),
       version: '1.0.0',
       services: {
-        database: dbStatus ? 'connected' : 'disconnected',
+        database: dbStatus === true ? 'connected' : dbStatus === false ? 'disconnected' : 'not_configured',
         qdrant: 'connected', // TODO: Implementar check de Qdrant
       },
     };
@@ -57,7 +57,7 @@ export class HealthController {
   async getReadiness() {
     const dbStatus = await this.checkDatabase();
     
-    if (!dbStatus) {
+    if (dbStatus === false) {
       throw new Error('Database not ready');
     }
 
@@ -71,7 +71,11 @@ export class HealthController {
     return { status: 'alive', timestamp: new Date().toISOString() };
   }
 
-  private async checkDatabase(): Promise<boolean> {
+  private async checkDatabase(): Promise<boolean | null> {
+    if (!this.connection) {
+      return null;
+    }
+
     try {
       await this.connection.query('SELECT 1');
       return true;
