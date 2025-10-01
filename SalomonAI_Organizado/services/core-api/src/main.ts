@@ -72,6 +72,7 @@ async function bootstrap() {
     process.exit(0);
   });
 
+  console.log(`[BOOT] PORT=${process.env.PORT || 8080}`);
   await app.listen(port, '0.0.0.0');
 
   logger.log(`🚀 SalomónAI API ejecutándose en: http://0.0.0.0:${port}`);
