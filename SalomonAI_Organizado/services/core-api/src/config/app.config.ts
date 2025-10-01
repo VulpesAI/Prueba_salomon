@@ -78,14 +78,23 @@ export const setupGlobalPrefix = (app: INestApplication, configService: ConfigSe
 };
 
 export const setupCors = (app: INestApplication, configService: ConfigService) => {
-  const corsOrigins = configService.get<string>(
-    'ALLOWED_ORIGINS',
-    'http://localhost:3000,http://localhost:3001',
-  );
+  const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
+  const legacyCorsOrigin = configService.get<string>('CORS_ORIGIN');
+  // Deprecated: CORS_ORIGIN is kept for backwards compatibility. Prefer ALLOWED_ORIGINS.
+  const originsString =
+    allowedOrigins?.trim()?.length
+      ? allowedOrigins
+      : legacyCorsOrigin?.trim()?.length
+        ? legacyCorsOrigin
+        : 'http://localhost:3000';
+  const corsOrigins = originsString
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   // The list is expected to include localhost for development, the Vercel deployment domain
   // (https://prueba-salomon.vercel.app), and any custom production domain, separated by commas.
   app.enableCors({
-    origin: corsOrigins.split(','),
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
