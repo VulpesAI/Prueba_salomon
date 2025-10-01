@@ -49,6 +49,56 @@ type BackendSessionResponse = {
   user: BackendUser
 }
 
+const ACCESS_TOKEN_STORAGE_KEY = "salomonai.auth.accessToken"
+const REFRESH_TOKEN_STORAGE_KEY = "salomonai.auth.refreshToken"
+
+const GOOGLE_POPUP_ERROR_MESSAGES: Record<string, string> = {
+  "auth/popup-closed-by-user": "La ventana de acceso se cerró antes de completar el inicio de sesión.",
+  "auth/cancelled-popup-request":
+    "Ya hay una ventana de inicio de sesión activa. Espera a que termine e inténtalo de nuevo.",
+  "auth/unauthorized-domain":
+    "Este dominio no está autorizado para iniciar sesión con Google.",
+  "auth/operation-not-allowed":
+    "El inicio de sesión con Google no está habilitado en este proyecto.",
+}
+
+const parseBackendErrorMessage = async (
+  response: Response
+): Promise<string | undefined> => {
+  try {
+    const data = (await response.clone().json()) as
+      | { message?: unknown; error?: unknown }
+      | undefined
+
+    if (data && typeof data === "object") {
+      const possibleMessage = [data.message, data.error].find(
+        (value): value is string => typeof value === "string" && value.length > 0
+      )
+
+      if (possibleMessage) {
+        return possibleMessage
+      }
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Failed to parse backend error JSON", error)
+    }
+  }
+
+  try {
+    const text = await response.clone().text()
+    if (text.trim().length > 0) {
+      return text
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Failed to read backend error text", error)
+    }
+  }
+
+  return undefined
+}
+
 export type AuthSession = {
   accessToken: string
   refreshToken: string
@@ -186,11 +236,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   )
 
+  const persistSessionTokens = useCallback(
+    (accessToken: string, refreshToken?: string) => {
+      if (typeof window === "undefined") {
+        return
+      }
+
+      try {
+        window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken)
+
+        if (refreshToken) {
+          window.localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refreshToken)
+        } else {
+          window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
+        }
+      } catch (error) {
+        console.warn("Failed to persist session tokens", error)
+      }
+    },
+    []
+  )
+
+  const clearPersistedSessionTokens = useCallback(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    try {
+      window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+      window.localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
+    } catch (error) {
+      console.warn("Failed to clear persisted session tokens", error)
+    }
+  }, [])
+
   const clearSessionState = useCallback(() => {
     clearRefreshTimer()
+    clearPersistedSessionTokens()
     sessionRef.current = null
     setSession(null)
-  }, [clearRefreshTimer])
+  }, [clearPersistedSessionTokens, clearRefreshTimer])
 
   const handleUnauthorizedSession = useCallback(async () => {
     emitTelemetryEvent("auth.session.invalidated")
@@ -264,6 +349,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       sessionRef.current = nextSession
       setSession(nextSession)
+      persistSessionTokens(accessToken, refreshToken)
 
       if (Number.isFinite(nextSession.expiresAt)) {
         scheduleRefresh(nextSession.expiresAt)
@@ -279,7 +365,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return nextSession
     },
-    [clearRefreshTimer, notifySessionHandler, scheduleRefresh]
+    [
+      clearRefreshTimer,
+      notifySessionHandler,
+      persistSessionTokens,
+      scheduleRefresh,
+    ]
   )
 
   const refreshSession = useCallback(async () => {
@@ -303,8 +394,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!response.ok) {
-        emitTelemetryEvent("auth.token.refresh_failed", { status: response.status })
-        throw new Error(`Token refresh failed with status ${response.status}`)
+        const backendMessage = await parseBackendErrorMessage(response)
+        emitTelemetryEvent("auth.token.refresh_failed", {
+          status: response.status,
+          message: backendMessage,
+        })
+        throw new Error(
+          backendMessage ?? `Token refresh failed with status ${response.status}`
+        )
       }
 
       const payload = (await response.json()) as BackendSessionResponse
@@ -343,16 +440,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
       const idToken = await firebaseUser.getIdToken()
-      const response = await fetch(buildApiUrl("/auth/firebase/login"), {
+      const response = await fetch(buildApiUrl("/auth/firebase-login"), {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({ idToken }),
       })
 
       if (!response.ok) {
-        emitTelemetryEvent("auth.token.exchange_failed", { status: response.status })
-        throw new Error(`Failed to exchange Firebase token (${response.status})`)
+        const backendMessage = await parseBackendErrorMessage(response)
+        emitTelemetryEvent("auth.token.exchange_failed", {
+          status: response.status,
+          message: backendMessage,
+        })
+        throw new Error(
+          backendMessage ?? `Failed to exchange Firebase token (${response.status})`
+        )
       }
 
       const payload = (await response.json()) as BackendSessionResponse
@@ -490,12 +594,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       credential = await auth.signInWithPopup(provider)
     } catch (error) {
-      if (
+      const errorCode =
         error &&
         typeof error === "object" &&
-        "code" in error &&
-        (error as { code?: string }).code === "auth/popup-blocked"
-      ) {
+        "code" in error
+          ? (error as { code?: string | undefined }).code
+          : undefined
+
+      if (errorCode === "auth/popup-blocked") {
         const redirectCapableAuth = auth as FirebaseAuth & {
           signInWithRedirect?: (
             provider: FirebaseAuthProvider
@@ -512,6 +618,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         await redirectCapableAuth.signInWithRedirect(provider)
         credential = await redirectCapableAuth.getRedirectResult()
+      } else if (errorCode && errorCode in GOOGLE_POPUP_ERROR_MESSAGES) {
+        throw new Error(GOOGLE_POPUP_ERROR_MESSAGES[errorCode])
       } else {
         throw error
       }
@@ -554,10 +662,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       await clearSessionCookies()
+      clearPersistedSessionTokens()
       clearSessionState()
       await auth.signOut()
     }
-  }, [buildApiUrl, clearSessionCookies, clearSessionState])
+  }, [
+    buildApiUrl,
+    clearPersistedSessionTokens,
+    clearSessionCookies,
+    clearSessionState,
+  ])
 
   const value = useMemo(
     () => ({
