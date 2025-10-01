@@ -4,11 +4,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import axios from 'axios';
 import { OAuthService } from './oauth.service';
 import { TokenService } from './token.service';
-import { UserService } from '../users/user.service';
 import { SiemLoggerService } from '../security/siem-logger.service';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import {
+  USER_ACCOUNTS_SERVICE,
+  UserAccountsService,
+} from '../users/interfaces/user-accounts.interface';
 
 describe('OAuthService', () => {
   let service: OAuthService;
@@ -29,7 +32,7 @@ describe('OAuthService', () => {
 
   const userService = {
     upsertOAuthUser: jest.fn(),
-  } as unknown as UserService;
+  } as unknown as UserAccountsService;
 
   const tokenService = {
     issueTokenPair: jest.fn(),
@@ -48,7 +51,7 @@ describe('OAuthService', () => {
       providers: [
         OAuthService,
         { provide: ConfigService, useValue: configService },
-        { provide: UserService, useValue: userService },
+        { provide: USER_ACCOUNTS_SERVICE, useValue: userService },
         { provide: TokenService, useValue: tokenService },
         { provide: SiemLoggerService, useValue: siemLogger },
       ],

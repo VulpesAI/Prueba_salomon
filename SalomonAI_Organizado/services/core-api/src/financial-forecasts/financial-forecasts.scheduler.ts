@@ -1,9 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 
 import { FinancialForecastsService } from './financial-forecasts.service';
-import { UsersService } from '../users/users.service';
+import {
+  USER_DIRECTORY_SERVICE,
+  UserDirectoryService,
+} from '../users/interfaces/user-directory.interface';
 
 @Injectable()
 export class FinancialForecastsScheduler {
@@ -12,7 +15,8 @@ export class FinancialForecastsScheduler {
 
   constructor(
     private readonly forecastsService: FinancialForecastsService,
-    private readonly usersService: UsersService,
+    @Inject(USER_DIRECTORY_SERVICE)
+    private readonly usersService: UserDirectoryService,
     private readonly configService: ConfigService,
   ) {
     this.horizonDays =

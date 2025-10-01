@@ -1,13 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AuthToken } from './entities/auth-token.entity';
 import { SiemLoggerService } from '../security/siem-logger.service';
 import { User } from '../users/entities/user.entity';
+import {
+  TOKEN_STORE,
+  TokenStore,
+  TokenUser,
+  StoredRefreshToken,
+} from './token-store/token-store.interface';
 
 export interface TokenPair {
   accessToken: string;
@@ -27,8 +30,8 @@ interface JwtPayload {
 @Injectable()
 export class TokenService {
   constructor(
-    @InjectRepository(AuthToken)
-    private readonly authTokenRepository: Repository<AuthToken>,
+    @Inject(TOKEN_STORE)
+    private readonly tokenStore: TokenStore,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly siemLogger: SiemLoggerService,
@@ -46,34 +49,33 @@ export class TokenService {
     return Number.isNaN(ttl) ? 60 * 60 * 24 * 30 : ttl;
   }
 
-  private async createRefreshTokenRecord(user: { id: string }): Promise<{ token: string; expiresAt: Date }> {
+  private toTokenUser(user: { id: string; email: string; roles?: string[]; uid?: string }): TokenUser {
+    return {
+      id: user.id,
+      email: user.email,
+      roles: user.roles,
+      uid: user.uid,
+    };
+  }
+
+  private async createRefreshTokenRecord(user: TokenUser): Promise<{ token: string; expiresAt: Date }> {
     const tokenSecret = randomBytes(48).toString('hex');
     const refreshTokenHash = await bcrypt.hash(tokenSecret, 12);
     const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlSeconds() * 1000);
 
-    const entity = this.authTokenRepository.create({
-      user: { id: user.id } as User,
-      refreshTokenHash,
-      expiresAt,
-    });
-    const saved = await this.authTokenRepository.save(entity);
-    const refreshToken = `${saved.id}.${tokenSecret}`;
+    const { id } = await this.tokenStore.createRefreshToken(user, refreshTokenHash, expiresAt);
+    const refreshToken = `${id}.${tokenSecret}`;
 
     return { token: refreshToken, expiresAt };
   }
 
-  private async verifyRefreshToken(rawToken: string): Promise<AuthToken & { user: User }> {
+  private async verifyRefreshToken(rawToken: string): Promise<StoredRefreshToken> {
     const [tokenId, tokenSecret] = rawToken.split('.');
     if (!tokenId || !tokenSecret) {
       throw new UnauthorizedException('Refresh token inválido');
     }
 
-    const token = await this.authTokenRepository
-      .createQueryBuilder('token')
-      .leftJoinAndSelect('token.user', 'user')
-      .addSelect('token.refreshTokenHash')
-      .where('token.id = :id', { id: tokenId })
-      .getOne();
+    const token = await this.tokenStore.findRefreshTokenById(tokenId);
 
     if (!token) {
       throw new UnauthorizedException('Refresh token no encontrado');
@@ -96,7 +98,7 @@ export class TokenService {
       throw new UnauthorizedException('Refresh token inválido');
     }
 
-    return token as AuthToken & { user: User };
+    return token;
   }
 
   private buildJwtPayload(user: { id: string; email: string; roles?: string[]; uid?: string }): JwtPayload {
@@ -122,8 +124,9 @@ export class TokenService {
   }
 
   async issueTokenPair(user: { id: string; email: string; roles?: string[]; uid?: string }): Promise<TokenPair> {
+    const tokenUser = this.toTokenUser(user);
     const [{ token: refreshToken, expiresAt }, { token: accessToken, expiresInSeconds }] = await Promise.all([
-      this.createRefreshTokenRecord(user),
+      this.createRefreshTokenRecord(tokenUser),
       this.generateAccessToken(user),
     ]);
 
@@ -143,11 +146,11 @@ export class TokenService {
     };
   }
 
-  async rotateRefreshToken(rawToken: string): Promise<{ user: User; tokens: TokenPair }> {
+  async rotateRefreshToken(rawToken: string): Promise<{ user: Pick<User, 'id' | 'email' | 'roles' | 'uid'>; tokens: TokenPair }> {
     const token = await this.verifyRefreshToken(rawToken);
 
-    token.rotatedAt = new Date();
-    await this.authTokenRepository.save(token);
+    const rotatedAt = new Date();
+    await this.tokenStore.markRotated(token.id, rotatedAt);
 
     const tokens = await this.issueTokenPair({
       id: token.user.id,
@@ -167,7 +170,7 @@ export class TokenService {
   }
 
   async revokeTokensForUser(userId: string): Promise<void> {
-    await this.authTokenRepository.update({ user: { id: userId } as User }, { revokedAt: new Date() });
+    await this.tokenStore.revokeTokensForUser(userId);
 
     await this.siemLogger.logSecurityEvent({
       type: 'AUTH_TOKENS_REVOKED',

@@ -8,7 +8,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { UserModule } from '../users/user.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FinancialGoal, GoalProgress]), NotificationsModule, UserModule],
+  imports: [
+    TypeOrmModule.forFeature([FinancialGoal, GoalProgress]),
+    NotificationsModule,
+    UserModule.register({ mode: 'strict' }),
+  ],
   controllers: [GoalsController],
   providers: [GoalsService],
   exports: [GoalsService],

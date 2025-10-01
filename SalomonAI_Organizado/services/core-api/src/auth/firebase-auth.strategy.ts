@@ -1,15 +1,19 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseAdminService } from '../firebase/firebase-admin.service';
-import { UsersService } from '../users/users.service';
+import {
+  USER_DIRECTORY_SERVICE,
+  UserDirectoryService,
+} from '../users/interfaces/user-directory.interface';
 
 @Injectable()
 export class FirebaseAuthStrategy extends PassportStrategy(Strategy, 'firebase-auth') {
   constructor(
     private firebaseAdminService: FirebaseAdminService,
-    private usersService: UsersService,
+    @Inject(USER_DIRECTORY_SERVICE)
+    private usersService: UserDirectoryService,
     private configService: ConfigService,
   ) {
     super({

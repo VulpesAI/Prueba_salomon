@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -15,31 +15,57 @@ import { TokenService } from './token.service';
 import { SecurityModule } from '../security/security.module';
 import { OAuthController } from './oauth.controller';
 import { OAuthService } from './oauth.service';
+import { EnvStrictnessMode } from '../config/env.validation';
+import { TOKEN_STORE } from './token-store/token-store.interface';
+import { TypeormTokenStore } from './token-store/typeorm-token.store';
+import { InMemoryTokenStore } from './token-store/in-memory-token.store';
 
-@Module({
-  imports: [
-    UserModule,
-    FirebaseModule,
-    SecurityModule,
-    TypeOrmModule.forFeature([AuthToken]),
-    PassportModule,
-    ConfigModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: (() => {
-            const raw = Number(configService.get<string>('JWT_ACCESS_TOKEN_TTL_SECONDS', '900'));
-            return Number.isNaN(raw) ? 900 : raw;
-          })(),
-        },
+@Module({})
+export class AuthModule {
+  static register(options: { mode: EnvStrictnessMode }): DynamicModule {
+    const isStrict = options.mode === 'strict';
+
+    const imports = [
+      UserModule.register(options),
+      FirebaseModule,
+      SecurityModule,
+      PassportModule,
+      ConfigModule,
+      ...(isStrict ? [TypeOrmModule.forFeature([AuthToken])] : []),
+      JwtModule.registerAsync({
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: async (configService: ConfigService) => ({
+          secret: configService.get<string>('JWT_SECRET'),
+          signOptions: {
+            expiresIn: (() => {
+              const raw = Number(configService.get<string>('JWT_ACCESS_TOKEN_TTL_SECONDS', '900'));
+              return Number.isNaN(raw) ? 900 : raw;
+            })(),
+          },
+        }),
       }),
-    }),
-  ],
-  controllers: [AuthController, OAuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy, FirebaseAuthStrategy, TokenService, OAuthService],
-  exports: [AuthService, TokenService],
-})
-export class AuthModule {}
+    ];
+
+    const providers: Provider[] = [
+      AuthService,
+      JwtStrategy,
+      LocalStrategy,
+      FirebaseAuthStrategy,
+      TokenService,
+      OAuthService,
+      {
+        provide: TOKEN_STORE,
+        useClass: isStrict ? TypeormTokenStore : InMemoryTokenStore,
+      },
+    ];
+
+    return {
+      module: AuthModule,
+      imports,
+      controllers: [AuthController, OAuthController],
+      providers,
+      exports: [AuthService, TokenService, TOKEN_STORE],
+    };
+  }
+}

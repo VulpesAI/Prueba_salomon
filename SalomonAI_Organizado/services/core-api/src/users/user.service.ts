@@ -10,9 +10,10 @@ import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
+import { UserAccountsService } from './interfaces/user-accounts.interface';
 
 @Injectable()
-export class UserService {
+export class UserService implements UserAccountsService {
   private readonly logger = new Logger(UserService.name);
 
   constructor(
@@ -57,7 +58,7 @@ export class UserService {
     return user;
   }
 
-  async findByEmail(email: string): Promise<User> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.userRepository
       .createQueryBuilder('user')
       .addSelect(['user.passwordHash', 'user.mfaSecret', 'user.mfaTempSecret', 'user.mfaBackupCodes'])
