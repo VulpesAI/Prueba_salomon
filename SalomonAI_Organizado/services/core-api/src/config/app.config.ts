@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { INestApplication, ValidationPipe, Logger } from '@nestjs/common';
+import { INestApplication, ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 export const createDatabaseConfig = (configService: ConfigService) => ({
@@ -74,7 +74,12 @@ export const setupGlobalPipes = (app: INestApplication) => {
 };
 
 export const setupGlobalPrefix = (app: INestApplication, configService: ConfigService) => {
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [
+      { path: 'health', method: RequestMethod.ALL },
+      { path: 'health/(.*)', method: RequestMethod.ALL },
+    ],
+  });
 };
 
 export const setupCors = (app: INestApplication, configService: ConfigService) => {
