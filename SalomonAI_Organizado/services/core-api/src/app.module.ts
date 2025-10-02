@@ -110,6 +110,8 @@ const coreImports = [
     useFactory: (configService: ConfigService) => createCacheConfig(configService),
   }),
 
+  KafkaModule.register({ enabled: isKafkaConfigured }),
+
   FirebaseModule.register({ enabled: firebaseEnabled }),
 
   HealthModule,
@@ -144,7 +146,6 @@ const fullProfileImports = !isFullProfile
       NlpModule,
 
       // Infrastructure Modules
-      KafkaModule.register({ enabled: isKafkaConfigured }),
       QdrantModule.register({ enabled: isQdrantConfigured }),
       SecurityModule,
       ...databaseDependentModules,
