@@ -1,92 +1,72 @@
 #!/bin/bash
+set -euo pipefail
 
-# Script de configuración de PostgreSQL para SalomonAI
-# Este script configura la base de datos necesaria para el proyecto
+cat <<'INSTRUCTIONS'
+⚠️  Este script no realiza cambios automáticos en tu entorno.
+    Está pensado como guía para desarrolladores que necesitan
+    preparar una base de datos de Supabase para SalomónAI.
 
-echo "🗄️  Configurando PostgreSQL para SalomonAI..."
+🚫  No lo ejecutes en entornos productivos donde Supabase ya esté
+    provisionado ni intentes crear bases de datos adicionales.
 
-# Verificar si PostgreSQL está instalado
-if ! command -v psql &> /dev/null; then
-    echo "❌ PostgreSQL no está instalado. Instalando..."
-    
-    # Detectar el sistema operativo
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS - usar Homebrew
-        if command -v brew &> /dev/null; then
-            brew install postgresql@15
-            brew services start postgresql@15
-        else
-            echo "❌ Homebrew no está instalado. Por favor instala Homebrew primero:"
-            echo "   /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-            exit 1
-        fi
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        # Linux - usar apt
-        sudo apt update
-        sudo apt install postgresql postgresql-contrib
-        sudo systemctl start postgresql
-        sudo systemctl enable postgresql
-    else
-        echo "❌ Sistema operativo no soportado automáticamente."
-        echo "   Por favor instala PostgreSQL manualmente y ejecuta este script de nuevo."
-        exit 1
-    fi
-fi
+=====================================
+1. Crear el proyecto y la base en Supabase
+=====================================
+A) Desde el panel web:
+   1. Ingresa en https://app.supabase.com/ y autentícate.
+   2. Crea un nuevo proyecto o selecciona uno existente.
+   3. Define la contraseña principal de la base de datos.
+   4. Copia la información de conexión (host, puerto, base, usuario y contraseña).
 
-echo "✅ PostgreSQL está disponible"
+B) Con la CLI de Supabase:
+   1. Instala la CLI siguiendo https://supabase.com/docs/guides/cli.
+   2. Ejecuta `supabase login` para vincular tu cuenta.
+   3. Usa `supabase projects create` para crear un proyecto nuevo
+      o `supabase projects list` para localizar uno existente.
+   4. Obtén la cadena de conexión con
+      `supabase db credentials get --project-ref <ref_del_proyecto>`.
 
-# Configurar la base de datos
-echo "🔧 Configurando base de datos 'salomonai_db'..."
+==============================================
+2. Configurar la cadena de conexión con SSL requerido
+==============================================
+Supabase exige conexiones TLS. Exporta la URL de la base incluyendo `sslmode=require`:
 
-# Crear usuario y base de datos
-sudo -u postgres psql << EOF
--- Crear usuario salomonai
-CREATE USER salomonai WITH PASSWORD 'salomonai_password';
+   export SUPABASE_DB_URL="postgresql://<usuario>:<contraseña>@<host>:<puerto>/<base>?sslmode=require"
+   export DATABASE_URL="$SUPABASE_DB_URL"
+   # Opcionalmente, también puedes exportar POSTGRES_URL si lo prefieres:
+   export POSTGRES_URL="$SUPABASE_DB_URL"
 
--- Crear base de datos
-CREATE DATABASE salomonai_db OWNER salomonai;
+Reemplaza los marcadores `<usuario>`, `<contraseña>`, `<host>`, `<puerto>` y `<base>`
+con los valores obtenidos del panel o de la CLI.
 
--- Dar permisos al usuario
-GRANT ALL PRIVILEGES ON DATABASE salomonai_db TO salomonai;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO salomonai;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO salomonai;
+=======================================================
+3. Ejecutar migraciones de TypeORM contra tu instancia remota
+=======================================================
+Dentro del servicio `core-api` se incluye la configuración de TypeORM.
+Desde la raíz del repositorio:
 
--- Habilitar extensiones necesarias
-\c salomonai_db;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "vector" CASCADE;
+   cd services/core-api
+   npm install
+   npm run migration:run
 
-\q
-EOF
+El comando utilizará la variable `DATABASE_URL` (o `POSTGRES_URL`) que
+configuraste en el paso anterior y aplicará las migraciones sobre tu
+instancia de Supabase.
 
-if [ $? -eq 0 ]; then
-    echo "✅ Base de datos configurada exitosamente"
-    echo "📊 Detalles de la conexión:"
-    echo "   Host: localhost"
-    echo "   Puerto: 5432"
-    echo "   Base de datos: salomonai_db"
-    echo "   Usuario: salomonai"
-    echo "   Contraseña: salomonai_password"
-else
-    echo "❌ Error configurando la base de datos"
-    echo "💡 Intentando configuración alternativa para macOS..."
-    
-    # Configuración alternativa para macOS con usuario actual
-    createdb salomonai_db 2>/dev/null || echo "Base de datos ya existe"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Base de datos creada con usuario actual"
-        echo "📊 Detalles de la conexión:"
-        echo "   Host: localhost"
-        echo "   Puerto: 5432"
-        echo "   Base de datos: salomonai_db"
-        echo "   Usuario: $(whoami)"
-        echo "   Contraseña: (sin contraseña)"
-    fi
-fi
+=======================================================
+4. Verificaciones adicionales
+=======================================================
+- Para validar la conexión manualmente ejecuta:
 
-echo ""
-echo "🔍 Para verificar la conexión, ejecuta:"
-echo "   psql -h localhost -p 5432 -U salomonai -d salomonai_db"
-echo ""
-echo "🚀 Siguiente paso: Configurar variables de entorno en el backend"
+     psql "$SUPABASE_DB_URL"
+
+- Si necesitas rehacer las migraciones, utiliza:
+
+     npm run migration:revert
+
+- Mantén tus credenciales seguras. Nunca compartas la contraseña del
+  proyecto y evita guardarla en archivos versionados.
+
+✅  Con estos pasos tendrás tu base de datos de Supabase lista y las
+    migraciones ejecutadas para SalomónAI.
+INSTRUCTIONS
