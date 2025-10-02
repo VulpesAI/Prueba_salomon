@@ -21,7 +21,7 @@ const optionalUrlOrNonEmptyString = () =>
 const baseEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-    PORT: z.coerce.number().default(3000),
+    PORT: z.coerce.number().default(8080),
     STRICT_ENV: z.coerce.boolean().default(false),
     POSTGRES_HOST: optionalNonEmptyString(),
     POSTGRES_PORT: z.coerce.number().default(5432),

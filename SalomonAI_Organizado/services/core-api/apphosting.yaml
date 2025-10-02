@@ -10,6 +10,11 @@ scripts:
   runCommand: node dist/main.js
 
 env:
+  - variable: PORT
+    value: "8080"
+    availability:
+      - RUNTIME
+
   - variable: JWT_SECRET
     value: "8pE2uY7F1dQn0rXkV4tL9mJ2bS5cH8wZ3qA6vN1pR7yT0uC5fD"
     availability:
