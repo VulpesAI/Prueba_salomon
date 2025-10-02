@@ -48,7 +48,20 @@ const resolveSecret = async (name: string): Promise<string | undefined> => {
   return decryptWithKms(cipherValue);
 };
 
+const CLOUD_RUN_ENV_MARKERS = ['K_SERVICE', 'GOOGLE_CLOUD_PROJECT', 'K_REVISION', 'K_CONFIGURATION'];
+
 export const loadTlsOptionsFromEnv = async (): Promise<HttpsOptions | undefined> => {
+  const isManagedTlsEnvironment = CLOUD_RUN_ENV_MARKERS.some(
+    (marker) => !!process.env[marker],
+  );
+
+  if (isManagedTlsEnvironment) {
+    logger.warn(
+      'Se detectó Cloud Run/App Hosting. El balanceador termina TLS antes del contenedor; se ignorará ENABLE_TLS.',
+    );
+    return undefined;
+  }
+
   if ((process.env.ENABLE_TLS ?? 'false').toLowerCase() !== 'true') {
     return undefined;
   }
