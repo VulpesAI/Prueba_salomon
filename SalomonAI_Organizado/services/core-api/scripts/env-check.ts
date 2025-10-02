@@ -1,6 +1,10 @@
 #!/usr/bin/env ts-node
 import { loadRootEnv } from '../src/config/env.loader';
-import { envSchema, type EnvStrictnessMode } from '../src/config/env.validation';
+import {
+  baseEnvSchema,
+  envSchema,
+  type EnvStrictnessMode,
+} from '../src/config/env.validation';
 
 const hasValue = (value: string | undefined | null): boolean =>
   typeof value === 'string' && value.trim().length > 0;
@@ -60,12 +64,13 @@ const run = (): number => {
     ? []
     : validationResult.error.issues.map((issue) => `${issue.path.join('.') || 'env'}: ${issue.message}`);
 
-  const partialResult = envSchema.partial().safeParse(process.env);
+  const partialResult = baseEnvSchema.partial().safeParse(process.env);
   const envVars = partialResult.success ? partialResult.data : {};
   const strictEnvEnabled = validationResult.success
     ? validationResult.data.STRICT_ENV
     : toBoolean(envVars.STRICT_ENV);
   const strictMode: EnvStrictnessMode = strictEnvEnabled ? 'strict' : 'minimal';
+  const isStrictMode = strictMode === 'strict';
 
   const dependencyStatuses: { name: string; enabled: boolean; reason?: string }[] = [];
 
@@ -76,36 +81,36 @@ const run = (): number => {
     'POSTGRES_DB',
   ];
   const missingDbKeys = databaseKeys.filter((key) => !hasValue(process.env[key]));
-  const databaseEnabled = strictMode === 'strict' || missingDbKeys.length === 0;
+  const databaseEnabled = isStrictMode || missingDbKeys.length === 0;
   dependencyStatuses.push({
     name: 'Base de datos y módulos dependientes (Auth, Users, Belvo, Forecasts, Alerts, Notifications, Goals, Transactions, Classification, Privacy, Dashboard)',
     enabled: databaseEnabled,
     reason:
-      databaseEnabled || strictMode === 'strict'
+      databaseEnabled || isStrictMode
         ? undefined
         : `Faltan variables: ${formatList(missingDbKeys as string[])}`,
   });
 
-  const kafkaEnabled = strictMode === 'strict' || hasValue(process.env.KAFKA_BROKER);
+  const kafkaEnabled = isStrictMode || hasValue(process.env.KAFKA_BROKER);
   dependencyStatuses.push({
     name: 'Kafka',
     enabled: kafkaEnabled,
-    reason: kafkaEnabled || strictMode === 'strict' ? undefined : 'Configura KAFKA_BROKER para activarlo.',
+    reason: kafkaEnabled || isStrictMode ? undefined : 'Configura KAFKA_BROKER para activarlo.',
   });
 
-  const qdrantEnabled = strictMode === 'strict' || hasValue(process.env.QDRANT_URL);
+  const qdrantEnabled = isStrictMode || hasValue(process.env.QDRANT_URL);
   dependencyStatuses.push({
     name: 'Qdrant',
     enabled: qdrantEnabled,
-    reason: qdrantEnabled || strictMode === 'strict' ? undefined : 'Configura QDRANT_URL para activarlo.',
+    reason: qdrantEnabled || isStrictMode ? undefined : 'Configura QDRANT_URL para activarlo.',
   });
 
-  const recommendationsEnabled = strictMode === 'strict' || hasValue(process.env.RECOMMENDATION_ENGINE_URL);
+  const recommendationsEnabled = isStrictMode || hasValue(process.env.RECOMMENDATION_ENGINE_URL);
   dependencyStatuses.push({
     name: 'Motor de recomendaciones',
     enabled: recommendationsEnabled,
     reason:
-      recommendationsEnabled || strictMode === 'strict'
+      recommendationsEnabled || isStrictMode
         ? undefined
         : 'Configura RECOMMENDATION_ENGINE_URL para habilitar las recomendaciones.',
   });

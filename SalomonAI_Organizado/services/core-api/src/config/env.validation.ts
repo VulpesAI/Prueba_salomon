@@ -18,7 +18,7 @@ const optionalUrlOrNonEmptyString = () =>
     )
     .optional();
 
-const baseEnvSchema = z
+export const baseEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z
