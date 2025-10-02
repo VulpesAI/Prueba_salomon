@@ -15,6 +15,10 @@ Cloud Run expects the container to listen on the port provided by the `PORT` env
 
 Store secrets with Google Secret Manager and mount them as environment variables. Keep the private key formatted with escaped newlines (`\n`) so that it parses correctly in the container.
 
+### TLS Termination
+
+Cloud Run and Firebase App Hosting terminate TLS at the load balancer and forward traffic to the container over plain HTTP. Por ello, la API **no debe** intentar habilitar TLS desde el contenedor. El helper `loadTlsOptionsFromEnv` ahora detecta automáticamente las variables de plataforma (`K_SERVICE`, `GOOGLE_CLOUD_PROJECT`, etc.) y deja sin efecto `ENABLE_TLS`, registrando una advertencia para recordar que la terminación ocurre aguas arriba. Mantén `ENABLE_TLS=false` en estos despliegues y confía en la capa de Cloud Run para HTTPS.
+
 ## Firebase Authentication
 
 1. Open the Firebase Console → **Authentication** → **Settings**.
