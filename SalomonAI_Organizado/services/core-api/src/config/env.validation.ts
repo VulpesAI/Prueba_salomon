@@ -21,7 +21,25 @@ const optionalUrlOrNonEmptyString = () =>
 const baseEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-    PORT: z.coerce.number().default(8080),
+    PORT: z
+      .preprocess((value) => {
+        const normalized = emptyStringToUndefined(value);
+        if (normalized === undefined) {
+          return undefined;
+        }
+
+        if (typeof normalized === 'number') {
+          return normalized;
+        }
+
+        if (typeof normalized === 'string') {
+          const parsed = Number(normalized);
+          return Number.isNaN(parsed) ? normalized : parsed;
+        }
+
+        return normalized;
+      }, z.number().int().min(1).max(65535).optional())
+      .default(8080),
     STRICT_ENV: z.coerce.boolean().default(false),
     POSTGRES_HOST: optionalNonEmptyString(),
     POSTGRES_PORT: z.coerce.number().default(5432),

@@ -9,6 +9,22 @@ const compression_1 = require("compression");
 const app_config_1 = require("./config/app.config");
 const nest_winston_1 = require("nest-winston");
 const tls_util_1 = require("./security/tls.util");
+const normalizePort = (value) => {
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 65535) {
+        return value;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.length === 0) {
+            return undefined;
+        }
+        const parsed = Number(trimmed);
+        if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {
+            return parsed;
+        }
+    }
+    return undefined;
+};
 async function bootstrap() {
     const httpsOptions = await (0, tls_util_1.loadTlsOptionsFromEnv)();
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
@@ -47,7 +63,13 @@ async function bootstrap() {
         req.setTimeout(300000);
         next();
     });
-    const port = Number(process.env.PORT ?? 8080);
+    const configuredPort = configService.get('PORT');
+    const normalizedPort = normalizePort(configuredPort);
+    let port = normalizedPort;
+    if (port === undefined) {
+        logger.warn(`Valor de puerto inválido "${configuredPort}" recibido. Usando el puerto por defecto 8080.`);
+        port = 8080;
+    }
     process.on('SIGINT', async () => {
         logger.log('Received SIGINT, shutting down gracefully...');
         await app.close();

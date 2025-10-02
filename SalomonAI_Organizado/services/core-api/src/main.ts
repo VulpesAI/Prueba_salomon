@@ -8,6 +8,26 @@ import { setupGlobalPipes, setupGlobalPrefix, setupSwagger, setupCors } from './
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { loadTlsOptionsFromEnv } from './security/tls.util';
 
+const normalizePort = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 65535) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return undefined;
+    }
+
+    const parsed = Number(trimmed);
+    if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+};
+
 async function bootstrap() {
   const httpsOptions = await loadTlsOptionsFromEnv();
   const app = await NestFactory.create(AppModule, {
@@ -57,8 +77,17 @@ async function bootstrap() {
     next();
   });
 
-  const port = Number(process.env.PORT ?? 8080);
-  
+  const configuredPort = configService.get<number>('PORT');
+  const normalizedPort = normalizePort(configuredPort);
+  let port = normalizedPort;
+
+  if (port === undefined) {
+    logger.warn(
+      `Valor de puerto inválido "${configuredPort}" recibido. Usando el puerto por defecto 8080.`,
+    );
+    port = 8080;
+  }
+
   // Graceful shutdown
   process.on('SIGINT', async () => {
     logger.log('Received SIGINT, shutting down gracefully...');
