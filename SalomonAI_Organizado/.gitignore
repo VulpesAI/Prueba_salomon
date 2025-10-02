@@ -39,3 +39,5 @@ secrets/*.env
 
 # Docker artifacts
 *.pid
+
+services/core-api/dist/
