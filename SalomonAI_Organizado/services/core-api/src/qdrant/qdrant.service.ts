@@ -22,6 +22,7 @@ export class QdrantService implements OnModuleInit, QdrantVectorService {
   constructor(private readonly configService: ConfigService) {
     this.client = new QdrantClient({
       url: this.configService.get('app.qdrant.url'),
+      apiKey: this.configService.get<string>('app.qdrant.apiKey') || undefined,
       checkCompatibility: false, // Omitir verificación de compatibilidad de versión
     });
   }

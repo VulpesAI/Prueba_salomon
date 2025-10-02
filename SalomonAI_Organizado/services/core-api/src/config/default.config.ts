@@ -19,6 +19,7 @@ export const DEFAULT_CONFIG = {
   qdrant: {
     url: 'http://qdrant:6333',
     collectionName: 'transactions',
+    apiKey: '',
   },
   forecasting: {
     engineUrl: 'http://forecasting-engine:8003',

@@ -22,6 +22,7 @@ export default registerAs('app', () => ({
   qdrant: {
     url: process.env.QDRANT_URL || DEFAULT_CONFIG.qdrant.url,
     collectionName: process.env.QDRANT_COLLECTION || DEFAULT_CONFIG.qdrant.collectionName,
+    apiKey: process.env.QDRANT_API_KEY || DEFAULT_CONFIG.qdrant.apiKey,
   },
   forecasting: {
     engineUrl: process.env.FORECASTING_ENGINE_URL || DEFAULT_CONFIG.forecasting.engineUrl,

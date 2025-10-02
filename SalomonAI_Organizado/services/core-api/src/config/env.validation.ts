@@ -57,6 +57,7 @@ const baseEnvSchema = z
     KAFKA_CLIENT_ID: z.string().default('salomon-api'),
     QDRANT_URL: optionalUrlOrNonEmptyString(),
     QDRANT_COLLECTION: z.string().default('transactions'),
+    QDRANT_API_KEY: optionalNonEmptyString(),
     FRONTEND_URL: optionalUrlOrNonEmptyString(),
     RECOMMENDATION_ENGINE_URL: optionalUrlOrNonEmptyString(),
     RECOMMENDATION_ENGINE_TIMEOUT_MS: z.coerce.number().default(8000),
