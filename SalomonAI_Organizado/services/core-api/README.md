@@ -29,7 +29,7 @@ Cuando subas la aplicación a Firebase App Hosting o entornos similares sin Post
 
 Si se cargan valores ficticios (por ejemplo, los que venían en `.env.example`), `AppModule` asume que los servicios existen y los inicializa en `onModuleInit`, lo que provoca que el contenedor espere conexiones que nunca llegan.
 
-Los archivos `.env.example` ya se distribuyen con esos campos en blanco para evitarlo; rellénalos solo cuando cuentes con la infraestructura real o estés levantando el stack completo de Docker Compose.
+El `.env.example` se entrega con las claves `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` y `POSTGRES_DB` vacías a propósito. Déjalas así cuando despliegues sin base de datos y complétalas únicamente cuando tengas un Postgres real disponible. El script `npm run env:check` detectará esas credenciales en blanco y marcará la base de datos como desactivada hasta que aportes valores válidos.
 
 ### Variables mínimas necesarias
 
