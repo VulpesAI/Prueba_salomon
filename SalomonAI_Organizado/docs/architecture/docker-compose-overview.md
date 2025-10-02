@@ -7,15 +7,14 @@ Este documento resume la topología declarada en [`docker-compose.yml`](../../do
 | Servicio | Imagen / Build | Puertos expuestos | Dependencias | Healthcheck | Rol principal |
 |----------|----------------|-------------------|--------------|-------------|---------------|
 | `qdrant` | `qdrant/qdrant:latest` | `6333`, `6334` | — | `curl http://localhost:6333/health` | Base de datos vectorial para embeddings y búsquedas semánticas. |
-| `core-api` | Build `./services/core-api` | `3000` | Supabase (externo) / `postgres` (local, healthy), `qdrant` (started) | `curl http://localhost:3000/api/health` | API Node.js central: orquesta autenticación, ingesta de documentos y coordinación con microservicios. |
+| `core-api` | Build `./services/core-api` | `3000` | Supabase (externo), `qdrant` (started) | `curl http://localhost:3000/api/health` | API Node.js central: orquesta autenticación, ingesta de documentos y coordinación con microservicios. |
 | `frontend` | Build `./frontend` (`npm run dev`) | `3001->3000` | — | `wget http://localhost:3000` | Aplicación Next.js para experiencia web; consume `core-api`, `conversation-engine` y `voice-gateway`. |
 | `parsing-engine` | Build `./services/parsing-engine` | — | `kafka`, `core-api` | — | Microservicio Python que procesa documentos publicados en Kafka y guarda resultados compartiendo volumen `/uploads`. |
 | `recommendation-engine` | Build `./services/recommendation-engine` | `8001->8000` | — | `curl http://localhost:8000/health` | API FastAPI que entrega recomendaciones financieras al `core-api`. |
 | `financial-connector` | Build `./services/financial-connector` | `8004->8000` | `core-api` (started) | `curl http://localhost:8000/health` | Conector FastAPI que orquesta sincronizaciones bancarias y cargas de archivos hacia Belvo. |
 | `conversation-engine` | Build `./services/conversation-engine` | `8002` | `core-api` (started) | `curl http://localhost:8002/health` | Motor conversacional que se comunica con `core-api` para obtener contexto vía `CORE_API_BASE_URL`. |
-| `forecasting-engine` | Build `./services/forecasting-engine` | `8003` | Supabase (externo) / `postgres` (local, healthy) | `curl http://localhost:8003/health` | Servicio de pronósticos que lee/escribe en la base de datos gestionada vía `FORECASTING_DATABASE_URL`. |
+| `forecasting-engine` | Build `./services/forecasting-engine` | `8003` | Supabase (externo) | `curl http://localhost:8003/health` | Servicio de pronósticos que lee/escribe en la base de datos gestionada vía `FORECASTING_DATABASE_URL`. |
 | `voice-gateway` | Build `./services/voice-gateway` | `8100` | `conversation-engine` | `curl http://localhost:8100/health` | Pasarela de voz que encapsula STT/TTS y delega lógica conversacional al `conversation-engine`. |
-| `postgres` | `postgres:15-alpine` | `5432` | — | `pg_isready` | Base de datos relacional local opcional para desarrollo sin Supabase. |
 | `zookeeper` | `confluentinc/cp-zookeeper:7.3.2` | — | — | — | Servicio de coordinación requerido por Kafka. |
 | `kafka` | `confluentinc/cp-kafka:7.3.2` | `9092`, `29092` | `zookeeper` | `cub kafka-ready` | Bus de eventos para los motores Python y `core-api` (publicación/consumo de documentos y eventos asíncronos). |
 
@@ -24,14 +23,13 @@ Este documento resume la topología declarada en [`docker-compose.yml`](../../do
 - `parsing-engine` necesita acceso al volumen `uploads_volume` para intercambiar archivos con `core-api`.
 - `financial-connector` expone los endpoints usados por las pantallas de cuentas, transacciones y dashboard para disparar sincronizaciones y cargas desde Belvo.
 - Los microservicios Python se conectan a Kafka (`kafka:9092`) para suscribirse a tópicos definidos en las variables de entorno.
-- `forecasting-engine` y `core-api` dependen de la base de datos administrada en Supabase (o del contenedor `postgres` si trabajas sin conexión externa); `core-api` también inicializa colecciones en Qdrant.
+- `forecasting-engine` y `core-api` dependen de la base de datos administrada en Supabase; `core-api` también inicializa colecciones en Qdrant.
 
 ## Redes y volúmenes
 
 | Recurso | Tipo | Propósito |
 |---------|------|-----------|
 | `salomon-net` | Red bridge (local) / overlay (producción) | Aisla el tráfico interno entre API, microservicios y bases de datos. |
-| `pgdata` | Volumen | Persiste datos del contenedor `postgres` cuando se usa el fallback local. |
 | `qdrant_data` | Volumen | Almacena vectores de Qdrant. |
 | `uploads_volume` | Volumen | Zona compartida entre `core-api` y `parsing-engine` para documentos subidos. |
 | `models_volume` | Volumen | Contiene modelos de NLP utilizados por servicios Python. |
@@ -86,7 +84,7 @@ graph LR
 
     subgraph Core
         API[core-api]
-        PG[(Postgres)]
+        SB[(Supabase Postgres)]
         QD[(Qdrant)]
     end
 
@@ -104,7 +102,7 @@ graph LR
     end
 
     FE -->|REST/GraphQL| API
-    API -->|CRUD| PG
+    API -->|CRUD| SB
     API -->|Embeddings| QD
     API -->|Produce eventos| K
     K -->|Consume documentos| PE
@@ -121,11 +119,11 @@ graph LR
 
 | Componente | Interacciones con Kafka | Persistencia principal |
 |------------|------------------------|------------------------|
-| `core-api` | Publica eventos de documentos y escucha respuestas | Postgres (`pgdata`), Qdrant (`qdrant_data`) |
+| `core-api` | Publica eventos de documentos y escucha respuestas | Supabase (externo), Qdrant (`qdrant_data`) |
 | `parsing-engine` | Consume tópicos `documents.pending_processing` y publica resultados | Volumen `uploads_volume` para archivos procesados |
 | `recommendation-engine` | Puede consumir eventos para actualizar recomendaciones (opcional) | Qdrant para embeddings, variables en memoria |
-| `forecasting-engine` | Puede dispararse vía API o eventos para cálculos batch | Postgres usando `FORECASTING_DATABASE_URL` |
-| `conversation-engine` | Consulta estado vía API, publica/consume mensajes de usuario | Postgres (para historial a través de `core-api`) |
+| `forecasting-engine` | Puede dispararse vía API o eventos para cálculos batch | Supabase (mediante `FORECASTING_DATABASE_URL`) |
+| `conversation-engine` | Consulta estado vía API, publica/consume mensajes de usuario | Supabase (para historial a través de `core-api`) |
 | `voice-gateway` | Intermediario entre conversaciones y usuarios; puede publicar eventos de interacción | No persiste datos, depende de `conversation-engine` |
 
 ## Puesta en marcha local
@@ -150,7 +148,7 @@ graph LR
 ### Consideraciones locales
 
 - `frontend` monta el código fuente con `bind mount`, por lo que los cambios se reflejan en caliente.
-- Si usas Supabase, no es necesario levantar el servicio `postgres`; asegúrate de que `.env` apunte al host gestionado.
+- Usa Supabase como origen de datos principal; asegúrate de que `.env` apunte al host gestionado y que las cadenas incluyan `?sslmode=require`.
 - `parsing-engine` requiere modelos en `models_volume`; asegúrate de poblar `/models` si tus pipelines lo necesitan.
 - Si conectas clientes externos a Kafka, usa `localhost:29092` tal como está anunciado en `KAFKA_ADVERTISED_LISTENERS`.
 
@@ -159,7 +157,7 @@ graph LR
 - Utiliza [`docker-compose.prod.yml`](../../docker-compose.prod.yml) para construir imágenes versionadas y habilitar escalado (`replicas`) en `core-api` y `frontend`.
 - Declara secretos (`./secrets/jwt_secret.txt`, `./secrets/internal_api_key.txt`) y monta certificados TLS para Nginx (`./nginx/certs`).
 - Cambia `salomon-net` a red overlay cuando se ejecute en Swarm o Kubernetes equivalente.
-- Configura almacenamiento persistente gestionado para volúmenes (`pgdata`, `qdrant_data`, `prometheus_data`, `grafana_data`).
+- Configura almacenamiento persistente gestionado para volúmenes (`qdrant_data`, `prometheus_data`, `grafana_data`).
 - Ajusta límites de recursos (`deploy.resources`) acorde a la carga esperada; actualmente `core-api` reserva 0.25 CPU / 512MB en prod.
 - Implementa monitoreo centralizado activando Prometheus y Grafana, y considera alertas sobre los healthchecks definidos.
 - Sincroniza variables públicas del frontend (`NEXT_PUBLIC_*`) con URLs expuestas por Nginx u otro gateway para evitar CORS y mezclar HTTP/HTTPS.

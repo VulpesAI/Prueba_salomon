@@ -7,7 +7,7 @@ Este documento lista los servicios y recursos que deben estar activos para ejecu
 | Servicio / recurso | Cómo se levanta | Módulos que dependen | Notas |
 |--------------------|-----------------|----------------------|-------|
 | `core-api` (NestJS) | `docker compose up core-api` | Autenticación unificada, dashboard, cuentas, transacciones, metas, alertas, asistente, configuración | Expone los endpoints REST consumidos por React Query y gestiona la sesión JWT. |
-| Supabase (PostgreSQL gestionado) | Configura `.env` con la URL remota | Todos los módulos | Base de datos principal alojada en Supabase. Si trabajas sin internet puedes usar el contenedor `postgres` como fallback local. |
+| Supabase (PostgreSQL gestionado) | Configura `.env` con la URL remota | Todos los módulos | Base de datos principal alojada en Supabase; usa el pool transaccional (`6543`) con `?sslmode=require`. |
 | `qdrant` | `docker compose up qdrant` | Dashboard (insights), recomendaciones, analítica | Almacena embeddings usados por recomendaciones y alertas inteligentes. |
 | `kafka` + `zookeeper` | `docker compose up kafka` | Ingesta de documentos, sincronización Belvo | Necesario para que `parsing-engine` procese eventos emitidos desde `core-api`. |
 | `parsing-engine` | `docker compose up parsing-engine` | Alertas, documentos enriquecidos en dashboard | Consume eventos de Kafka y escribe resultados en `/uploads`. |
@@ -18,7 +18,7 @@ Este documento lista los servicios y recursos que deben estar activos para ejecu
 | `voice-gateway` | `docker compose up voice-gateway` | Asistente (voz) | Publica sockets y endpoints de TTS/STT usados por `useVoiceGateway`. |
 | `frontend` (Next.js) | `docker compose up frontend` | Interfaz completa | Depende de las URLs públicas (`NEXT_PUBLIC_*`) para comunicarse con los servicios anteriores. |
 
-> **Sugerencia:** utiliza `docker compose up --build frontend core-api financial-connector recommendation-engine forecasting-engine conversation-engine voice-gateway parsing-engine kafka zookeeper qdrant` (agrega `postgres` solo si necesitas la base local)` para levantar todos los componentes necesarios en desarrollo.
+> **Sugerencia:** utiliza `docker compose up --build frontend core-api financial-connector recommendation-engine forecasting-engine conversation-engine voice-gateway parsing-engine kafka zookeeper qdrant` para levantar todos los componentes necesarios en desarrollo.
 
 ## 2. Variables de entorno mínimas
 
@@ -41,7 +41,7 @@ Para el frontend (`frontend/.env.local`):
 ## 3. Secuencia recomendada de arranque
 
 1. Crear/actualizar `.env` y `.env.local` con los valores descritos.
-2. Si usas Supabase, asegúrate de que la base remota esté accesible; en modo offline ejecuta `docker compose up -d postgres qdrant zookeeper kafka` para levantar las dependencias locales.
+2. Si usas Supabase, asegúrate de que la base remota esté accesible y que tus credenciales del pool estén activas.
 3. `docker compose up -d core-api financial-connector recommendation-engine forecasting-engine parsing-engine conversation-engine voice-gateway`.
 4. Confirmar healthchecks (`docker compose ps` o `curl http://localhost:<puerto>/health`).
 5. `docker compose up frontend` y acceder a `http://localhost:3001`.
