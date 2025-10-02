@@ -1,9 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { ConfigService } from '@nestjs/config';
+import { FirebaseAdminServiceInterface } from './firebase-admin.interface';
 
 @Injectable()
-export class FirebaseAdminService implements OnModuleInit {
+export class FirebaseAdminService implements OnModuleInit, FirebaseAdminServiceInterface {
   private app: admin.app.App;
   private readonly logger = new Logger(FirebaseAdminService.name);
 
@@ -47,6 +48,10 @@ export class FirebaseAdminService implements OnModuleInit {
     }
   }
 
+  isEnabled(): boolean {
+    return true;
+  }
+
   getApp(): admin.app.App {
     return this.app;
   }
@@ -81,5 +86,9 @@ export class FirebaseAdminService implements OnModuleInit {
     } catch (error) {
       throw new Error(`Custom token creation failed: ${error.message}`);
     }
+  }
+
+  async sendMessage(message: admin.messaging.Message): Promise<string> {
+    return this.getMessaging().send(message);
   }
 }

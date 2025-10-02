@@ -2,7 +2,10 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { FirebaseAdminService } from '../firebase/firebase-admin.service';
+import {
+  FIREBASE_ADMIN_SERVICE,
+  FirebaseAdminServiceInterface,
+} from '../firebase/firebase-admin.interface';
 import {
   USER_DIRECTORY_SERVICE,
   UserDirectoryService,
@@ -11,7 +14,8 @@ import {
 @Injectable()
 export class FirebaseAuthStrategy extends PassportStrategy(Strategy, 'firebase-auth') {
   constructor(
-    private firebaseAdminService: FirebaseAdminService,
+    @Inject(FIREBASE_ADMIN_SERVICE)
+    private firebaseAdminService: FirebaseAdminServiceInterface,
     @Inject(USER_DIRECTORY_SERVICE)
     private usersService: UserDirectoryService,
     private configService: ConfigService,
@@ -25,6 +29,10 @@ export class FirebaseAuthStrategy extends PassportStrategy(Strategy, 'firebase-a
   }
 
   async validate(req: any, payload: any) {
+    if (!this.firebaseAdminService.isEnabled()) {
+      throw new UnauthorizedException('Firebase authentication is disabled.');
+    }
+
     try {
       // Extraer el token del header
       const authHeader = req.headers.authorization;

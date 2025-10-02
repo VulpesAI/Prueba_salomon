@@ -10,6 +10,9 @@ const emptyStringToUndefined = (value: unknown) => {
 const optionalNonEmptyString = () =>
   z.preprocess(emptyStringToUndefined, z.string().min(1)).optional();
 
+const optionalEmail = () =>
+  z.preprocess(emptyStringToUndefined, z.string().email()).optional();
+
 const optionalUrlOrNonEmptyString = () =>
   z
     .preprocess(
@@ -42,6 +45,7 @@ export const baseEnvSchema = z
       }, z.number().int().min(1).max(65535).optional())
       .default(8080),
     STRICT_ENV: z.coerce.boolean().default(false),
+    ENABLE_FIREBASE: z.coerce.boolean().default(false),
     POSTGRES_HOST: optionalNonEmptyString(),
     POSTGRES_PORT: z.coerce.number().default(5432),
     POSTGRES_USER: optionalNonEmptyString(),
@@ -66,43 +70,79 @@ export const baseEnvSchema = z
     FORECASTING_DEFAULT_HORIZON_DAYS: z.coerce.number().default(30),
     FORECASTING_DEFAULT_MODEL: z.string().default('auto'),
     FORECASTING_DATABASE_URL: optionalNonEmptyString(),
-    FIREBASE_PROJECT_ID: z.string().min(1),
-    FIREBASE_CLIENT_EMAIL: z.string().email(),
-    FIREBASE_PRIVATE_KEY: z.string().min(1),
+    FIREBASE_SERVICE_ACCOUNT_KEY: optionalNonEmptyString(),
+    FIREBASE_PROJECT_ID: optionalNonEmptyString(),
+    FIREBASE_CLIENT_EMAIL: optionalEmail(),
+    FIREBASE_PRIVATE_KEY: optionalNonEmptyString(),
+    FIREBASE_PRIVATE_KEY_ID: optionalNonEmptyString(),
+    FIREBASE_CLIENT_ID: optionalNonEmptyString(),
+    FIREBASE_CLIENT_CERT_URL: optionalUrlOrNonEmptyString(),
+    FIREBASE_DATABASE_URL: optionalUrlOrNonEmptyString(),
   })
   .passthrough();
 
 export const envSchema = baseEnvSchema.superRefine((data, ctx) => {
-    if (!data.STRICT_ENV) {
-      return;
+  if (data.ENABLE_FIREBASE) {
+    const serviceAccountKey = data.FIREBASE_SERVICE_ACCOUNT_KEY;
+    const hasServiceAccountKey =
+      typeof serviceAccountKey === 'string' && serviceAccountKey.trim().length > 0;
+
+    if (!hasServiceAccountKey) {
+      const firebaseKeys = [
+        'FIREBASE_PROJECT_ID',
+        'FIREBASE_CLIENT_EMAIL',
+        'FIREBASE_PRIVATE_KEY',
+        'FIREBASE_PRIVATE_KEY_ID',
+        'FIREBASE_CLIENT_ID',
+      ] as const;
+
+      firebaseKeys.forEach((key) => {
+        const value = data[key];
+        if (
+          value === undefined ||
+          value === null ||
+          (typeof value === 'string' && value.trim().length === 0)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: 'Required when ENABLE_FIREBASE is true.',
+          });
+        }
+      });
     }
+  }
 
-    const strictKeys = [
-      'POSTGRES_HOST',
-      'POSTGRES_PORT',
-      'POSTGRES_USER',
-      'POSTGRES_PASSWORD',
-      'POSTGRES_DB',
-      'QDRANT_URL',
-      'FRONTEND_URL',
-      'RECOMMENDATION_ENGINE_URL',
-    ] as const;
+  if (!data.STRICT_ENV) {
+    return;
+  }
 
-    strictKeys.forEach((key) => {
-      const value = data[key];
-      if (
-        value === undefined ||
-        value === null ||
-        (typeof value === 'string' && value.trim().length === 0)
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [key],
-          message: 'Required when STRICT_ENV is enabled.',
-        });
-      }
-    });
+  const strictKeys = [
+    'POSTGRES_HOST',
+    'POSTGRES_PORT',
+    'POSTGRES_USER',
+    'POSTGRES_PASSWORD',
+    'POSTGRES_DB',
+    'QDRANT_URL',
+    'FRONTEND_URL',
+    'RECOMMENDATION_ENGINE_URL',
+  ] as const;
+
+  strictKeys.forEach((key) => {
+    const value = data[key];
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === 'string' && value.trim().length === 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: 'Required when STRICT_ENV is enabled.',
+      });
+    }
   });
+});
 
 export type EnvVars = z.infer<typeof envSchema>;
 
