@@ -45,9 +45,13 @@ const isDatabaseConfigured =
   });
 
 const isKafkaConfigured = strictMode || Boolean(process.env.KAFKA_BROKER?.trim());
-const isQdrantConfigured = strictMode || Boolean(envVars.QDRANT_URL?.toString().trim());
+const isQdrantConfigured =
+  strictMode ||
+  (typeof envVars.QDRANT_URL === 'string' && envVars.QDRANT_URL.trim().length > 0);
 const isRecommendationsConfigured =
-  strictMode || Boolean(envVars.RECOMMENDATION_ENGINE_URL?.toString().trim());
+  strictMode ||
+  (typeof envVars.RECOMMENDATION_ENGINE_URL === 'string' &&
+    envVars.RECOMMENDATION_ENGINE_URL.trim().length > 0);
 
 const authModules = [AuthModule.register({ mode: envMode }), UserModule.register({ mode: envMode })];
 
