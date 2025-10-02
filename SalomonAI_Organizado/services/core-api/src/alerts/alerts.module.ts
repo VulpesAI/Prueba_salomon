@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertsController } from './alerts.controller';
 import { PredictiveAlertsService } from './predictive-alerts.service';
 import { FinancialForecastsModule } from '../financial-forecasts/financial-forecasts.module';
-import { FirebaseModule } from '../firebase/firebase.module';
 import { Notification } from '../notifications/entities/notification.entity';
 import { User } from '../users/entities/user.entity';
 import { AlertOrchestratorService } from './alert-orchestrator.service';
@@ -16,7 +15,6 @@ import { TwilioSmsProvider } from './providers/twilio-sms.provider';
 @Module({
   imports: [
     FinancialForecastsModule,
-    FirebaseModule.register({ enabled: true }),
     TypeOrmModule.forFeature([Notification, User]),
   ],
   controllers: [AlertsController],

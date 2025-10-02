@@ -27,7 +27,7 @@ This makes it possible to run lightweight environments (for demos or tests) with
 
 The new `CORE_API_PROFILE` environment variable controls which infrastructure modules the Core API boots. It defaults to `minimal`.
 
-- **minimal**: keeps only the essential platform pieces — `ConfigModule`, `WinstonModule`, `CacheModule`, `HealthModule` and the in-memory authentication modules (`AuthModule`/`UserModule`). Optional dependencies such as Kafka, Qdrant, schedulers, dashboards or Firebase Admin are replaced with no-op implementations, so the service never attempts to reach external infrastructure during startup.
+- **minimal**: keeps only the essential platform pieces — `ConfigModule`, `WinstonModule`, `CacheModule`, `HealthModule` and the in-memory authentication modules (`AuthModule`/`UserModule`). Optional dependencies such as Kafka, Qdrant, schedulers, dashboards or Firebase Admin (when `ENABLE_FIREBASE=false`) are replaced with no-op implementations, so the service never attempts to reach external infrastructure during startup.
 - **full**: loads the complete feature set (Kafka, Qdrant, schedulers, dashboards, NLP, Belvo, forecasting, alerts, etc.) and wires the production Firebase Admin SDK. Use this profile in environments where the supporting services are available.
 
 `ConfigService` exposes the active profile through `configService.get('app.profile')`.
@@ -48,6 +48,8 @@ Para iniciar en modo mínimo (`STRICT_ENV=false` y `CORE_API_PROFILE=minimal`) d
 
 - `JWT_SECRET`: la firma de los tokens emitidos por la API.
 - `ALLOWED_ORIGINS`: lista de orígenes permitidos para CORS (usa `CORS_ORIGIN` solo como respaldo temporal).
-- Secretos `FIREBASE_*`: ya sea el JSON completo en `FIREBASE_SERVICE_ACCOUNT_KEY` o cada campo individual (`FIREBASE_PROJECT_ID`, `FIREBASE_PRIVATE_KEY_ID`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_CLIENT_ID`, `FIREBASE_CLIENT_CERT_URL`, `FIREBASE_DATABASE_URL`).
+- `ENABLE_FIREBASE` (opcional, por defecto `false`): actívalo únicamente cuando quieras inicializar Firebase Admin.
+  - Si lo dejas en `false`, la aplicación utilizará `NoopFirebaseAdminService` y puedes mantener vacías todas las variables `FIREBASE_*`.
+  - Si lo pones en `true`, aporta el JSON completo en `FIREBASE_SERVICE_ACCOUNT_KEY` o cada campo individual (`FIREBASE_PROJECT_ID`, `FIREBASE_PRIVATE_KEY_ID`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_CLIENT_ID`, `FIREBASE_CLIENT_CERT_URL`, `FIREBASE_DATABASE_URL`).
 
 Ejecuta `npm run env:check` para revisar rápidamente si faltan valores y qué dependencias opcionales se activarán en ese modo.

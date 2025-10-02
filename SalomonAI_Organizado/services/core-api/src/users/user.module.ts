@@ -7,7 +7,6 @@ import { UsersService } from './users.service';
 import { UserController } from './user.controller';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
-import { FirebaseModule } from '../firebase/firebase.module';
 import { EnvProfile, EnvStrictnessMode } from '../config/env.validation';
 import { InMemoryUserService } from './in-memory-user.service';
 import { InMemoryUsersService } from './in-memory-users.service';
@@ -21,9 +20,8 @@ export class UserModule {
     const mode = options.mode ?? 'strict';
     const profile = options.profile ?? 'full';
     const isStrict = mode === 'strict';
-    const firebaseModule = FirebaseModule.register({ enabled: profile === 'full' });
 
-    const sharedImports = [HttpModule, ConfigModule, firebaseModule];
+    const sharedImports = [HttpModule, ConfigModule];
     const imports = isStrict ? [TypeOrmModule.forFeature([User]), ...sharedImports] : sharedImports;
 
     const providers: Provider[] = [];

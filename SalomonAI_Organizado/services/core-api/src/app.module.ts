@@ -36,12 +36,14 @@ import {
   EnvStrictnessMode,
   getEnvProfile,
 } from './config/env.validation';
+import { FirebaseModule } from './firebase/firebase.module';
 
 const envVars = validateEnv(process.env);
 const strictMode = isStrictEnv(envVars);
 const envMode: EnvStrictnessMode = strictMode ? 'strict' : 'minimal';
 const profile = getEnvProfile(envVars);
 const isFullProfile = profile === 'full';
+const firebaseEnabled = envVars.ENABLE_FIREBASE;
 
 const isDatabaseConfigured =
   strictMode ||
@@ -107,6 +109,8 @@ const coreImports = [
     inject: [ConfigService],
     useFactory: (configService: ConfigService) => createCacheConfig(configService),
   }),
+
+  FirebaseModule.register({ enabled: firebaseEnabled }),
 
   HealthModule,
   ...authModules,

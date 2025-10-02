@@ -6,7 +6,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../users/user.module';
-import { FirebaseModule } from '../firebase/firebase.module';
 import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
 import { FirebaseAuthStrategy } from './firebase-auth.strategy';
@@ -26,11 +25,9 @@ export class AuthModule {
     const mode = options.mode ?? 'strict';
     const profile = options.profile ?? 'full';
     const isStrict = mode === 'strict';
-    const isFirebaseEnabled = profile === 'full';
 
     const imports = [
       UserModule.register({ mode, profile }),
-      FirebaseModule.register({ enabled: isFirebaseEnabled }),
       SecurityModule,
       PassportModule,
       ConfigModule,
