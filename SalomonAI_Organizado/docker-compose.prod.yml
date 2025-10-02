@@ -41,8 +41,6 @@ services:
       - jwt_secret
       - internal_api_key
     depends_on:
-      postgres:
-        condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
@@ -89,9 +87,6 @@ services:
       - FORECASTING_DATABASE_URL=${FORECASTING_DATABASE_URL}
       - FORECASTING_DEFAULT_MODEL=${FORECASTING_DEFAULT_MODEL:-auto}
       - FORECASTING_DEFAULT_HORIZON_DAYS=${FORECASTING_DEFAULT_HORIZON_DAYS:-30}
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - salomon-net
     deploy:

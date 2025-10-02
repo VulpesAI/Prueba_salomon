@@ -31,8 +31,6 @@ services:
     environment:
       PORT: ${CORE_API_PORT}
     depends_on:
-      postgres:
-        condition: service_healthy
       qdrant:
         condition: service_started
     deploy:
@@ -166,9 +164,6 @@ services:
       FORECASTING_DATABASE_URL: ${FORECASTING_DATABASE_URL}
       FORECASTING_DEFAULT_MODEL: ${FORECASTING_DEFAULT_MODEL}
       FORECASTING_DEFAULT_HORIZON_DAYS: ${FORECASTING_DEFAULT_HORIZON_DAYS}
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - salomon-net
     command: uvicorn app.main:app --host 0.0.0.0 --port 8003
@@ -198,22 +193,6 @@ services:
       retries: 3
 
   # --- Infrastructure ---
-  postgres:
-    image: postgres:15-alpine
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    env_file:
-      - .env
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - salomon-net
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.2
     networks:
@@ -255,7 +234,6 @@ networks:
     driver: bridge
 
 volumes:
-  pgdata:
   qdrant_data:
   uploads_volume:
   models_volume:

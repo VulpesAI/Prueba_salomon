@@ -36,7 +36,7 @@ La carpeta `services/` agrupa los distintos motores y conectores:
 - `core-api/`: monolito NestJS modular con subcarpetas como `auth`, `financial-movements`, `belvo`, `users`, `kafka`, etc. Actúa como orquestador principal y referencia para las responsabilidades de cada módulo backend.
 - Motores en FastAPI/Python:
   - `conversation-engine/`: motor conversacional que consulta `core-api` para obtener contexto financiero.
-  - `forecasting-engine/`: servicio de pronósticos que opera sobre Postgres mediante SQLAlchemy.
+  - `forecasting-engine/`: servicio de pronósticos que opera sobre Supabase (Postgres gestionado) mediante SQLAlchemy.
   - `voice-gateway/`: pasarela de voz con proveedores STT/TTS configurables.
   - `parsing-engine/`: consumidor Kafka que procesa documentos compartidos vía volumen.
   - `recommendation-engine/`: motor de recomendaciones y pipelines batch.
@@ -46,5 +46,5 @@ Cada microservicio define su propia configuración mediante validadores (`pydant
 
 ## Redes y orquestación
 
-Docker Compose conecta los servicios a través de la red `salomon-net`, define volúmenes compartidos (`pgdata`, `qdrant_data`, `uploads_volume`, `models_volume`) y coordina dependencias entre bases de datos, microservicios y brokers (Kafka, Zookeeper). El dossier de arquitectura detalla estos vínculos y sirve como guía para extender o desplegar la plataforma.
+Docker Compose conecta los servicios a través de la red `salomon-net`, define volúmenes compartidos (`qdrant_data`, `uploads_volume`, `models_volume`) y coordina dependencias entre bases de datos, microservicios y brokers (Kafka, Zookeeper). El dossier de arquitectura detalla estos vínculos y sirve como guía para extender o desplegar la plataforma.
 
