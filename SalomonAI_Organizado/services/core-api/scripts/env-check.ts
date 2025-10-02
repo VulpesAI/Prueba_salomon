@@ -81,7 +81,7 @@ const run = (): number => {
     'POSTGRES_DB',
   ];
   const missingDbKeys = databaseKeys.filter((key) => !hasValue(process.env[key]));
-  const databaseEnabled = isStrictMode || missingDbKeys.length === 0;
+  const databaseEnabled = missingDbKeys.length === 0 || isStrictMode;
   dependencyStatuses.push({
     name: 'Base de datos y módulos dependientes (Auth, Users, Belvo, Forecasts, Alerts, Notifications, Goals, Transactions, Classification, Privacy, Dashboard)',
     enabled: databaseEnabled,
@@ -91,21 +91,21 @@ const run = (): number => {
         : `Faltan variables: ${formatList(missingDbKeys as string[])}`,
   });
 
-  const kafkaEnabled = isStrictMode || hasValue(process.env.KAFKA_BROKER);
+  const kafkaEnabled = hasValue(process.env.KAFKA_BROKER) || isStrictMode;
   dependencyStatuses.push({
     name: 'Kafka',
     enabled: kafkaEnabled,
     reason: kafkaEnabled || isStrictMode ? undefined : 'Configura KAFKA_BROKER para activarlo.',
   });
 
-  const qdrantEnabled = isStrictMode || hasValue(process.env.QDRANT_URL);
+  const qdrantEnabled = hasValue(process.env.QDRANT_URL) || isStrictMode;
   dependencyStatuses.push({
     name: 'Qdrant',
     enabled: qdrantEnabled,
     reason: qdrantEnabled || isStrictMode ? undefined : 'Configura QDRANT_URL para activarlo.',
   });
 
-  const recommendationsEnabled = isStrictMode || hasValue(process.env.RECOMMENDATION_ENGINE_URL);
+  const recommendationsEnabled = hasValue(process.env.RECOMMENDATION_ENGINE_URL) || isStrictMode;
   dependencyStatuses.push({
     name: 'Motor de recomendaciones',
     enabled: recommendationsEnabled,
