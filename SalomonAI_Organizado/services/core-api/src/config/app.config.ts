@@ -2,24 +2,77 @@ import { ConfigService } from '@nestjs/config';
 import { INestApplication, ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-export const createDatabaseConfig = (configService: ConfigService) => ({
-  type: 'postgres' as const,
-  host: configService.get<string>('POSTGRES_HOST', 'postgres'),
-  port: configService.get<number>('POSTGRES_PORT', 5432),
-  username: configService.get<string>('POSTGRES_USER', 'salomon_user'),
-  password: configService.get<string>('POSTGRES_PASSWORD'),
-  database: configService.get<string>('POSTGRES_DB', 'salomon_db'),
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-  synchronize: configService.get<string>('NODE_ENV') !== 'production',
-  logging: configService.get<string>('NODE_ENV') !== 'production',
-  ssl: false, // Disable SSL for Docker development and production
-  extra: {
-    max: 20, // Pool de conexiones máximo
-    connectionTimeoutMillis: 30000,
-    idleTimeoutMillis: 30000,
-  },
-});
+export const createDatabaseConfig = (configService: ConfigService) => {
+  const databaseUrl =
+    configService.get<string>('POSTGRES_URL') ?? configService.get<string>('DATABASE_URL');
+
+  let parsedHost: string | undefined;
+  let parsedPort: string | undefined;
+  let parsedUsername: string | undefined;
+  let parsedPassword: string | undefined;
+  let parsedDatabase: string | undefined;
+
+  if (databaseUrl) {
+    try {
+      const url = new URL(databaseUrl);
+      parsedHost = url.hostname;
+      parsedPort = url.port;
+      parsedUsername = url.username || undefined;
+      parsedPassword = url.password || undefined;
+      parsedDatabase = url.pathname?.replace(/^\//, '') || undefined;
+    } catch (error) {
+      Logger.warn(`Invalid POSTGRES_URL provided: ${error}`);
+    }
+  }
+
+  const host =
+    configService.get<string>('POSTGRES_HOST') ??
+    configService.get<string>('DATABASE_HOST') ??
+    parsedHost ??
+    'db.supabase.co';
+  const portValue =
+    (configService.get<string | number>('POSTGRES_PORT') ??
+      configService.get<string | number>('DATABASE_PORT') ??
+      parsedPort ??
+      '5432') as string | number;
+  const username =
+    configService.get<string>('POSTGRES_USER') ??
+    configService.get<string>('DATABASE_USER') ??
+    parsedUsername ??
+    'postgres';
+  const password =
+    configService.get<string>('POSTGRES_PASSWORD') ??
+    configService.get<string>('DATABASE_PASSWORD') ??
+    parsedPassword ??
+    undefined;
+  const database =
+    configService.get<string>('POSTGRES_DB') ??
+    configService.get<string>('DATABASE_NAME') ??
+    parsedDatabase ??
+    'postgres';
+
+  const portNormalized =
+    typeof portValue === 'number' ? portValue : parseInt(portValue, 10);
+
+  return {
+    type: 'postgres' as const,
+    host,
+    port: Number.isNaN(portNormalized) ? 5432 : portNormalized,
+    username,
+    password,
+    database,
+    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+    migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+    synchronize: configService.get<string>('NODE_ENV') !== 'production',
+    logging: configService.get<string>('NODE_ENV') !== 'production',
+    ssl: { rejectUnauthorized: false },
+    extra: {
+      max: 20, // Pool de conexiones máximo
+      connectionTimeoutMillis: 30000,
+      idleTimeoutMillis: 30000,
+    },
+  };
+};
 
 export const createQdrantConfig = (configService: ConfigService) => ({
   url: configService.get<string>('QDRANT_URL', 'http://qdrant:6333'),
