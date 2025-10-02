@@ -77,7 +77,9 @@ async function bootstrap() {
 
   logger.log(`🚀 SalomónAI API ejecutándose en: http://0.0.0.0:${port}`);
   logger.log(`📖 Documentación Swagger: http://0.0.0.0:${port}/api/docs`);
-  logger.log(`🏥 Health Check: http://0.0.0.0:${port}/api/v1/health`);
+  logger.log(
+    `🏥 Health Check: http://0.0.0.0:${port}/health (legacy: http://0.0.0.0:${port}/api/v1/health)`,
+  );
   logger.log(`🌍 Environment: ${nodeEnv}`);
 }
 
