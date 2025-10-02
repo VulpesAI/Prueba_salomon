@@ -1,6 +1,8 @@
 # path: services/core-api/apphosting.yaml
 # Config de Firebase App Hosting para el backend (core-api)
 
+runtime: nodejs20
+
 runConfig:
   cpu: 1
   memoryMiB: 512
