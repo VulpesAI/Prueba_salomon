@@ -1,6 +1,8 @@
 # services/core-api/apphosting.yaml
 # Config válida para Firebase App Hosting de tu backend NestJS (core-api)
 
+runtime: nodejs20
+
 runConfig:
   cpu: 1
   memoryMiB: 512
