@@ -73,19 +73,20 @@ FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccoun
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-here
 
-# Database
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
+# Database (Supabase)
+DATABASE_HOST=aws-0-us-east-1.pooler.supabase.com
+DATABASE_PORT=6543
 DATABASE_USER=postgres
-DATABASE_PASSWORD=password
-DATABASE_NAME=salomonai_db
+DATABASE_PASSWORD=your-supabase-password
+DATABASE_NAME=postgres
+DATABASE_URL=postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=require
 ```
 
 ## 📋 Próximos Pasos Recomendados
 
 ### 1. Configuración del Entorno
 1. Configurar Firebase Console y obtener credenciales
-2. Configurar base de datos PostgreSQL
+2. Configurar base de datos Supabase (pool transaccional con SSL)
 3. Ejecutar migraciones de TypeORM
 4. Configurar variables de entorno
 

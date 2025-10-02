@@ -7,15 +7,15 @@ Este documento resume la topología declarada en [`docker-compose.yml`](../../do
 | Servicio | Imagen / Build | Puertos expuestos | Dependencias | Healthcheck | Rol principal |
 |----------|----------------|-------------------|--------------|-------------|---------------|
 | `qdrant` | `qdrant/qdrant:latest` | `6333`, `6334` | — | `curl http://localhost:6333/health` | Base de datos vectorial para embeddings y búsquedas semánticas. |
-| `core-api` | Build `./services/core-api` | `3000` | `postgres` (healthy), `qdrant` (started) | `curl http://localhost:3000/api/health` | API Node.js central: orquesta autenticación, ingesta de documentos y coordinación con microservicios. |
+| `core-api` | Build `./services/core-api` | `3000` | Supabase (externo) / `postgres` (local, healthy), `qdrant` (started) | `curl http://localhost:3000/api/health` | API Node.js central: orquesta autenticación, ingesta de documentos y coordinación con microservicios. |
 | `frontend` | Build `./frontend` (`npm run dev`) | `3001->3000` | — | `wget http://localhost:3000` | Aplicación Next.js para experiencia web; consume `core-api`, `conversation-engine` y `voice-gateway`. |
 | `parsing-engine` | Build `./services/parsing-engine` | — | `kafka`, `core-api` | — | Microservicio Python que procesa documentos publicados en Kafka y guarda resultados compartiendo volumen `/uploads`. |
 | `recommendation-engine` | Build `./services/recommendation-engine` | `8001->8000` | — | `curl http://localhost:8000/health` | API FastAPI que entrega recomendaciones financieras al `core-api`. |
 | `financial-connector` | Build `./services/financial-connector` | `8004->8000` | `core-api` (started) | `curl http://localhost:8000/health` | Conector FastAPI que orquesta sincronizaciones bancarias y cargas de archivos hacia Belvo. |
 | `conversation-engine` | Build `./services/conversation-engine` | `8002` | `core-api` (started) | `curl http://localhost:8002/health` | Motor conversacional que se comunica con `core-api` para obtener contexto vía `CORE_API_BASE_URL`. |
-| `forecasting-engine` | Build `./services/forecasting-engine` | `8003` | `postgres` (healthy) | `curl http://localhost:8003/health` | Servicio de pronósticos que lee/escribe en Postgres mediante URL configurables. |
+| `forecasting-engine` | Build `./services/forecasting-engine` | `8003` | Supabase (externo) / `postgres` (local, healthy) | `curl http://localhost:8003/health` | Servicio de pronósticos que lee/escribe en la base de datos gestionada vía `FORECASTING_DATABASE_URL`. |
 | `voice-gateway` | Build `./services/voice-gateway` | `8100` | `conversation-engine` | `curl http://localhost:8100/health` | Pasarela de voz que encapsula STT/TTS y delega lógica conversacional al `conversation-engine`. |
-| `postgres` | `postgres:15-alpine` | `5432` | — | `pg_isready` | Base de datos relacional principal (persistencia de usuarios, sesiones y datos financieros). |
+| `postgres` | `postgres:15-alpine` | `5432` | — | `pg_isready` | Base de datos relacional local opcional para desarrollo sin Supabase. |
 | `zookeeper` | `confluentinc/cp-zookeeper:7.3.2` | — | — | — | Servicio de coordinación requerido por Kafka. |
 | `kafka` | `confluentinc/cp-kafka:7.3.2` | `9092`, `29092` | `zookeeper` | `cub kafka-ready` | Bus de eventos para los motores Python y `core-api` (publicación/consumo de documentos y eventos asíncronos). |
 
@@ -24,14 +24,14 @@ Este documento resume la topología declarada en [`docker-compose.yml`](../../do
 - `parsing-engine` necesita acceso al volumen `uploads_volume` para intercambiar archivos con `core-api`.
 - `financial-connector` expone los endpoints usados por las pantallas de cuentas, transacciones y dashboard para disparar sincronizaciones y cargas desde Belvo.
 - Los microservicios Python se conectan a Kafka (`kafka:9092`) para suscribirse a tópicos definidos en las variables de entorno.
-- `forecasting-engine` y `core-api` dependen de Postgres para persistencia; `core-api` también inicializa colecciones en Qdrant.
+- `forecasting-engine` y `core-api` dependen de la base de datos administrada en Supabase (o del contenedor `postgres` si trabajas sin conexión externa); `core-api` también inicializa colecciones en Qdrant.
 
 ## Redes y volúmenes
 
 | Recurso | Tipo | Propósito |
 |---------|------|-----------|
 | `salomon-net` | Red bridge (local) / overlay (producción) | Aisla el tráfico interno entre API, microservicios y bases de datos. |
-| `pgdata` | Volumen | Persiste datos de Postgres. |
+| `pgdata` | Volumen | Persiste datos del contenedor `postgres` cuando se usa el fallback local. |
 | `qdrant_data` | Volumen | Almacena vectores de Qdrant. |
 | `uploads_volume` | Volumen | Zona compartida entre `core-api` y `parsing-engine` para documentos subidos. |
 | `models_volume` | Volumen | Contiene modelos de NLP utilizados por servicios Python. |
@@ -51,7 +51,7 @@ Las variables provienen de [`docker-compose.yml`](../../docker-compose.yml), [`d
 
 ### Bases de datos y almacenamiento
 
-- `POSTGRES_*`: host, puerto, base y credenciales para Postgres. También se construye `FORECASTING_DATABASE_URL` para el motor de pronósticos.
+- `POSTGRES_*`: host, puerto, base y credenciales del clúster Supabase. La cadena resultante debe incluir `?sslmode=require` y se reutiliza en `FORECASTING_DATABASE_URL`.
 - `QDRANT_URL`, `QDRANT_COLLECTION_NAME`: configuración del vector store utilizado por recomendadores y análisis semántico.
 - `UPLOAD_PATH`, `MAX_FILE_SIZE`, `ALLOWED_FILE_TYPES`: restringen almacenamiento de archivos y validaciones en `core-api`.
 
@@ -131,6 +131,7 @@ graph LR
 ## Puesta en marcha local
 
 1. **Pre-requisitos**: Docker Desktop/Engine 20+, Docker Compose v2, archivo `.env` basado en `.env.example` con credenciales válidas.
+   - Si trabajas con Supabase, verifica que las URLs incluyan `?sslmode=require`.
 2. **Inicializar volúmenes y dependencias** (opcional, reinicia estado):
    ```bash
    docker compose down -v
@@ -149,6 +150,7 @@ graph LR
 ### Consideraciones locales
 
 - `frontend` monta el código fuente con `bind mount`, por lo que los cambios se reflejan en caliente.
+- Si usas Supabase, no es necesario levantar el servicio `postgres`; asegúrate de que `.env` apunte al host gestionado.
 - `parsing-engine` requiere modelos en `models_volume`; asegúrate de poblar `/models` si tus pipelines lo necesitan.
 - Si conectas clientes externos a Kafka, usa `localhost:29092` tal como está anunciado en `KAFKA_ADVERTISED_LISTENERS`.
 
