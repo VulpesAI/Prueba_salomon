@@ -1,0 +1,52 @@
+# path: services/core-api/apphosting.yaml
+# Config de Firebase App Hosting para el backend (core-api)
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+  minInstances: 0
+  maxInstances: 10
+
+# Comando de arranque (Nest compilado a dist/)
+scripts:
+  runCommand: node dist/main.js
+
+# Variables de entorno (RUNTIME) y secretos
+env:
+  # 🔐 JWT secreto propio para firmar el token del backend
+  - variable: JWT_SECRET
+    value: "8pE2uY7F1dQn0rXkV4tL9mJ2bS5cH8wZ3qA6vN1pR7yT0uC5fD"  # puedes dejar este y cambiarlo luego
+    availability: [RUNTIME]
+
+  # Firebase Admin (OBLIGATORIAS)
+  - variable: FIREBASE_PROJECT_ID
+    value: "gen-lang-client-0516565338"
+    availability: [RUNTIME]
+
+  - variable: FIREBASE_CLIENT_EMAIL
+    value: "firebase-adminsdk-fbsvc@gen-lang-client-0516565338.iam.gserviceaccount.com"
+    availability: [RUNTIME]
+
+  # Private key del service account desde Secret Manager (NO en texto plano)
+  - variable: FIREBASE_PRIVATE_KEY
+    value: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCaKoSHGgK/6oH+\nDuUqMx1KLX9hJR6uJZG71O7Z4Rm1UcKIMQdNbQKLz33mV3yetuSjRhMdJquCz3FW\nMS8di1+luOEIMkdiyH2/OXeF0FJlRps5PxZ9pRcvQlW17PoBrZ1kr7CgKA+HjfRn\nFVn18VFXfjblNJl1NP66K4xXn9pU5Yx3HwGXGCEUZf8wZ0bM8930Sx4uDMbwbc4o\nj3LQ2R3cJMhMTK01RYY4hHTkvfMvyl8MXyM8fyna6/JvqtWe9vkJlxNYsg9BXLim\nFe6B2o+sxKem5CYimgbcoG6Xpq4M9JQuWj9VFstxeFBNRiYSTcc81EouclCgt2UA\nzIIy6qXjAgMBAAECggEAELbyZnl1+dvRmzt/MiuXjd7P9DbjlCsDmXNVMC89K9EA\n/+Yc7hKXF5R4CHzMyKJ4uJEU6nCyYLzgA2HSw2fEh4G7eDmHTtkA9TYkVNBI1q0o\nkDTcWeQH1vpgs5hNZNgve+amhj7BrEdCS9jfR5CR6qQHDKO+zZvg0Et/bFKrB9Au\nbUq4TfOvmIETMn35HcBxnob7p3Uki4v5AiiVoDCVsP4yC3l5uY8e2TZLU6Yq16QY\nzZz4DGFbh7mwNKcwJYUYkxDbyx+LDF1s3vLNz98DEENZUx31ZC5nZgZss6NZusKT\n4e2WgezCKEwk1Ue7gNcGfbSy+me6zrDpig6dL/yNvQKBgQDI6xhGZhwMprJU/OdM\nEprIt1+YR86qZJMM9zoE6tLgGdFxyba/ox7GoEx8zSEjmEXHWPQjj8s6mAupQGSb\n5VvhPeufbNOGEZ179M0c6TCxiXVXNwQcpkSfFdTSIdB75ko+kBh9Nbqozk4R1KjU\nMh8LvxCOj0+Pr6NuhI5ARoEaLwKBgQDEbj5WboDqNuDfjo4+JaNzRfECxqvILc05\nV8EytkLYaIdckyPWOSYRNHyesJJKeUY2HDudkxup501PdZZultkBILw6p6MnpJH1\neAdq8e4pdqWQJ45OZyyeSkT7l1LAPkC/fM43qi+VS7sug2cWOmDxsA2ss7yNJ1jO\nC2WJpwfmjQKBgAGrutLzDG6qgDcmt0GxsenTZI8eocBW/8YO1EOwNDq63DwHAmcL\nkzjxolEzX4AtRv9GZRlam8UL+KTarTuCp8Xyvt/fhs7JnLaoLYB9C/OeAgTMp1MZ\nqt5rzw5ES7iMDLgCeMGpzbiTpqCNVS4WkJ2HZDrbRD0cp85Geexc6bvvAoGBAK2B\nM07lDLnU/4x4PuxmEpofjWMGWXXX/w5HlT9V/nVo3yfGUEFI+Xb5BZqmHJHrzTi+\nd2oYJrdMt90X4GiOld+JKrokmNjLZKGOA/9S8ytswZEzX1+hgqfOsmAIqe9lDYwW\nkZBZou4clpnfN49KwZa6C1og6MtFlgtpxaZxA2mBAoGBAIR3etzvnpyAeVTjQ+c7\n3bvCbEeoxzb8EfIeER4AsSMaiXXiBOW7xCvncmmg5KSuC/GQPN78DW0i3aM6ibMK\nWyFpr1qW8ATwqqlkGCrRzXpO5mlw48GUdffffv5zzOfMeUa5a81T9U4WUCFoJNsm\nuoALDMXHbuDLvx3HXR+0SIxZ\n-----END PRIVATE KEY-----\n"
+    availability: [RUNTIME]
+
+  # CORS (orígenes permitidos, coma-separados)
+  - variable: ALLOWED_ORIGINS
+    value: "http://localhost:3000,https://prueba-salomon.vercel.app"
+    availability: [RUNTIME]
+
+  # Opcionales (no bloquean el arranque si van vacías)
+  - variable: FRONTEND_URL
+    value: "https://prueba-salomon.vercel.app"
+    availability: [RUNTIME]
+
+  - variable: QDRANT_URL
+    value: ""
+    availability: [RUNTIME]
+
+  - variable: RECOMMENDATION_ENGINE_URL
+    value: ""
+    availability: [RUNTIME]
