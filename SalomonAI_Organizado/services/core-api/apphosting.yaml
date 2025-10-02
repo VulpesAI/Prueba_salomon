@@ -1,8 +1,3 @@
-# services/core-api/apphosting.yaml
-# Config válida para Firebase App Hosting de tu backend NestJS (core-api)
-
-runtime: nodejs20
-
 runConfig:
   cpu: 1
   memoryMiB: 512
@@ -11,18 +6,15 @@ runConfig:
   maxInstances: 10
 
 scripts:
-  # Forzamos build y run para Nest
   buildCommand: npm ci && npm run build
   runCommand: node dist/main.js
 
 env:
-  # 🔐 JWT de prueba (puedes cambiarlo cuando quieras)
   - variable: JWT_SECRET
     value: "8pE2uY7F1dQn0rXkV4tL9mJ2bS5cH8wZ3qA6vN1pR7yT0uC5fD"
     availability:
       - RUNTIME
 
-  # Firebase Admin (OBLIGATORIAS)
   - variable: FIREBASE_PROJECT_ID
     value: "gen-lang-client-0516565338"
     availability:
@@ -33,47 +25,44 @@ env:
     availability:
       - RUNTIME
 
-  # ⚠️ Private key directa con \n escapados (pegada tal cual desde tu JSON)
-  - - variable: FIREBASE_PRIVATE_KEY
-  value: |
-    -----BEGIN PRIVATE KEY-----
-    MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCaKoSHGgK/6oH+
-    DuUqMx1KLX9hJR6uJZG71O7Z4Rm1UcKIMQdNbQKLz33mV3yetuSjRhMdJquCz3FW
-    MS8di1+luOEIMkdiyH2/OXeF0FJlRps5PxZ9pRcvQlW17PoBrZ1kr7CgKA+HjfRn
-    FVn18VFXfjblNJl1NP66K4xXn9pU5Yx3HwGXGCEUZf8wZ0bM8930Sx4uDMbwbc4o
-    j3LQ2R3cJMhMTK01RYY4hHTkvfMvyl8MXyM8fyna6/JvqtWe9vkJlxNYsg9BXLim
-    Fe6B2o+sxKem5CYimgbcoG6Xpq4M9JQuWj9VFstxeFBNRiYSTcc81EouclCgt2UA
-    zIIy6qXjAgMBAAECggEAELbyZnl1+dvRmzt/MiuXjd7P9DbjlCsDmXNVMC89K9EA
-    /+Yc7hKXF5R4CHzMyKJ4uJEU6nCyYLzgA2HSw2fEh4G7eDmHTtkA9TYkVNBI1q0o
-    kDTcWeQH1vpgs5hNZNgve+amhj7BrEdCS9jfR5CR6qQHDKO+zZvg0Et/bFKrB9Au
-    bUq4TfOvmIETMn35HcBxnob7p3Uki4v5AiiVoDCVsP4yC3l5uY8e2TZLU6Yq16QY
-    zZz4DGFbh7mwNKcwJYUYkxDbyx+LDF1s3vLNz98DEENZUx31ZC5nZgZss6NZusKT
-    4e2WgezCKEwk1Ue7gNcGfbSy+me6zrDpig6dL/yNvQKBgQDI6xhGZhwMprJU/OdM
-    EprIt1+YR86qZJMM9zoE6tLgGdFxyba/ox7GoEx8zSEjmEXHWPQjj8s6mAupQGSb
-    5VvhPeufbNOGEZ179M0c6TCxiXVXNwQcpkSfFdTSIdB75ko+kBh9Nbqozk4R1KjU
-    Mh8LvxCOj0+Pr6NuhI5ARoEaLwKBgQDEbj5WboDqNuDfjo4+JaNzRfECxqvILc05
-    V8EytkLYaIdckyPWOSYRNHyesJJKeUY2HDudkxup501PdZZultkBILw6p6MnpJH1
-    eAdq8e4pdqWQJ45OZyyeSkT7l1LAPkC/fM43qi+VS7sug2cWOmDxsA2ss7yNJ1jO
-    C2WJpwfmjQKBgAGrutLzDG6qgDcmt0GxsenTZI8eocBW/8YO1EOwNDq63DwHAmcL
-    kzjxolEzX4AtRv9GZRlam8UL+KTarTuCp8Xyvt/fhs7JnLaoLYB9C/OeAgTMp1MZ
-    qt5rzw5ES7iMDLgCeMGpzbiTpqCNVS4WkJ2HZDrbRD0cp85Geexc6bvvAoGBAK2B
-    M07lDLnU/4x4PuxmEpofjWMGWXXX/w5HlT9V/nVo3yfGUEFI+Xb5BZqmHJHrzTi+
-    d2oYJrdMt90X4GiOld+JKrokmNjLZKGOA/9S8ytswZEzX1+hgqfOsmAIqe9lDYwW
-    kZBZou4clpnfN49KwZa6C1og6MtFlgtpxaZxA2mBAoGBAIR3etzvnpyAeVTjQ+c7
-    3bvCbEeoxzb8EfIeER4AsSMaiXXiBOW7xCvncmmg5KSuC/GQPN78DW0i3aM6ibMK
-    WyFpr1qW8ATwqqlkGCrRzXpO5mlw48GUdffffv5zzOfMeUa5a81T9U4WUCFoJNsm
-    uoALDMXHbuDLvx3HXR+0SIxZ
-    -----END PRIVATE KEY-----
-  availability:
-    - RUNTIME
+  - variable: FIREBASE_PRIVATE_KEY
+    value: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCaKoSHGgK/6oH+
+      DuUqMx1KLX9hJR6uJZG71O7Z4Rm1UcKIMQdNbQKLz33mV3yetuSjRhMdJquCz3FW
+      MS8di1+luOEIMkdiyH2/OXeF0FJlRps5PxZ9pRcvQlW17PoBrZ1kr7CgKA+HjfRn
+      FVn18VFXfjblNJl1NP66K4xXn9pU5Yx3HwGXGCEUZf8wZ0bM8930Sx4uDMbwbc4o
+      j3LQ2R3cJMhMTK01RYY4hHTkvfMvyl8MXyM8fyna6/JvqtWe9vkJlxNYsg9BXLim
+      Fe6B2o+sxKem5CYimgbcoG6Xpq4M9JQuWj9VFstxeFBNRiYSTcc81EouclCgt2UA
+      zIIy6qXjAgMBAAECggEAELbyZnl1+dvRmzt/MiuXjd7P9DbjlCsDmXNVMC89K9EA
+      /+Yc7hKXF5R4CHzMyKJ4uJEU6nCyYLzgA2HSw2fEh4G7eDmHTtkA9TYkVNBI1q0o
+      kDTcWeQH1vpgs5hNZNgve+amhj7BrEdCS9jfR5CR6qQHDKO+zZvg0Et/bFKrB9Au
+      bUq4TfOvmIETMn35HcBxnob7p3Uki4v5AiiVoDCVsP4yC3l5uY8e2TZLU6Yq16QY
+      zZz4DGFbh7mwNKcwJYUYkxDbyx+LDF1s3vLNz98DEENZUx31ZC5nZgZss6NZusKT
+      4e2WgezCKEwk1Ue7gNcGfbSy+me6zrDpig6dL/yNvQKBgQDI6xhGZhwMprJU/OdM
+      EprIt1+YR86qZJMM9zoE6tLgGdFxyba/ox7GoEx8zSEjmEXHWPQjj8s6mAupQGSb
+      5VvhPeufbNOGEZ179M0c6TCxiXVXNwQcpkSfFdTSIdB75ko+kBh9Nbqozk4R1KjU
+      Mh8LvxCOj0+Pr6NuhI5ARoEaLwKBgQDEbj5WboDqNuDfjo4+JaNzRfECxqvILc05
+      V8EytkLYaIdckyPWOSYRNHyesJJKeUY2HDudkxup501PdZZultkBILw6p6MnpJH1
+      eAdq8e4pdqWQJ45OZyyeSkT7l1LAPkC/fM43qi+VS7sug2cWOmDxsA2ss7yNJ1jO
+      C2WJpwfmjQKBgAGrutLzDG6qgDcmt0GxsenTZI8eocBW/8YO1EOwNDq63DwHAmcL
+      kzjxolEzX4AtRv9GZRlam8UL+KTarTuCp8Xyvt/fhs7JnLaoLYB9C/OeAgTMp1MZ
+      qt5rzw5ES7iMDLgCeMGpzbiTpqCNVS4WkJ2HZDrbRD0cp85Geexc6bvvAoGBAK2B
+      M07lDLnU/4x4PuxmEpofjWMGWXXX/w5HlT9V/nVo3yfGUEFI+Xb5BZqmHJHrzTi+
+      d2oYJrdMt90X4GiOld+JKrokmNjLZKGOA/9S8ytswZEzX1+hgqfOsmAIqe9lDYwW
+      kZBZou4clpnfN49KwZa6C1og6MtFlgtpxaZxA2mBAoGBAIR3etzvnpyAeVTjQ+c7
+      3bvCbEeoxzb8EfIeER4AsSMaiXXiBOW7xCvncmmg5KSuC/GQPN78DW0i3aM6ibMK
+      WyFpr1qW8ATwqqlkGCrRzXpO5mlw48GUdffffv5zzOfMeUa5a81T9U4WUCFoJNsm
+      uoALDMXHbuDLvx3HXR+0SIxZ
+      -----END PRIVATE KEY-----
+    availability:
+      - RUNTIME
 
-  # CORS (coma-separado)
   - variable: ALLOWED_ORIGINS
     value: "http://localhost:3000,https://prueba-salomon.vercel.app"
     availability:
       - RUNTIME
 
-  # Opcional (no bloquea si queda así)
   - variable: FRONTEND_URL
     value: "https://prueba-salomon.vercel.app"
     availability:
