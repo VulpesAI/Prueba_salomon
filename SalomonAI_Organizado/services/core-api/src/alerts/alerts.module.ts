@@ -14,7 +14,11 @@ import { FirebasePushProvider } from './providers/firebase-push.provider';
 import { TwilioSmsProvider } from './providers/twilio-sms.provider';
 
 @Module({
-  imports: [FinancialForecastsModule, FirebaseModule, TypeOrmModule.forFeature([Notification, User])],
+  imports: [
+    FinancialForecastsModule,
+    FirebaseModule.register({ enabled: true }),
+    TypeOrmModule.forFeature([Notification, User]),
+  ],
   controllers: [AlertsController],
   providers: [
     PredictiveAlertsService,

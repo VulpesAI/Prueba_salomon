@@ -1,4 +1,5 @@
 export const DEFAULT_CONFIG = {
+  profile: 'minimal',
   env: 'development',
   port: 8080,
   database: {

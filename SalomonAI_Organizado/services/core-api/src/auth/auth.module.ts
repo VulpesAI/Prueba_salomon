@@ -15,19 +15,22 @@ import { TokenService } from './token.service';
 import { SecurityModule } from '../security/security.module';
 import { OAuthController } from './oauth.controller';
 import { OAuthService } from './oauth.service';
-import { EnvStrictnessMode } from '../config/env.validation';
+import { EnvProfile, EnvStrictnessMode } from '../config/env.validation';
 import { TOKEN_STORE } from './token-store/token-store.interface';
 import { TypeormTokenStore } from './token-store/typeorm-token.store';
 import { InMemoryTokenStore } from './token-store/in-memory-token.store';
 
 @Module({})
 export class AuthModule {
-  static register(options: { mode: EnvStrictnessMode }): DynamicModule {
-    const isStrict = options.mode === 'strict';
+  static register(options: { mode?: EnvStrictnessMode; profile?: EnvProfile } = {}): DynamicModule {
+    const mode = options.mode ?? 'strict';
+    const profile = options.profile ?? 'full';
+    const isStrict = mode === 'strict';
+    const isFirebaseEnabled = profile === 'full';
 
     const imports = [
-      UserModule.register(options),
-      FirebaseModule,
+      UserModule.register({ mode, profile }),
+      FirebaseModule.register({ enabled: isFirebaseEnabled }),
       SecurityModule,
       PassportModule,
       ConfigModule,

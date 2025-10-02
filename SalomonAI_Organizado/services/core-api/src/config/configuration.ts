@@ -2,6 +2,7 @@ import { registerAs } from '@nestjs/config';
 import { DEFAULT_CONFIG } from './default.config';
 
 export default registerAs('app', () => ({
+  profile: process.env.CORE_API_PROFILE === 'full' ? 'full' : DEFAULT_CONFIG.profile,
   env: process.env.NODE_ENV || DEFAULT_CONFIG.env,
   port: parseInt(process.env.PORT, 10) || DEFAULT_CONFIG.port,
   database: {
