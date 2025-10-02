@@ -5,5 +5,5 @@ export declare class GoogleOAuthCallbackDto {
     code: string;
     codeVerifier: string;
     redirectUri?: string;
-    state?: string;
+    state: string;
 }

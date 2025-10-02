@@ -17,9 +17,7 @@ const classification_service_1 = require("./classification.service");
 const classification_label_entity_1 = require("./entities/classification-label.entity");
 const classification_controller_1 = require("./classification.controller");
 const financial_movement_entity_1 = require("../financial-movements/entities/financial-movement.entity");
-const kafka_module_1 = require("../kafka/kafka.module");
 const nlp_module_1 = require("../nlp/nlp.module");
-const qdrant_module_1 = require("../qdrant/qdrant.module");
 let ClassificationModule = class ClassificationModule {
 };
 exports.ClassificationModule = ClassificationModule;
@@ -27,8 +25,6 @@ exports.ClassificationModule = ClassificationModule = __decorate([
     (0, common_1.Module)({
         imports: [
             nlp_module_1.NlpModule,
-            qdrant_module_1.QdrantModule,
-            kafka_module_1.KafkaModule,
             typeorm_1.TypeOrmModule.forFeature([classification_label_entity_1.ClassificationLabel, financial_movement_entity_1.FinancialMovement]),
             cache_manager_1.CacheModule.register({
                 ttl: 300,

@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { KafkaService } from '../kafka/kafka.service';
+import { KafkaProducerService } from '../kafka/kafka.tokens';
 import { QueryDto } from './dto/query.dto';
 import { ConfigService } from '@nestjs/config';
 import { User } from './entities/user.entity';
@@ -11,7 +11,7 @@ export declare class UserController {
     private readonly configService;
     private readonly httpService;
     private readonly logger;
-    constructor(userService: UserService, kafkaService: KafkaService, configService: ConfigService, httpService: HttpService);
+    constructor(userService: UserService, kafkaService: KafkaProducerService, configService: ConfigService, httpService: HttpService);
     getProfile(user: User): {
         id: string;
         uid: string;

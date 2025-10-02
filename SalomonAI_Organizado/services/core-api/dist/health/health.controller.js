@@ -15,31 +15,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.HealthController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 let HealthController = class HealthController {
-    constructor(configService, connection) {
-        this.configService = configService;
+    constructor(connection) {
         this.connection = connection;
     }
-    async getHealth() {
-        const dbStatus = await this.checkDatabase();
-        return {
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-            environment: this.configService.get('NODE_ENV', 'development'),
-            version: '1.0.0',
-            services: {
-                database: dbStatus ? 'connected' : 'disconnected',
-                qdrant: 'connected',
-            },
-        };
+    getHealth() {
+        return { ok: true };
     }
     async getReadiness() {
         const dbStatus = await this.checkDatabase();
-        if (!dbStatus) {
+        if (dbStatus === false) {
             throw new Error('Database not ready');
         }
         return { status: 'ready', timestamp: new Date().toISOString() };
@@ -48,6 +35,9 @@ let HealthController = class HealthController {
         return { status: 'alive', timestamp: new Date().toISOString() };
     }
     async checkDatabase() {
+        if (!this.connection) {
+            return null;
+        }
         try {
             await this.connection.query('SELECT 1');
             return true;
@@ -67,24 +57,14 @@ __decorate([
         schema: {
             type: 'object',
             properties: {
-                status: { type: 'string', example: 'ok' },
-                timestamp: { type: 'string', example: '2025-07-31T13:00:00.000Z' },
-                uptime: { type: 'number', example: 3600 },
-                environment: { type: 'string', example: 'production' },
-                version: { type: 'string', example: '1.0.0' },
-                services: {
-                    type: 'object',
-                    properties: {
-                        database: { type: 'string', example: 'connected' },
-                        qdrant: { type: 'string', example: 'connected' },
-                    }
-                }
-            }
-        }
+                ok: { type: 'boolean', example: true },
+            },
+            required: ['ok'],
+        },
     }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], HealthController.prototype, "getHealth", null);
 __decorate([
     (0, common_1.Get)('ready'),
@@ -105,8 +85,8 @@ __decorate([
 exports.HealthController = HealthController = __decorate([
     (0, swagger_1.ApiTags)('Health'),
     (0, common_1.Controller)('health'),
-    __param(1, (0, typeorm_1.InjectConnection)()),
-    __metadata("design:paramtypes", [config_1.ConfigService,
-        typeorm_2.Connection])
+    __param(0, (0, common_1.Optional)()),
+    __param(0, (0, typeorm_1.InjectConnection)()),
+    __metadata("design:paramtypes", [typeorm_2.Connection])
 ], HealthController);
 //# sourceMappingURL=health.controller.js.map

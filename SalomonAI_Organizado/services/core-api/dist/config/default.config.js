@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_CONFIG = void 0;
 exports.DEFAULT_CONFIG = {
     env: 'development',
-    port: 3000,
+    port: 8080,
     database: {
         host: 'postgres',
         port: 5432,

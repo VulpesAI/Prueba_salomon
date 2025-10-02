@@ -1,14 +1,14 @@
 import { FinancialMovementsService } from '../financial-movements/financial-movements.service';
 import { FinancialForecastsService } from '../financial-forecasts/financial-forecasts.service';
 import { GoalsService } from '../goals/goals.service';
-import { RecommendationsService } from './recommendations.service';
+import { RecommendationsPort } from './recommendations.tokens';
 import { SubmitRecommendationFeedbackDto } from './dto/submit-recommendation-feedback.dto';
 export declare class DashboardController {
     private readonly financialMovementsService;
     private readonly financialForecastsService;
     private readonly goalsService;
     private readonly recommendationsService;
-    constructor(financialMovementsService: FinancialMovementsService, financialForecastsService: FinancialForecastsService, goalsService: GoalsService, recommendationsService: RecommendationsService);
+    constructor(financialMovementsService: FinancialMovementsService, financialForecastsService: FinancialForecastsService, goalsService: GoalsService, recommendationsService: RecommendationsPort);
     getDashboardSummary(req: any): Promise<{
         summary: {
             totalIncome: number;

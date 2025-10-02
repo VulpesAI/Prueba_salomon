@@ -1,7 +1,8 @@
 import { OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ProducerRecord } from 'kafkajs';
-export declare class KafkaService implements OnModuleInit, OnModuleDestroy {
+import { KafkaProducerService } from './kafka.tokens';
+export declare class KafkaService implements OnModuleInit, OnModuleDestroy, KafkaProducerService {
     private readonly configService;
     private kafka;
     private producer;

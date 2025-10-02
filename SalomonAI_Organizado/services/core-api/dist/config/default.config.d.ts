@@ -1,6 +1,6 @@
 export declare const DEFAULT_CONFIG: {
     readonly env: "development";
-    readonly port: 3000;
+    readonly port: 8080;
     readonly database: {
         readonly host: "postgres";
         readonly port: 5432;

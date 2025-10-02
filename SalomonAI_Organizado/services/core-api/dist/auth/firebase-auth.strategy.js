@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FirebaseAuthStrategy = void 0;
 const common_1 = require("@nestjs/common");
@@ -15,7 +18,7 @@ const passport_1 = require("@nestjs/passport");
 const passport_jwt_1 = require("passport-jwt");
 const config_1 = require("@nestjs/config");
 const firebase_admin_service_1 = require("../firebase/firebase-admin.service");
-const users_service_1 = require("../users/users.service");
+const user_directory_interface_1 = require("../users/interfaces/user-directory.interface");
 let FirebaseAuthStrategy = class FirebaseAuthStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy, 'firebase-auth') {
     constructor(firebaseAdminService, usersService, configService) {
         super({
@@ -64,8 +67,7 @@ let FirebaseAuthStrategy = class FirebaseAuthStrategy extends (0, passport_1.Pas
 exports.FirebaseAuthStrategy = FirebaseAuthStrategy;
 exports.FirebaseAuthStrategy = FirebaseAuthStrategy = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [firebase_admin_service_1.FirebaseAdminService,
-        users_service_1.UsersService,
-        config_1.ConfigService])
+    __param(1, (0, common_1.Inject)(user_directory_interface_1.USER_DIRECTORY_SERVICE)),
+    __metadata("design:paramtypes", [firebase_admin_service_1.FirebaseAdminService, Object, config_1.ConfigService])
 ], FirebaseAuthStrategy);
 //# sourceMappingURL=firebase-auth.strategy.js.map

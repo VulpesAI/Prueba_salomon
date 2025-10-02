@@ -1,10 +1,11 @@
 import { OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { QdrantVectorService } from './qdrant.tokens';
 interface CollectionConfig {
     size: number;
     distance: 'Cosine' | 'Euclid' | 'Dot';
 }
-export declare class QdrantService implements OnModuleInit {
+export declare class QdrantService implements OnModuleInit, QdrantVectorService {
     private readonly configService;
     private readonly logger;
     private client;
