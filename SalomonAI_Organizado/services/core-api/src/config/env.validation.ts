@@ -21,6 +21,7 @@ const optionalUrlOrNonEmptyString = () =>
 export const baseEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    CORE_API_PROFILE: z.enum(['minimal', 'full']).default('minimal'),
     PORT: z
       .preprocess((value) => {
         const normalized = emptyStringToUndefined(value);
@@ -106,9 +107,12 @@ export const envSchema = baseEnvSchema.superRefine((data, ctx) => {
 export type EnvVars = z.infer<typeof envSchema>;
 
 export type EnvStrictnessMode = 'strict' | 'minimal';
+export type EnvProfile = 'minimal' | 'full';
 
 export const getEnvStrictnessMode = (env: EnvVars): EnvStrictnessMode =>
   env.STRICT_ENV ? 'strict' : 'minimal';
+
+export const getEnvProfile = (env: EnvVars): EnvProfile => env.CORE_API_PROFILE;
 
 export const isStrictEnv = (env: EnvVars): boolean => env.STRICT_ENV;
 

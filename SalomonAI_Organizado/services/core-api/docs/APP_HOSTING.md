@@ -7,6 +7,7 @@ This document summarizes the required configuration to run the Core API service 
 | Variable | Purpose | Where to set it |
 | --- | --- | --- |
 | `PORT` | Port injected by the hosting platform. The service binds to `0.0.0.0:${PORT}` (defaults to `8080`). | Provided by Firebase App Hosting / Cloud Run. No manual action required. |
+| `CORE_API_PROFILE` | Runtime profile selector. Use `minimal` for demo/test deployments without external dependencies. Switch to `full` when Kafka, Qdrant, schedulers, etc. are available. | Runtime variables (Firebase console), local `.env`, container orchestrators. |
 | `ENVIRONMENT` | Label for the current environment (`production`, `staging`, etc.). | Runtime configuration (Firebase console → App Hosting → Service → **Variables & secrets**). |
 | `JWT_SECRET` | Signing key for the application-issued JSON Web Tokens (JWTs). Required for `/auth/firebase-login`. | Runtime variables (`Firebase App Hosting`), local `.env`, container orchestrators (Docker, Kubernetes, etc.). |
 | `ALLOWED_ORIGINS` | Comma-separated list of origins allowed by CORS. Keep it in sync with the frontend URLs. | Runtime variables (Firebase), local `.env`, container orchestrators. |
@@ -61,6 +62,10 @@ Store the generated value without surrounding quotes.
    * `FIREBASE_PRIVATE_KEY` → value of `private_key` from the JSON file (ensure escaped `\n` are preserved).
 4. (If not already set) add `JWT_SECRET` following the generation guidance above.
 5. Click **Save** to redeploy the service with the new runtime variables.
+
+### Selecting the runtime profile
+
+Firebase App Hosting deployments default to the minimal profile. Set `CORE_API_PROFILE=minimal` explicitly if you want to force the lightweight mode (no Kafka/Qdrant/scheduler/NLP). When the backing services are provisioned, flip the variable to `CORE_API_PROFILE=full` and redeploy so the Core API enables the complete module set.
 
 ## CORS configuration examples
 

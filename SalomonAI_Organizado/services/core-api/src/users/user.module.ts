@@ -8,7 +8,7 @@ import { UserController } from './user.controller';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
 import { FirebaseModule } from '../firebase/firebase.module';
-import { EnvStrictnessMode } from '../config/env.validation';
+import { EnvProfile, EnvStrictnessMode } from '../config/env.validation';
 import { InMemoryUserService } from './in-memory-user.service';
 import { InMemoryUsersService } from './in-memory-users.service';
 import { InMemoryUserStore } from './in-memory-user.store';
@@ -17,10 +17,13 @@ import { USER_DIRECTORY_SERVICE } from './interfaces/user-directory.interface';
 
 @Module({})
 export class UserModule {
-  static register(options: { mode: EnvStrictnessMode } = { mode: 'strict' }): DynamicModule {
-    const isStrict = options.mode === 'strict';
+  static register(options: { mode?: EnvStrictnessMode; profile?: EnvProfile } = {}): DynamicModule {
+    const mode = options.mode ?? 'strict';
+    const profile = options.profile ?? 'full';
+    const isStrict = mode === 'strict';
+    const firebaseModule = FirebaseModule.register({ enabled: profile === 'full' });
 
-    const sharedImports = [HttpModule, ConfigModule, FirebaseModule];
+    const sharedImports = [HttpModule, ConfigModule, firebaseModule];
     const imports = isStrict ? [TypeOrmModule.forFeature([User]), ...sharedImports] : sharedImports;
 
     const providers: Provider[] = [];

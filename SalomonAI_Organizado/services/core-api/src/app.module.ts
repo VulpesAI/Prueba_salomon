@@ -15,7 +15,6 @@ import {
 } from './config/app.config';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './users/user.module';
-import { FirebaseModule } from './firebase/firebase.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { QdrantModule } from './qdrant/qdrant.module';
 import { ClassificationModule } from './classification/classification.module';
@@ -31,11 +30,18 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { GoalsModule } from './goals/goals.module';
 import { SecurityModule } from './security/security.module';
 import { PrivacyModule } from './privacy/privacy.module';
-import { validateEnv, isStrictEnv, EnvStrictnessMode } from './config/env.validation';
+import {
+  validateEnv,
+  isStrictEnv,
+  EnvStrictnessMode,
+  getEnvProfile,
+} from './config/env.validation';
 
 const envVars = validateEnv(process.env);
 const strictMode = isStrictEnv(envVars);
 const envMode: EnvStrictnessMode = strictMode ? 'strict' : 'minimal';
+const profile = getEnvProfile(envVars);
+const isFullProfile = profile === 'full';
 
 const isDatabaseConfigured =
   strictMode ||
@@ -53,86 +59,98 @@ const isRecommendationsConfigured =
   (typeof envVars.RECOMMENDATION_ENGINE_URL === 'string' &&
     envVars.RECOMMENDATION_ENGINE_URL.trim().length > 0);
 
-const authModules = [AuthModule.register({ mode: envMode }), UserModule.register({ mode: envMode })];
+const authModules = [
+  AuthModule.register({ mode: envMode, profile }),
+  UserModule.register({ mode: envMode, profile }),
+];
 
-const databaseModules = isDatabaseConfigured
-  ? [
-      TypeOrmModule.forRootAsync({
+const databaseDependentModules =
+  isFullProfile && isDatabaseConfigured
+    ? [
+        TypeOrmModule.forRootAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+        }),
+        BelvoModule,
+        FinancialForecastsModule,
+        AlertsModule,
+        NotificationsModule,
+        GoalsModule,
+        TransactionsModule,
+        ClassificationModule,
+        ClassificationRulesModule,
+        PrivacyModule,
+      ]
+    : [];
+
+const dashboardModules =
+  isFullProfile && isDatabaseConfigured
+    ? [DashboardModule.register({ recommendationsEnabled: isRecommendationsConfigured })]
+    : [];
+
+const coreImports = [
+  // Core Configuration
+  ConfigModule.forRoot(configModuleOptions),
+
+  // Logging
+  WinstonModule.forRootAsync({
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService) => createLoggerConfig(configService),
+  }),
+
+  // Cache Management
+  CacheModule.registerAsync({
+    isGlobal: true,
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService) => createCacheConfig(configService),
+  }),
+
+  HealthModule,
+  ...authModules,
+];
+
+const fullProfileImports = !isFullProfile
+  ? []
+  : [
+      // Event System
+      EventEmitterModule.forRoot({
+        wildcard: true,
+        delimiter: '.',
+        newListener: false,
+        removeListener: false,
+        maxListeners: 20,
+        verboseMemoryLeak: false,
+        ignoreErrors: false,
+      }),
+
+      // Scheduled Tasks
+      ScheduleModule.forRoot(),
+
+      // Rate Limiting
+      ThrottlerModule.forRootAsync({
         imports: [ConfigModule],
         inject: [ConfigService],
-        useFactory: (configService: ConfigService) => createDatabaseConfig(configService),
+        useFactory: (configService: ConfigService) => createThrottlerConfig(configService),
       }),
-      ...authModules,
-      BelvoModule,
-      FinancialForecastsModule,
-      AlertsModule,
-      NotificationsModule,
-      GoalsModule,
-      TransactionsModule,
-      ClassificationModule,
-      ClassificationRulesModule,
-      PrivacyModule,
-    ]
-  : authModules;
 
-const dashboardModules = isDatabaseConfigured
-  ? [DashboardModule.register({ recommendationsEnabled: isRecommendationsConfigured })]
-  : [];
+      // Feature Modules
+      NlpModule,
+
+      // Infrastructure Modules
+      KafkaModule.register({ enabled: isKafkaConfigured }),
+      QdrantModule.register({ enabled: isQdrantConfigured }),
+      SecurityModule,
+      ...databaseDependentModules,
+      ...dashboardModules,
+    ];
 
 @Module({
-  imports: [
-    // Core Configuration
-    ConfigModule.forRoot(configModuleOptions),
-    
-    // Logging
-    WinstonModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createLoggerConfig(configService),
-    }),
-    
-    // Cache Management
-    CacheModule.registerAsync({
-      isGlobal: true,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createCacheConfig(configService),
-    }),
-    
-    // Event System
-    EventEmitterModule.forRoot({
-      wildcard: true,
-      delimiter: '.',
-      newListener: false,
-      removeListener: false,
-      maxListeners: 20,
-      verboseMemoryLeak: false,
-      ignoreErrors: false,
-    }),
-    
-    // Scheduled Tasks
-    ScheduleModule.forRoot(),
-    
-    // Rate Limiting
-    ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => createThrottlerConfig(configService),
-    }),
-
-    // Feature Modules
-    FirebaseModule,
-    NlpModule,
-
-    // Infrastructure Modules
-    KafkaModule.register({ enabled: isKafkaConfigured }),
-    QdrantModule.register({ enabled: isQdrantConfigured }),
-    HealthModule,
-    SecurityModule,
-    ...databaseModules,
-    ...dashboardModules,
-  ],
+  imports: [...coreImports, ...fullProfileImports],
   controllers: [],
   providers: [],
 })
 export class AppModule {}
+
