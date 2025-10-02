@@ -30,6 +30,21 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy, KafkaProduce
       this.isConnected = true;
       this.logger.log('Successfully connected to Kafka');
     } catch (error) {
+      const isStrictEnv = this.configService.get<boolean>('STRICT_ENV', false);
+      const profile = this.configService.get<'minimal' | 'full'>('app.profile',
+        this.configService.get<'minimal' | 'full'>('CORE_API_PROFILE', 'minimal'));
+
+      if (!isStrictEnv || profile === 'minimal') {
+        const reason = !isStrictEnv
+          ? 'STRICT_ENV is disabled'
+          : 'profile is set to minimal';
+        this.logger.warn(
+          `Kafka broker is unavailable. Continuing without Kafka because ${reason}.`,
+          error,
+        );
+        return;
+      }
+
       this.logger.error('Failed to connect to Kafka', error);
       throw error;
     }
@@ -48,7 +63,10 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy, KafkaProduce
 
   async produce(record: ProducerRecord): Promise<void> {
     if (!this.isConnected) {
-      throw new Error('Kafka producer is not connected');
+      this.logger.warn(
+        `Kafka producer is not connected; skipping send to topic ${record.topic}`,
+      );
+      return;
     }
 
     try {
@@ -61,8 +79,15 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy, KafkaProduce
   }
 
   async produceWithRetry(record: ProducerRecord, maxRetries = 3): Promise<void> {
+    if (!this.isConnected) {
+      this.logger.warn(
+        `Kafka producer is not connected; skipping retry send to topic ${record.topic}`,
+      );
+      return;
+    }
+
     let lastError: Error;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await this.produce(record);
