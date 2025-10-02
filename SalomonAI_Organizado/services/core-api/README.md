@@ -23,6 +23,14 @@ The API can operate in two strictness modes controlled by the `STRICT_ENV` envir
 
 This makes it possible to run lightweight environments (for demos or tests) without provisioning Postgres. Switching back to strict mode automatically restores the TypeORM-backed services.
 
+### Despliegues en App Hosting sin servicios externos
+
+Cuando subas la aplicación a Firebase App Hosting o entornos similares sin Postgres, Kafka ni motores anexos, deja vacías las variables opcionales (`POSTGRES_*`, `KAFKA_BROKER`, `QDRANT_URL`, `RECOMMENDATION_ENGINE_URL`, `FORECASTING_ENGINE_URL`, etc.).
+
+Si se cargan valores ficticios (por ejemplo, los que venían en `.env.example`), `AppModule` asume que los servicios existen y los inicializa en `onModuleInit`, lo que provoca que el contenedor espere conexiones que nunca llegan.
+
+Los archivos `.env.example` ya se distribuyen con esos campos en blanco para evitarlo; rellénalos solo cuando cuentes con la infraestructura real o estés levantando el stack completo de Docker Compose.
+
 ### Variables mínimas necesarias
 
 Para iniciar en modo mínimo (`STRICT_ENV=false`) debes definir:
