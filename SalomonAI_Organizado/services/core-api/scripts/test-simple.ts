@@ -17,7 +17,8 @@ async function testClassificationServices() {
   try {
     // Configurar servicios manualmente
     const configService = new ConfigService({
-      QDRANT_URL: 'http://localhost:6333'
+      QDRANT_URL: 'https://4da8d705-d2a8-4aa2-a6e8-b04e35a551cb.us-east4-0.gcp.cloud.qdrant.io',
+      QDRANT_API_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.2z3mBk53Rvc0Fcy8GSdRI7ndSFJkPSsvixRMAkAfYOk'
     });
 
     const nlpService = new NlpService();
