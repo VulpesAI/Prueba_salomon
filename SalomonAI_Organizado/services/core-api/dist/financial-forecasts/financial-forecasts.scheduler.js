@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var FinancialForecastsScheduler_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FinancialForecastsScheduler = void 0;
@@ -15,7 +18,7 @@ const common_1 = require("@nestjs/common");
 const schedule_1 = require("@nestjs/schedule");
 const config_1 = require("@nestjs/config");
 const financial_forecasts_service_1 = require("./financial-forecasts.service");
-const users_service_1 = require("../users/users.service");
+const user_directory_interface_1 = require("../users/interfaces/user-directory.interface");
 let FinancialForecastsScheduler = FinancialForecastsScheduler_1 = class FinancialForecastsScheduler {
     constructor(forecastsService, usersService, configService) {
         this.forecastsService = forecastsService;
@@ -49,8 +52,7 @@ __decorate([
 ], FinancialForecastsScheduler.prototype, "refreshForecastsForUsers", null);
 exports.FinancialForecastsScheduler = FinancialForecastsScheduler = FinancialForecastsScheduler_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [financial_forecasts_service_1.FinancialForecastsService,
-        users_service_1.UsersService,
-        config_1.ConfigService])
+    __param(1, (0, common_1.Inject)(user_directory_interface_1.USER_DIRECTORY_SERVICE)),
+    __metadata("design:paramtypes", [financial_forecasts_service_1.FinancialForecastsService, Object, config_1.ConfigService])
 ], FinancialForecastsScheduler);
 //# sourceMappingURL=financial-forecasts.scheduler.js.map

@@ -18,7 +18,8 @@ const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const financial_movements_service_1 = require("../financial-movements/financial-movements.service");
 const financial_forecasts_service_1 = require("../financial-forecasts/financial-forecasts.service");
 const goals_service_1 = require("../goals/goals.service");
-const recommendations_service_1 = require("./recommendations.service");
+const common_2 = require("@nestjs/common");
+const recommendations_tokens_1 = require("./recommendations.tokens");
 const submit_recommendation_feedback_dto_1 = require("./dto/submit-recommendation-feedback.dto");
 let DashboardController = class DashboardController {
     constructor(financialMovementsService, financialForecastsService, goalsService, recommendationsService) {
@@ -284,9 +285,9 @@ __decorate([
 ], DashboardController.prototype, "getSpendingAnalysis", null);
 exports.DashboardController = DashboardController = __decorate([
     (0, common_1.Controller)('dashboard'),
+    __param(3, (0, common_2.Inject)(recommendations_tokens_1.RECOMMENDATIONS_SERVICE)),
     __metadata("design:paramtypes", [financial_movements_service_1.FinancialMovementsService,
         financial_forecasts_service_1.FinancialForecastsService,
-        goals_service_1.GoalsService,
-        recommendations_service_1.RecommendationsService])
+        goals_service_1.GoalsService, Object])
 ], DashboardController);
 //# sourceMappingURL=dashboard.controller.js.map

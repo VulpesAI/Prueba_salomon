@@ -36,6 +36,41 @@ const notifications_module_1 = require("./notifications/notifications.module");
 const goals_module_1 = require("./goals/goals.module");
 const security_module_1 = require("./security/security.module");
 const privacy_module_1 = require("./privacy/privacy.module");
+const env_validation_1 = require("./config/env.validation");
+const envVars = (0, env_validation_1.validateEnv)(process.env);
+const strictMode = (0, env_validation_1.isStrictEnv)(envVars);
+const envMode = strictMode ? 'strict' : 'minimal';
+const isDatabaseConfigured = strictMode ||
+    ['POSTGRES_HOST', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'].every((key) => {
+        const value = envVars[key];
+        return typeof value === 'string' ? value.trim().length > 0 : value !== undefined && value !== null;
+    });
+const isKafkaConfigured = strictMode || Boolean(process.env.KAFKA_BROKER?.trim());
+const isQdrantConfigured = strictMode || Boolean(envVars.QDRANT_URL?.toString().trim());
+const isRecommendationsConfigured = strictMode || Boolean(envVars.RECOMMENDATION_ENGINE_URL?.toString().trim());
+const authModules = [auth_module_1.AuthModule.register({ mode: envMode }), user_module_1.UserModule.register({ mode: envMode })];
+const databaseModules = isDatabaseConfigured
+    ? [
+        typeorm_1.TypeOrmModule.forRootAsync({
+            imports: [config_1.ConfigModule],
+            inject: [config_1.ConfigService],
+            useFactory: (configService) => (0, app_config_1.createDatabaseConfig)(configService),
+        }),
+        ...authModules,
+        belvo_module_1.BelvoModule,
+        financial_forecasts_module_1.FinancialForecastsModule,
+        alerts_module_1.AlertsModule,
+        notifications_module_1.NotificationsModule,
+        goals_module_1.GoalsModule,
+        transactions_module_1.TransactionsModule,
+        classification_module_1.ClassificationModule,
+        classification_rules_module_1.ClassificationRulesModule,
+        privacy_module_1.PrivacyModule,
+    ]
+    : authModules;
+const dashboardModules = isDatabaseConfigured
+    ? [dashboard_module_1.DashboardModule.register({ recommendationsEnabled: isRecommendationsConfigured })]
+    : [];
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -48,12 +83,8 @@ exports.AppModule = AppModule = __decorate([
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => (0, logger_config_1.createLoggerConfig)(configService),
             }),
-            typeorm_1.TypeOrmModule.forRootAsync({
-                imports: [config_1.ConfigModule],
-                inject: [config_1.ConfigService],
-                useFactory: (configService) => (0, app_config_1.createDatabaseConfig)(configService),
-            }),
             cache_manager_1.CacheModule.registerAsync({
+                isGlobal: true,
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => (0, app_config_1.createCacheConfig)(configService),
@@ -73,24 +104,14 @@ exports.AppModule = AppModule = __decorate([
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => (0, app_config_1.createThrottlerConfig)(configService),
             }),
-            auth_module_1.AuthModule,
-            user_module_1.UserModule,
             firebase_module_1.FirebaseModule,
-            dashboard_module_1.DashboardModule,
-            belvo_module_1.BelvoModule,
-            financial_forecasts_module_1.FinancialForecastsModule,
-            alerts_module_1.AlertsModule,
-            notifications_module_1.NotificationsModule,
-            goals_module_1.GoalsModule,
-            transactions_module_1.TransactionsModule,
-            classification_module_1.ClassificationModule,
-            classification_rules_module_1.ClassificationRulesModule,
             nlp_module_1.NlpModule,
-            kafka_module_1.KafkaModule,
-            qdrant_module_1.QdrantModule,
+            kafka_module_1.KafkaModule.register({ enabled: isKafkaConfigured }),
+            qdrant_module_1.QdrantModule.register({ enabled: isQdrantConfigured }),
             health_module_1.HealthModule,
             security_module_1.SecurityModule,
-            privacy_module_1.PrivacyModule,
+            ...databaseModules,
+            ...dashboardModules,
         ],
         controllers: [],
         providers: [],

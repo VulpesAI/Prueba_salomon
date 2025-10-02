@@ -21,8 +21,13 @@ __decorate([
 ], AuthToken.prototype, "id", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.authTokens, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.JoinColumn)({ name: 'user_id' }),
     __metadata("design:type", user_entity_1.User)
 ], AuthToken.prototype, "user", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'user_id' }),
+    __metadata("design:type", String)
+], AuthToken.prototype, "userId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'refresh_token_hash', nullable: false, select: false }),
     __metadata("design:type", String)

@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { QdrantService } from '../qdrant/qdrant.service';
+import { QdrantVectorService } from '../qdrant/qdrant.tokens';
 import { CreateFinancialMovementDto } from './dto/create-financial-movement.dto';
 import { UpdateFinancialMovementDto } from './dto/update-financial-movement.dto';
 import { FinancialMovement } from './entities/financial-movement.entity';
@@ -23,7 +23,7 @@ export declare class FinancialMovementsService {
     private readonly movementRepository;
     private readonly userRepository;
     private readonly qdrantService;
-    constructor(movementRepository: Repository<FinancialMovement>, userRepository: Repository<User>, qdrantService: QdrantService);
+    constructor(movementRepository: Repository<FinancialMovement>, userRepository: Repository<User>, qdrantService: QdrantVectorService);
     create(dto: CreateFinancialMovementDto): Promise<FinancialMovement>;
     classifyBySimilarity(dto: ClassifyMovementDto): Promise<string>;
     findAllByUser(userId: string, queryDto: FindFinancialMovementsQueryDto): Promise<PaginatedMovements>;

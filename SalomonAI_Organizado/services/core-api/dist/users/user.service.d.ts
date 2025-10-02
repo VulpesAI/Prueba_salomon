@@ -2,14 +2,15 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-export declare class UserService {
+import { UserAccountsService } from './interfaces/user-accounts.interface';
+export declare class UserService implements UserAccountsService {
     private readonly userRepository;
     private readonly logger;
     constructor(userRepository: Repository<User>);
     create(createUserDto: CreateUserDto): Promise<User>;
     findAll(): Promise<User[]>;
     findOne(id: string): Promise<User>;
-    findByEmail(email: string): Promise<User>;
+    findByEmail(email: string): Promise<User | null>;
     getByIdWithSecrets(id: string): Promise<User | null>;
     setMfaTempSecret(userId: string, secret: string): Promise<void>;
     activateMfa(userId: string, secret: string, backupCodes: string[]): Promise<void>;

@@ -22,8 +22,8 @@ const typeorm_1 = require("@nestjs/typeorm");
 const schedule_1 = require("@nestjs/schedule");
 const typeorm_2 = require("typeorm");
 const nlp_service_1 = require("../nlp/nlp.service");
-const qdrant_service_1 = require("../qdrant/qdrant.service");
-const kafka_service_1 = require("../kafka/kafka.service");
+const qdrant_tokens_1 = require("../qdrant/qdrant.tokens");
+const kafka_tokens_1 = require("../kafka/kafka.tokens");
 const transaction_category_enum_1 = require("../transactions/enums/transaction-category.enum");
 const classification_label_entity_1 = require("./entities/classification-label.entity");
 const financial_movement_entity_1 = require("../financial-movements/entities/financial-movement.entity");
@@ -563,13 +563,11 @@ __decorate([
 ], ClassificationService.prototype, "handleClassificationCorrected", null);
 exports.ClassificationService = ClassificationService = ClassificationService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(1, (0, common_1.Inject)(qdrant_tokens_1.QDRANT_SERVICE)),
+    __param(3, (0, common_1.Inject)(kafka_tokens_1.KAFKA_SERVICE)),
     __param(5, (0, typeorm_1.InjectRepository)(classification_label_entity_1.ClassificationLabel)),
     __param(6, (0, typeorm_1.InjectRepository)(financial_movement_entity_1.FinancialMovement)),
-    __metadata("design:paramtypes", [nlp_service_1.NlpService,
-        qdrant_service_1.QdrantService,
-        event_emitter_1.EventEmitter2,
-        kafka_service_1.KafkaService,
-        config_1.ConfigService,
+    __metadata("design:paramtypes", [nlp_service_1.NlpService, Object, event_emitter_1.EventEmitter2, Object, config_1.ConfigService,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], ClassificationService);

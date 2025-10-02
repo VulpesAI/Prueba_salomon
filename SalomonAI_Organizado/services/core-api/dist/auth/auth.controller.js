@@ -18,17 +18,59 @@ const auth_service_1 = require("./auth.service");
 const local_auth_guard_1 = require("./local-auth.guard");
 const create_user_dto_1 = require("../users/dto/create-user.dto");
 const firebase_admin_service_1 = require("../firebase/firebase-admin.service");
-const users_service_1 = require("../users/users.service");
 const jwt_auth_guard_1 = require("./jwt-auth.guard");
 const verify_mfa_dto_1 = require("./dto/verify-mfa.dto");
 const disable_mfa_dto_1 = require("./dto/disable-mfa.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 const login_user_dto_1 = require("./dto/login-user.dto");
+const firebase_login_dto_1 = require("./dto/firebase-login.dto");
+const user_directory_interface_1 = require("../users/interfaces/user-directory.interface");
 let AuthController = class AuthController {
     constructor(authService, firebaseAdminService, usersService) {
         this.authService = authService;
         this.firebaseAdminService = firebaseAdminService;
         this.usersService = usersService;
+    }
+    extractBearerToken(authHeader) {
+        if (!authHeader) {
+            return null;
+        }
+        const matches = authHeader.match(/^Bearer\s+(.+)$/i);
+        return matches ? matches[1].trim() : null;
+    }
+    async handleFirebaseLogin(idToken) {
+        try {
+            const decodedToken = await this.firebaseAdminService.verifyIdToken(idToken);
+            const firebaseUser = await this.firebaseAdminService.getUserByUid(decodedToken.uid);
+            const user = await this.usersService.syncWithFirebase({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                emailVerified: firebaseUser.emailVerified,
+                phoneNumber: firebaseUser.phoneNumber,
+                metadata: {
+                    creationTime: firebaseUser.metadata.creationTime,
+                    lastSignInTime: firebaseUser.metadata.lastSignInTime,
+                },
+            });
+            const session = await this.authService.login({
+                id: user.id,
+                email: user.email,
+                roles: user.roles,
+                mfaEnabled: user.mfaEnabled,
+                isActive: user.isActive,
+                uid: user.uid,
+            });
+            return {
+                ...session,
+                access_token: session.accessToken,
+            };
+        }
+        catch (error) {
+            console.error('Error en login Firebase:', error);
+            throw new common_1.UnauthorizedException('Token Firebase inválido');
+        }
     }
     async register(createUserDto) {
         return this.authService.register(createUserDto);
@@ -49,41 +91,19 @@ let AuthController = class AuthController {
         await this.authService.disableMfa(req.user.id, dto.token, dto.backupCode);
         return { message: 'MFA desactivado correctamente' };
     }
-    async firebaseLogin(authHeader) {
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    async firebaseLogin(body, authHeader) {
+        const idToken = body?.idToken ?? this.extractBearerToken(authHeader);
+        if (!idToken) {
             throw new common_1.UnauthorizedException('Token Firebase requerido');
         }
-        const firebaseToken = authHeader.substring(7);
-        try {
-            const decodedToken = await this.firebaseAdminService.verifyIdToken(firebaseToken);
-            const firebaseUser = await this.firebaseAdminService.getUserByUid(decodedToken.uid);
-            const user = await this.usersService.syncWithFirebase({
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                photoURL: firebaseUser.photoURL,
-                emailVerified: firebaseUser.emailVerified,
-                phoneNumber: firebaseUser.phoneNumber,
-                metadata: {
-                    creationTime: firebaseUser.metadata.creationTime,
-                    lastSignInTime: firebaseUser.metadata.lastSignInTime,
-                },
-            });
-            const session = await this.authService.login({
-                id: user.id,
-                email: user.email,
-                roles: user.roles,
-                mfaEnabled: user.mfaEnabled,
-            });
-            return {
-                ...session,
-                access_token: session.accessToken,
-            };
+        return this.handleFirebaseLogin(idToken);
+    }
+    async firebaseLoginAlias(authHeader) {
+        const idToken = this.extractBearerToken(authHeader);
+        if (!idToken) {
+            throw new common_1.UnauthorizedException('Token Firebase requerido');
         }
-        catch (error) {
-            console.error('Error en login Firebase:', error);
-            throw new common_1.UnauthorizedException('Token Firebase inválido');
-        }
+        return this.handleFirebaseLogin(idToken);
     }
     async verifyFirebaseToken(authHeader) {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -169,13 +189,22 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "disableMfa", null);
 __decorate([
+    (0, common_1.Post)('firebase-login'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Headers)('authorization')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [firebase_login_dto_1.FirebaseLoginDto, String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "firebaseLogin", null);
+__decorate([
     (0, common_1.Post)('firebase/login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Headers)('authorization')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "firebaseLogin", null);
+], AuthController.prototype, "firebaseLoginAlias", null);
 __decorate([
     (0, common_1.Post)('firebase/verify'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
@@ -186,8 +215,8 @@ __decorate([
 ], AuthController.prototype, "verifyFirebaseToken", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
+    __param(2, (0, common_1.Inject)(user_directory_interface_1.USER_DIRECTORY_SERVICE)),
     __metadata("design:paramtypes", [auth_service_1.AuthService,
-        firebase_admin_service_1.FirebaseAdminService,
-        users_service_1.UsersService])
+        firebase_admin_service_1.FirebaseAdminService, Object])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

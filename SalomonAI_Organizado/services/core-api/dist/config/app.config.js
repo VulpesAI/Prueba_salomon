@@ -72,13 +72,28 @@ const setupGlobalPipes = (app) => {
 };
 exports.setupGlobalPipes = setupGlobalPipes;
 const setupGlobalPrefix = (app, configService) => {
-    app.setGlobalPrefix('api/v1');
+    app.setGlobalPrefix('api/v1', {
+        exclude: [
+            { path: 'health', method: common_1.RequestMethod.ALL },
+            { path: 'health/(.*)', method: common_1.RequestMethod.ALL },
+        ],
+    });
 };
 exports.setupGlobalPrefix = setupGlobalPrefix;
 const setupCors = (app, configService) => {
-    const corsOrigins = configService.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001');
+    const allowedOrigins = configService.get('ALLOWED_ORIGINS');
+    const legacyCorsOrigin = configService.get('CORS_ORIGIN');
+    const originsString = allowedOrigins?.trim()?.length
+        ? allowedOrigins
+        : legacyCorsOrigin?.trim()?.length
+            ? legacyCorsOrigin
+            : 'http://localhost:3000';
+    const corsOrigins = originsString
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
     app.enableCors({
-        origin: corsOrigins.split(','),
+        origin: corsOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

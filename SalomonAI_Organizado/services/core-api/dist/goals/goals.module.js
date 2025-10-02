@@ -20,7 +20,11 @@ let GoalsModule = class GoalsModule {
 exports.GoalsModule = GoalsModule;
 exports.GoalsModule = GoalsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([financial_goal_entity_1.FinancialGoal, goal_progress_entity_1.GoalProgress]), notifications_module_1.NotificationsModule, user_module_1.UserModule],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([financial_goal_entity_1.FinancialGoal, goal_progress_entity_1.GoalProgress]),
+            notifications_module_1.NotificationsModule,
+            user_module_1.UserModule.register({ mode: 'strict' }),
+        ],
         controllers: [goals_controller_1.GoalsController],
         providers: [goals_service_1.GoalsService],
         exports: [goals_service_1.GoalsService],

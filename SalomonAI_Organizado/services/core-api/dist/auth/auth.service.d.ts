@@ -1,25 +1,30 @@
 import { CreateUserDto } from '../users/dto/create-user.dto';
-import { UserService } from '../users/user.service';
 import { TokenService, TokenPair } from './token.service';
 import { SiemLoggerService } from '../security/siem-logger.service';
+import { UserAccountsService } from '../users/interfaces/user-accounts.interface';
 export declare class AuthService {
     private readonly userService;
     private readonly tokenService;
     private readonly siemLogger;
-    constructor(userService: UserService, tokenService: TokenService, siemLogger: SiemLoggerService);
+    constructor(userService: UserAccountsService, tokenService: TokenService, siemLogger: SiemLoggerService);
     private sanitizeUser;
+    private ensureActiveUser;
     validateUser(email: string, password: string, mfaToken?: string): Promise<any>;
     login(user: {
         id: string;
         email: string;
         roles?: string[];
         mfaEnabled?: boolean;
+        isActive?: boolean;
+        uid?: string;
     }): Promise<{
         user: {
             id: string;
             email: string;
             roles?: string[];
             mfaEnabled?: boolean;
+            isActive?: boolean;
+            uid?: string;
         };
         accessToken: string;
         refreshToken: string;

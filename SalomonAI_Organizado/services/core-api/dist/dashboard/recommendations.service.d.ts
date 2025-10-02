@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { SubmitRecommendationFeedbackDto } from './dto/submit-recommendation-feedback.dto';
+import { RecommendationsPort } from './recommendations.tokens';
 export interface RecommendationItem {
     id: string;
     title: string;
@@ -17,7 +18,7 @@ export interface PersonalizedRecommendations {
     recommendations: RecommendationItem[];
     featureSummary?: Record<string, any> | null;
 }
-export declare class RecommendationsService {
+export declare class RecommendationsService implements RecommendationsPort {
     private readonly httpService;
     private readonly configService;
     private readonly logger;

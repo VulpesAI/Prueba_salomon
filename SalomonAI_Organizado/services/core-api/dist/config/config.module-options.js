@@ -1,35 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.configModuleOptions = void 0;
+const env_loader_1 = require("./env.loader");
 const configuration_1 = require("./configuration");
-const Joi = require("joi");
+const env_validation_1 = require("./env.validation");
+(0, env_loader_1.loadRootEnv)();
 exports.configModuleOptions = {
     load: [configuration_1.default],
-    validationSchema: Joi.object({
-        NODE_ENV: Joi.string()
-            .valid('development', 'production', 'test')
-            .default('development'),
-        PORT: Joi.number().default(3000),
-        POSTGRES_HOST: Joi.string().default('postgres'),
-        POSTGRES_PORT: Joi.number().default(5432),
-        POSTGRES_USER: Joi.string().required(),
-        POSTGRES_PASSWORD: Joi.string().required(),
-        POSTGRES_DB: Joi.string().required(),
-        JWT_SECRET: Joi.string().required(),
-        JWT_EXPIRES_IN: Joi.string().default('24h'),
-        KAFKA_BROKER: Joi.string().default('kafka:9092'),
-        KAFKA_CLIENT_ID: Joi.string().default('salomon-api'),
-        QDRANT_URL: Joi.string().default('http://qdrant:6333'),
-        QDRANT_COLLECTION: Joi.string().default('transactions'),
-        FRONTEND_URL: Joi.string().default('http://localhost:3001'),
-        RECOMMENDATION_ENGINE_URL: Joi.string().default('http://recommendation-engine:8004'),
-        RECOMMENDATION_ENGINE_TIMEOUT_MS: Joi.number().default(8000),
-    }),
+    validate: env_validation_1.validateEnv,
     validationOptions: {
         allowUnknown: true,
         abortEarly: false,
     },
     isGlobal: true,
     cache: true,
+    ignoreEnvFile: true,
 };
 //# sourceMappingURL=config.module-options.js.map

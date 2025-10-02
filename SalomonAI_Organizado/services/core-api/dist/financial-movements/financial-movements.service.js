@@ -16,7 +16,7 @@ exports.FinancialMovementsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
-const qdrant_service_1 = require("../qdrant/qdrant.service");
+const qdrant_tokens_1 = require("../qdrant/qdrant.tokens");
 const financial_movement_entity_1 = require("./entities/financial-movement.entity");
 const user_entity_1 = require("../users/entities/user.entity");
 let FinancialMovementsService = class FinancialMovementsService {
@@ -139,8 +139,8 @@ exports.FinancialMovementsService = FinancialMovementsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(financial_movement_entity_1.FinancialMovement)),
     __param(1, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(2, (0, common_1.Inject)(qdrant_tokens_1.QDRANT_SERVICE)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
-        qdrant_service_1.QdrantService])
+        typeorm_2.Repository, Object])
 ], FinancialMovementsService);
 //# sourceMappingURL=financial-movements.service.js.map

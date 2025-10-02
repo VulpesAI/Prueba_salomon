@@ -4,8 +4,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { ClassifyTransactionDto, TrainTransactionDto, CorrectClassificationDto, ClassificationResultDto } from './dto/transaction.dto';
 import { NlpService } from '../nlp/nlp.service';
-import { QdrantService } from '../qdrant/qdrant.service';
-import { KafkaService } from '../kafka/kafka.service';
+import { QdrantVectorService } from '../qdrant/qdrant.tokens';
+import { KafkaProducerService } from '../kafka/kafka.tokens';
 import { ClassificationLabel } from './entities/classification-label.entity';
 import { FinancialMovement } from '../financial-movements/entities/financial-movement.entity';
 export declare class ClassificationService implements OnModuleInit {
@@ -32,7 +32,7 @@ export declare class ClassificationService implements OnModuleInit {
     private readonly classificationCache;
     private readonly maxCacheSize;
     private readonly fallbackRules;
-    constructor(nlpService: NlpService, qdrantService: QdrantService, eventEmitter: EventEmitter2, kafkaService: KafkaService, configService: ConfigService, labelRepository: Repository<ClassificationLabel>, movementRepository: Repository<FinancialMovement>);
+    constructor(nlpService: NlpService, qdrantService: QdrantVectorService, eventEmitter: EventEmitter2, kafkaService: KafkaProducerService, configService: ConfigService, labelRepository: Repository<ClassificationLabel>, movementRepository: Repository<FinancialMovement>);
     private getNumberConfig;
     onModuleInit(): Promise<void>;
     private initializeModel;

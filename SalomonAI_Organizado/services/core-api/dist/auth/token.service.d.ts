@@ -1,9 +1,8 @@
-import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AuthToken } from './entities/auth-token.entity';
 import { SiemLoggerService } from '../security/siem-logger.service';
 import { User } from '../users/entities/user.entity';
+import { TokenStore } from './token-store/token-store.interface';
 export interface TokenPair {
     accessToken: string;
     refreshToken: string;
@@ -12,13 +11,14 @@ export interface TokenPair {
     refreshTokenExpiresAt: string;
 }
 export declare class TokenService {
-    private readonly authTokenRepository;
+    private readonly tokenStore;
     private readonly jwtService;
     private readonly configService;
     private readonly siemLogger;
-    constructor(authTokenRepository: Repository<AuthToken>, jwtService: JwtService, configService: ConfigService, siemLogger: SiemLoggerService);
+    constructor(tokenStore: TokenStore, jwtService: JwtService, configService: ConfigService, siemLogger: SiemLoggerService);
     private getAccessTokenTtlSeconds;
     private getRefreshTokenTtlSeconds;
+    private toTokenUser;
     private createRefreshTokenRecord;
     private verifyRefreshToken;
     private buildJwtPayload;
@@ -38,7 +38,7 @@ export declare class TokenService {
         uid?: string;
     }): Promise<TokenPair>;
     rotateRefreshToken(rawToken: string): Promise<{
-        user: User;
+        user: Pick<User, 'id' | 'email' | 'roles' | 'uid'>;
         tokens: TokenPair;
     }>;
     revokeTokensForUser(userId: string): Promise<void>;

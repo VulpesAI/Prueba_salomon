@@ -23,7 +23,7 @@ const platform_express_1 = require("@nestjs/platform-express");
 const rxjs_1 = require("rxjs");
 const user_service_1 = require("./user.service");
 const update_user_dto_1 = require("./dto/update-user.dto");
-const kafka_service_1 = require("../kafka/kafka.service");
+const kafka_tokens_1 = require("../kafka/kafka.tokens");
 const query_dto_1 = require("./dto/query.dto");
 const config_1 = require("@nestjs/config");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
@@ -186,9 +186,8 @@ __decorate([
 exports.UserController = UserController = UserController_1 = __decorate([
     (0, common_1.Controller)('users'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [user_service_1.UserService,
-        kafka_service_1.KafkaService,
-        config_1.ConfigService,
+    __param(1, (0, common_1.Inject)(kafka_tokens_1.KAFKA_SERVICE)),
+    __metadata("design:paramtypes", [user_service_1.UserService, Object, config_1.ConfigService,
         axios_1.HttpService])
 ], UserController);
 //# sourceMappingURL=user.controller.js.map

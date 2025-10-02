@@ -13,7 +13,6 @@ const financial_movements_service_1 = require("./financial-movements.service");
 const financial_movements_controller_1 = require("./financial-movements.controller");
 const financial_movement_entity_1 = require("./entities/financial-movement.entity");
 const user_entity_1 = require("../users/entities/user.entity");
-const qdrant_module_1 = require("../qdrant/qdrant.module");
 let FinancialMovementsModule = class FinancialMovementsModule {
 };
 exports.FinancialMovementsModule = FinancialMovementsModule;
@@ -21,7 +20,6 @@ exports.FinancialMovementsModule = FinancialMovementsModule = __decorate([
     (0, common_1.Module)({
         imports: [
             typeorm_1.TypeOrmModule.forFeature([financial_movement_entity_1.FinancialMovement, user_entity_1.User]),
-            qdrant_module_1.QdrantModule,
         ],
         controllers: [financial_movements_controller_1.FinancialMovementsController],
         providers: [financial_movements_service_1.FinancialMovementsService],

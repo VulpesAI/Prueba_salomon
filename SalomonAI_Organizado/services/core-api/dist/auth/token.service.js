@@ -14,17 +14,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TokenService = void 0;
 const common_1 = require("@nestjs/common");
-const typeorm_1 = require("@nestjs/typeorm");
-const typeorm_2 = require("typeorm");
 const crypto_1 = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
-const auth_token_entity_1 = require("./entities/auth-token.entity");
 const siem_logger_service_1 = require("../security/siem-logger.service");
+const token_store_interface_1 = require("./token-store/token-store.interface");
 let TokenService = class TokenService {
-    constructor(authTokenRepository, jwtService, configService, siemLogger) {
-        this.authTokenRepository = authTokenRepository;
+    constructor(tokenStore, jwtService, configService, siemLogger) {
+        this.tokenStore = tokenStore;
         this.jwtService = jwtService;
         this.configService = configService;
         this.siemLogger = siemLogger;
@@ -39,17 +37,20 @@ let TokenService = class TokenService {
         const ttl = Number(value);
         return Number.isNaN(ttl) ? 60 * 60 * 24 * 30 : ttl;
     }
+    toTokenUser(user) {
+        return {
+            id: user.id,
+            email: user.email,
+            roles: user.roles,
+            uid: user.uid,
+        };
+    }
     async createRefreshTokenRecord(user) {
         const tokenSecret = (0, crypto_1.randomBytes)(48).toString('hex');
         const refreshTokenHash = await bcrypt.hash(tokenSecret, 12);
         const expiresAt = new Date(Date.now() + this.getRefreshTokenTtlSeconds() * 1000);
-        const entity = this.authTokenRepository.create({
-            user: { id: user.id },
-            refreshTokenHash,
-            expiresAt,
-        });
-        const saved = await this.authTokenRepository.save(entity);
-        const refreshToken = `${saved.id}.${tokenSecret}`;
+        const { id } = await this.tokenStore.createRefreshToken(user, refreshTokenHash, expiresAt);
+        const refreshToken = `${id}.${tokenSecret}`;
         return { token: refreshToken, expiresAt };
     }
     async verifyRefreshToken(rawToken) {
@@ -57,12 +58,7 @@ let TokenService = class TokenService {
         if (!tokenId || !tokenSecret) {
             throw new common_1.UnauthorizedException('Refresh token inválido');
         }
-        const token = await this.authTokenRepository
-            .createQueryBuilder('token')
-            .leftJoinAndSelect('token.user', 'user')
-            .addSelect('token.refreshTokenHash')
-            .where('token.id = :id', { id: tokenId })
-            .getOne();
+        const token = await this.tokenStore.findRefreshTokenById(tokenId);
         if (!token) {
             throw new common_1.UnauthorizedException('Refresh token no encontrado');
         }
@@ -99,8 +95,9 @@ let TokenService = class TokenService {
         return { token, expiresInSeconds };
     }
     async issueTokenPair(user) {
+        const tokenUser = this.toTokenUser(user);
         const [{ token: refreshToken, expiresAt }, { token: accessToken, expiresInSeconds }] = await Promise.all([
-            this.createRefreshTokenRecord(user),
+            this.createRefreshTokenRecord(tokenUser),
             this.generateAccessToken(user),
         ]);
         await this.siemLogger.logSecurityEvent({
@@ -119,8 +116,8 @@ let TokenService = class TokenService {
     }
     async rotateRefreshToken(rawToken) {
         const token = await this.verifyRefreshToken(rawToken);
-        token.rotatedAt = new Date();
-        await this.authTokenRepository.save(token);
+        const rotatedAt = new Date();
+        await this.tokenStore.markRotated(token.id, rotatedAt);
         const tokens = await this.issueTokenPair({
             id: token.user.id,
             email: token.user.email,
@@ -136,7 +133,7 @@ let TokenService = class TokenService {
         return { user: token.user, tokens };
     }
     async revokeTokensForUser(userId) {
-        await this.authTokenRepository.update({ user: { id: userId } }, { revokedAt: new Date() });
+        await this.tokenStore.revokeTokensForUser(userId);
         await this.siemLogger.logSecurityEvent({
             type: 'AUTH_TOKENS_REVOKED',
             severity: 'high',
@@ -147,9 +144,8 @@ let TokenService = class TokenService {
 exports.TokenService = TokenService;
 exports.TokenService = TokenService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(auth_token_entity_1.AuthToken)),
-    __metadata("design:paramtypes", [typeorm_2.Repository,
-        jwt_1.JwtService,
+    __param(0, (0, common_1.Inject)(token_store_interface_1.TOKEN_STORE)),
+    __metadata("design:paramtypes", [Object, jwt_1.JwtService,
         config_1.ConfigService,
         siem_logger_service_1.SiemLoggerService])
 ], TokenService);

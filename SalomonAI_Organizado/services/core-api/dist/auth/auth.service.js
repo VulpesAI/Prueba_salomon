@@ -8,14 +8,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const bcrypt = require("bcryptjs");
-const user_service_1 = require("../users/user.service");
 const token_service_1 = require("./token.service");
 const siem_logger_service_1 = require("../security/siem-logger.service");
 const totp_util_1 = require("./utils/totp.util");
+const user_accounts_interface_1 = require("../users/interfaces/user-accounts.interface");
 let AuthService = class AuthService {
     constructor(userService, tokenService, siemLogger) {
         this.userService = userService;
@@ -29,6 +32,20 @@ let AuthService = class AuthService {
         const { passwordHash, mfaSecret, mfaTempSecret, mfaBackupCodes, ...rest } = user;
         return rest;
     }
+    async ensureActiveUser(user) {
+        if (user?.isActive === false) {
+            await Promise.all([
+                this.tokenService.revokeTokensForUser(user.id),
+                this.siemLogger.logSecurityEvent({
+                    type: 'AUTH_LOGIN_BLOCKED',
+                    severity: 'high',
+                    userId: user.id,
+                    metadata: { email: user.email, reason: 'USER_INACTIVE' },
+                }),
+            ]);
+            throw new common_1.UnauthorizedException({ message: 'Cuenta desactivada', reason: 'USER_INACTIVE' });
+        }
+    }
     async validateUser(email, password, mfaToken) {
         const user = await this.userService.findByEmail(email);
         if (!user || !user.passwordHash) {
@@ -39,6 +56,7 @@ let AuthService = class AuthService {
             });
             return null;
         }
+        await this.ensureActiveUser(user);
         const passwordMatches = await bcrypt.compare(password, user.passwordHash);
         if (!passwordMatches) {
             await this.siemLogger.logSecurityEvent({
@@ -87,6 +105,7 @@ let AuthService = class AuthService {
         return this.sanitizeUser(user);
     }
     async login(user) {
+        await this.ensureActiveUser(user);
         const tokens = await this.tokenService.issueTokenPair(user);
         await this.siemLogger.logSecurityEvent({
             type: 'AUTH_LOGIN_SUCCESS',
@@ -181,6 +200,7 @@ let AuthService = class AuthService {
     async refreshTokens(refreshToken) {
         const { tokens, user } = await this.tokenService.rotateRefreshToken(refreshToken);
         const sanitized = this.sanitizeUser(user);
+        await this.ensureActiveUser(sanitized);
         await this.siemLogger.logSecurityEvent({
             type: 'AUTH_TOKENS_REFRESHED',
             severity: 'medium',
@@ -192,8 +212,8 @@ let AuthService = class AuthService {
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [user_service_1.UserService,
-        token_service_1.TokenService,
+    __param(0, (0, common_1.Inject)(user_accounts_interface_1.USER_ACCOUNTS_SERVICE)),
+    __metadata("design:paramtypes", [Object, token_service_1.TokenService,
         siem_logger_service_1.SiemLoggerService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map
