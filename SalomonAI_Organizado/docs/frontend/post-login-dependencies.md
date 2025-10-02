@@ -7,29 +7,31 @@ Este documento lista los servicios y recursos que deben estar activos para ejecu
 | Servicio / recurso | Cómo se levanta | Módulos que dependen | Notas |
 |--------------------|-----------------|----------------------|-------|
 | `core-api` (NestJS) | `docker compose up core-api` | Autenticación unificada, dashboard, cuentas, transacciones, metas, alertas, asistente, configuración | Expone los endpoints REST consumidos por React Query y gestiona la sesión JWT. |
-| `postgres` | `docker compose up postgres` | Todos los módulos | Base de datos principal con usuarios, cuentas y movimientos. Debe inicializarse antes de `core-api`. |
+| Supabase (PostgreSQL gestionado) | Configura `.env` con la URL remota | Todos los módulos | Base de datos principal alojada en Supabase. Si trabajas sin internet puedes usar el contenedor `postgres` como fallback local. |
 | `qdrant` | `docker compose up qdrant` | Dashboard (insights), recomendaciones, analítica | Almacena embeddings usados por recomendaciones y alertas inteligentes. |
 | `kafka` + `zookeeper` | `docker compose up kafka` | Ingesta de documentos, sincronización Belvo | Necesario para que `parsing-engine` procese eventos emitidos desde `core-api`. |
 | `parsing-engine` | `docker compose up parsing-engine` | Alertas, documentos enriquecidos en dashboard | Consume eventos de Kafka y escribe resultados en `/uploads`. |
 | `recommendation-engine` | `docker compose up recommendation-engine` | Dashboard (recomendaciones), analítica, asistente | Devuelve recomendaciones personalizadas y recibe feedback del usuario. |
 | `financial-connector` | `docker compose up financial-connector` | Dashboard, cuentas, transacciones, configuración | Gestiona la sincronización con Belvo y los flujos de importación manual. |
-| `forecasting-engine` | `docker compose up forecasting-engine` | Dashboard (pronósticos), analítica/forecasts | Calcula escenarios financieros y debe tener acceso a Postgres. |
+| `forecasting-engine` | `docker compose up forecasting-engine` | Dashboard (pronósticos), analítica/forecasts | Calcula escenarios financieros y requiere la cadena `FORECASTING_DATABASE_URL` apuntando a Supabase. |
 | `conversation-engine` | `docker compose up conversation-engine` | Asistente, resumen financiero | Provee endpoints `/chat` y `/context/summary` consumidos por los hooks `useConversationEngine` y `useFinancialSummary`. |
 | `voice-gateway` | `docker compose up voice-gateway` | Asistente (voz) | Publica sockets y endpoints de TTS/STT usados por `useVoiceGateway`. |
 | `frontend` (Next.js) | `docker compose up frontend` | Interfaz completa | Depende de las URLs públicas (`NEXT_PUBLIC_*`) para comunicarse con los servicios anteriores. |
 
-> **Sugerencia:** utiliza `docker compose up --build frontend core-api financial-connector recommendation-engine forecasting-engine conversation-engine voice-gateway parsing-engine kafka zookeeper qdrant postgres` para levantar todos los componentes necesarios en desarrollo.
+> **Sugerencia:** utiliza `docker compose up --build frontend core-api financial-connector recommendation-engine forecasting-engine conversation-engine voice-gateway parsing-engine kafka zookeeper qdrant` (agrega `postgres` solo si necesitas la base local)` para levantar todos los componentes necesarios en desarrollo.
 
 ## 2. Variables de entorno mínimas
 
 Configura el archivo `.env` (usado por los contenedores backend) con los siguientes bloques:
 
-- **Base de datos:** `POSTGRES_*` tal como aparecen en `.env.example`.
+- **Base de datos:** `POSTGRES_*` apuntando a Supabase (host pooler, puerto 6543) y `FORECASTING_DATABASE_URL` con `?sslmode=require`.
 - **Servicios internos:** `FINANCIAL_CONNECTOR_URL`, `RECOMMENDATION_ENGINE_URL`, `FORECASTING_ENGINE_URL`, `CORE_API_URL`.
 - **Mensajería:** `KAFKA_BROKER`, `KAFKA_TOPIC`, `KAFKA_CLIENT_ID`, `KAFKA_GROUP_ID`.
 - **Autenticación:** `JWT_SECRET`, `API_KEY_SECRET`, credenciales de Firebase cuando se valide el token del frontend.
 
 Para el frontend (`frontend/.env.local`):
+
+- `SUPABASE_URL` y `SUPABASE_ANON_KEY` si el frontend interactúa con servicios directos de Supabase (por ejemplo, Auth).
 
 - `NEXT_PUBLIC_API_URL` apuntando a `http://localhost:3000` (expuesto por `core-api`).
 - `NEXT_PUBLIC_CONVERSATION_ENGINE_URL` con `http://localhost:8002`.
@@ -39,7 +41,7 @@ Para el frontend (`frontend/.env.local`):
 ## 3. Secuencia recomendada de arranque
 
 1. Crear/actualizar `.env` y `.env.local` con los valores descritos.
-2. `docker compose up -d postgres qdrant zookeeper kafka` para garantizar que las dependencias de datos y mensajería estén listas.
+2. Si usas Supabase, asegúrate de que la base remota esté accesible; en modo offline ejecuta `docker compose up -d postgres qdrant zookeeper kafka` para levantar las dependencias locales.
 3. `docker compose up -d core-api financial-connector recommendation-engine forecasting-engine parsing-engine conversation-engine voice-gateway`.
 4. Confirmar healthchecks (`docker compose ps` o `curl http://localhost:<puerto>/health`).
 5. `docker compose up frontend` y acceder a `http://localhost:3001`.

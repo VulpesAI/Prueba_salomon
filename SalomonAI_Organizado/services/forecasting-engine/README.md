@@ -13,7 +13,7 @@ Microservicio responsable de generar proyecciones financieras para los usuarios 
 
 | Variable | Descripción | Valor por defecto |
 | --- | --- | --- |
-| `FORECASTING_DATABASE_URL` | Cadena de conexión SQLAlchemy a PostgreSQL | `postgresql+psycopg://salomon_user:salomon_password@postgres:5432/salomon_db` |
+| `FORECASTING_DATABASE_URL` | Cadena de conexión SQLAlchemy a PostgreSQL | `postgresql+psycopg://postgres:your-supabase-password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require` |
 | `FORECASTING_DEFAULT_MODEL` | Modelo preferido (`auto`, `arima`, `prophet`) | `auto` |
 | `FORECASTING_DEFAULT_HORIZON_DAYS` | Horizonte de proyección en días | `30` |
 | `FORECASTING_MINIMUM_HISTORY_DAYS` | Días mínimos de historia para usar Prophet | `30` |
