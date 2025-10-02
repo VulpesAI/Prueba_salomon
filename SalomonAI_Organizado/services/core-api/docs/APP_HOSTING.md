@@ -10,7 +10,9 @@ This document summarizes the required configuration to run the Core API service 
 | `ENVIRONMENT` | Label for the current environment (`production`, `staging`, etc.). | Runtime configuration (Firebase console → App Hosting → Service → **Variables & secrets**). |
 | `JWT_SECRET` | Signing key for the application-issued JSON Web Tokens (JWTs). Required for `/auth/firebase-login`. | Runtime variables (`Firebase App Hosting`), local `.env`, container orchestrators (Docker, Kubernetes, etc.). |
 | `ALLOWED_ORIGINS` | Comma-separated list of origins allowed by CORS. Keep it in sync with the frontend URLs. | Runtime variables (Firebase), local `.env`, container orchestrators. |
-| `FIREBASE_*` | Firebase service account credentials used to verify incoming Firebase ID tokens. | Runtime variables (Firebase), local `.env`, secret stores (Secret Manager, Docker secrets). |
+| `FIREBASE_PROJECT_ID` | Firebase project identifier from the service account JSON (`project_id`). | Runtime variables (Firebase), local `.env`, secret stores (Secret Manager, Docker secrets). |
+| `FIREBASE_CLIENT_EMAIL` | Client email from the service account JSON (`client_email`). | Runtime variables (Firebase), local `.env`, secret stores (Secret Manager, Docker secrets). |
+| `FIREBASE_PRIVATE_KEY` | Private key from the service account JSON (`private_key`). | Runtime variables (Firebase), local `.env`, secret stores (Secret Manager, Docker secrets). |
 
 ### What is `JWT_SECRET`?
 
@@ -38,6 +40,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 Store the generated value without surrounding quotes.
 
+> **Important:** When copying the Firebase service account private key into an environment variable (including Firebase App Hosting runtime variables), keep the escaped `\n` sequences exactly as they appear in the JSON file. The Core API converts these escaped newlines back into real newlines at runtime.
+
 ### Where to define `JWT_SECRET`
 
 | Environment | Location |
@@ -46,6 +50,17 @@ Store the generated value without surrounding quotes.
 | Local development | Add `JWT_SECRET=<generated-value>` to `services/core-api/.env` (or `.env.local` if you prefer) and reload the dev server. |
 | Docker Compose | Set `JWT_SECRET` in `.env`, `docker-compose.yml`, or mount it as a secret file referenced by the service. |
 | Kubernetes / Other orchestrators | Inject it through environment variables or secrets (ConfigMap/Secret) consumed by the deployment. |
+
+### Setting Firebase credentials in Firebase App Hosting
+
+1. Generate or download a Firebase service account key with the **Service Account Token Creator** role.
+2. Open the Firebase Console → **App Hosting** → select the Core API service → **Variables & secrets**.
+3. Click **Add variable** and set:
+   * `FIREBASE_PROJECT_ID` → value of `project_id` from the JSON file.
+   * `FIREBASE_CLIENT_EMAIL` → value of `client_email` from the JSON file.
+   * `FIREBASE_PRIVATE_KEY` → value of `private_key` from the JSON file (ensure escaped `\n` are preserved).
+4. (If not already set) add `JWT_SECRET` following the generation guidance above.
+5. Click **Save** to redeploy the service with the new runtime variables.
 
 ## CORS configuration examples
 
