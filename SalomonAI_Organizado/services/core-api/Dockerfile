@@ -32,9 +32,9 @@ COPY package*.json ./
 
 # Variables de entorno por defecto
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
-EXPOSE 3000
+EXPOSE 8080
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

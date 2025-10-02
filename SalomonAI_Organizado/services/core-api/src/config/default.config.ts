@@ -1,6 +1,6 @@
 export const DEFAULT_CONFIG = {
   env: 'development',
-  port: 3000,
+  port: 8080,
   database: {
     host: 'postgres',
     port: 5432,

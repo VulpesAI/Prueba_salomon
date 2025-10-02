@@ -47,7 +47,7 @@ async function bootstrap() {
         req.setTimeout(300000);
         next();
     });
-    const port = configService.get('API_PORT', 3000);
+    const port = Number(process.env.PORT ?? 8080);
     process.on('SIGINT', async () => {
         logger.log('Received SIGINT, shutting down gracefully...');
         await app.close();
@@ -58,10 +58,11 @@ async function bootstrap() {
         await app.close();
         process.exit(0);
     });
+    console.log(`[BOOT] PORT=${port}`);
     await app.listen(port, '0.0.0.0');
     logger.log(`🚀 SalomónAI API ejecutándose en: http://0.0.0.0:${port}`);
     logger.log(`📖 Documentación Swagger: http://0.0.0.0:${port}/api/docs`);
-    logger.log(`🏥 Health Check: http://0.0.0.0:${port}/api/v1/health`);
+    logger.log(`🏥 Health Check: http://0.0.0.0:${port}/health (legacy: http://0.0.0.0:${port}/api/v1/health)`);
     logger.log(`🌍 Environment: ${nodeEnv}`);
 }
 bootstrap().catch(err => {
