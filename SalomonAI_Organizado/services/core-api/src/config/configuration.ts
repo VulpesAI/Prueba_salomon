@@ -12,19 +12,16 @@ export interface AuthConfig {
   jwtExpiresIn: string;
 }
 
-export interface FirebaseConfig {
-  enabled: boolean;
-  projectId?: string;
-  clientEmail?: string;
-  privateKey?: string;
-  serviceAccountKey?: string;
-  databaseURL?: string;
+export interface SupabaseConfig {
+  url?: string;
+  serviceRoleKey?: string;
+  jwtAudience?: string;
 }
 
 export interface CoreConfiguration {
   app: AppConfig;
   auth: AuthConfig;
-  firebase: FirebaseConfig;
+  supabase: SupabaseConfig;
 }
 
 const parseAllowedOrigins = (value?: string): string[] => {
@@ -54,13 +51,10 @@ export default (): CoreConfiguration => {
       jwtSecret: process.env.JWT_SECRET ?? '',
       jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1h'
     },
-    firebase: {
-      enabled: (process.env.ENABLE_FIREBASE ?? 'false').toLowerCase() === 'true',
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
-      databaseURL: process.env.FIREBASE_DATABASE_URL
+    supabase: {
+      url: process.env.SUPABASE_URL,
+      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      jwtAudience: process.env.SUPABASE_JWT_AUDIENCE
     }
   };
 };

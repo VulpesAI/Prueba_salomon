@@ -1,14 +1,14 @@
 import { Body, Controller, Post } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
-import { FirebaseLoginDto } from './dto/firebase-login.dto';
+import { SupabaseLoginDto } from './dto/supabase-login.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('firebase-login')
-  firebaseLogin(@Body() body: FirebaseLoginDto) {
-    return this.authService.firebaseLogin(body);
+  @Post('supabase-login')
+  supabaseLogin(@Body() body: SupabaseLoginDto) {
+    return this.authService.supabaseLogin(body);
   }
 }
