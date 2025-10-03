@@ -110,7 +110,7 @@ export function AuthenticatedShell({
           <div className="pb-6 pt-2 md:hidden">
             <Breadcrumbs navigation={postLoginNavigation} />
           </div>
-          {children}
+          <div className="mx-auto w-full max-w-6xl space-y-8">{children}</div>
         </main>
       </div>
     </div>
