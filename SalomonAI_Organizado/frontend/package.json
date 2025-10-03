@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -49,6 +50,8 @@
     "lucide-react": "^0.534.0",
     "next": "15.4.5",
     "next-themes": "^0.4.6",
+    "papaparse": "^5.4.1",
+    "pdf-parse": "^1.1.1",
     "react": "19.1.0",
     "react-day-picker": "^9.8.1",
     "react-dom": "19.1.0",
@@ -63,6 +66,8 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
+    "@types/papaparse": "^5.3.16",
+    "@types/pdf-parse": "^1.1.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.20",
@@ -71,6 +76,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.8"
   }
 }
