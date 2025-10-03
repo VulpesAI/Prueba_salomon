@@ -9,10 +9,16 @@ export type AuthUser = {
   avatarUrl?: string | null
 }
 
+type AuthSession = {
+  accessToken?: string
+  refreshToken?: string
+  tokenType?: string
+}
+
 type AuthContextType = {
   user: AuthUser
   backendUser: AuthUser
-  session: null
+  session: AuthSession | null
   isLoading: false
   isAuthDisabled: boolean
   login: (email: string, password: string) => void
