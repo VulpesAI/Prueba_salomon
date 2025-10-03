@@ -18,17 +18,23 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const { login, loginWithGoogle, user, isLoading } = useAuth();
+  const { login, loginWithGoogle, user, isLoading, isAuthDisabled } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && user) {
+    if (!isAuthDisabled && !isLoading && user) {
       router.replace('/dashboard/overview');
     }
-  }, [isLoading, router, user]);
+  }, [isAuthDisabled, isLoading, router, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (isAuthDisabled) {
+      setError('La autenticación está deshabilitada en esta demo. Puedes navegar libremente sin iniciar sesión.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -44,6 +50,12 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setError(null);
+
+    if (isAuthDisabled) {
+      setError('La autenticación está deshabilitada en esta demo. Puedes navegar libremente sin iniciar sesión.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -86,6 +98,11 @@ export default function LoginPage() {
 
           {/* Login Form */}
           <Card className="p-6 bg-gradient-card border-primary/20">
+            {isAuthDisabled && (
+              <p className="mb-4 text-sm text-muted-foreground" role="note">
+                El inicio de sesión real está deshabilitado en esta versión demo. Explora la aplicación sin ingresar credenciales.
+              </p>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-2">
