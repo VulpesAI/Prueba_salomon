@@ -57,7 +57,7 @@ const mapSupabaseUser = (supabaseUser: User | null): AuthUser | null => {
 
   return {
     id: supabaseUser.id,
-    email: supabaseUser.email,
+    email: supabaseUser.email ?? null,
     name,
     avatarUrl,
   }
