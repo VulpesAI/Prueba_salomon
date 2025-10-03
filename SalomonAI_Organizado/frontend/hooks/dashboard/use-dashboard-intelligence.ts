@@ -13,6 +13,7 @@ import type {
   FeedbackStatus,
   RecommendationFeedbackPayload,
 } from "@/types/dashboard"
+import { useDemoFinancialData } from "@/context/DemoFinancialDataContext"
 
 type IntelligenceQueryResult = DashboardIntelligenceResponse | undefined
 
@@ -20,6 +21,9 @@ export const useDashboardIntelligence = () => {
   const [recommendationFeedback, setRecommendationFeedback] = useState<
     Record<string, FeedbackStatus>
   >({})
+
+  const { intelligence } = useDemoFinancialData()
+  const hasLocalIntelligence = Boolean(intelligence)
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
@@ -34,10 +38,12 @@ export const useDashboardIntelligence = () => {
     queryKey: queryKeys.dashboard.intelligence(),
     queryFn: (_, context) => getDashboardIntelligence({ signal: context.signal }),
     staleTime: 60_000,
+    enabled: !hasLocalIntelligence,
+    initialData: intelligence ?? undefined,
   })
 
   useEffect(() => {
-    const recommendations = intelligenceQuery.data?.recommendations ?? []
+    const recommendations = (intelligence ?? intelligenceQuery.data)?.recommendations ?? []
     if (recommendations.length === 0) {
       setRecommendationFeedback({})
       return
@@ -52,7 +58,7 @@ export const useDashboardIntelligence = () => {
 
       return nextState
     })
-  }, [intelligenceQuery.data?.recommendations])
+  }, [intelligence?.recommendations, intelligenceQuery.data?.recommendations])
 
   const feedbackMutation = useApiMutation<
     RecommendationFeedbackPayload,
@@ -65,13 +71,17 @@ export const useDashboardIntelligence = () => {
     },
   })
 
-  const intelligence = intelligenceQuery.data
+  const intelligenceData = intelligence ?? intelligenceQuery.data
 
-  const errorMessage = intelligenceQuery.error
-    ? intelligenceQuery.error.message || "No pudimos cargar los datos analíticos."
-    : null
+  const errorMessage = hasLocalIntelligence
+    ? null
+    : intelligenceQuery.error
+      ? intelligenceQuery.error.message || "No pudimos cargar los datos analíticos."
+      : null
 
-  const isLoading = intelligenceQuery.isPending || intelligenceQuery.isFetching
+  const isLoading = hasLocalIntelligence
+    ? false
+    : intelligenceQuery.isPending || intelligenceQuery.isFetching
 
   const sendRecommendationFeedback = async (
     recommendationId: string,
@@ -98,10 +108,10 @@ export const useDashboardIntelligence = () => {
   }
 
   return {
-    forecastSummary: intelligence?.forecastSummary ?? null,
-    predictiveAlerts: intelligence?.predictiveAlerts ?? [],
-    insights: intelligence?.insights ?? [],
-    recommendations: intelligence?.recommendations ?? [],
+    forecastSummary: intelligenceData?.forecastSummary ?? null,
+    predictiveAlerts: intelligenceData?.predictiveAlerts ?? [],
+    insights: intelligenceData?.insights ?? [],
+    recommendations: intelligenceData?.recommendations ?? [],
     recommendationFeedback,
     isLoading,
     error: errorMessage,
