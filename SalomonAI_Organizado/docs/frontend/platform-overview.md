@@ -3,10 +3,11 @@
 ## 1. Flujo de autenticación y variables públicas de Next.js
 
 ### AuthProvider y ciclo de vida de sesión
-- `AuthProvider` inicializa el estado consultando `getFirebaseAuth()` y suscribiéndose a `onAuthStateChanged` cuando el componente se monta en el navegador. El `user` y la bandera `isLoading` se actualizan con cada cambio de sesión, y se corta la suscripción al desmontar el componente.【F:frontend/context/AuthContext.tsx†L36-L79】
-- El proveedor expone acciones básicas (`login`, `signup`, `loginWithGoogle`, `resetPassword`, `logout`) que resuelven dinámicamente la instancia de autenticación de Firebase antes de cada operación, garantizando que el SDK esté listo y que siempre se ejecute en cliente.【F:frontend/context/AuthContext.tsx†L81-L123】
-- Tras obtener el `idToken` de Firebase, el contexto intercambia la sesión con el backend mediante `POST /auth/firebase-login`, enviando `{ "idToken": "<token>" }` en el body (o el mismo token en `Authorization: Bearer`). La respuesta incluye los JWT internos que se cachean en `localStorage` para llamadas posteriores al core-api.【F:frontend/context/AuthContext.tsx†L403-L476】
-- Cualquier hook o componente que dependa de la sesión debe consumir `useAuth()`, que valida que el contexto se utilice dentro del árbol de `AuthProvider` para evitar estados inconsistentes.【F:frontend/context/AuthContext.tsx†L125-L130】
+- `AuthProvider` inicializa Firebase en el cliente, escucha `onAuthStateChanged` y sincroniza `user`, `session` e `isLoading` en cada cambio. Si el usuario de Firebase desaparece limpia el estado y corta la suscripción al desmontar.【F:frontend/context/AuthContext.tsx†L112-L293】
+- Siempre que existe un usuario de Firebase nuevo, el proveedor solicita un `idToken`, lo intercambia contra `POST /auth/firebase-login` y almacena el `accessToken` interno junto con los datos del backend en memoria para futuras llamadas.【F:frontend/context/AuthContext.tsx†L176-L208】
+- El contexto configura el cliente Axios global para que cada request adjunte el token actual y, ante un `401`, fuerce el cierre de sesión y redireccione a `/login`.【F:frontend/context/AuthContext.tsx†L146-L174】
+- Las acciones `login`, `signup`, `loginWithGoogle`, `resetPassword` y `logout` resuelven dinámicamente la instancia de Firebase antes de operar y garantizan que, si el intercambio con el backend falla, se revierte la sesión local.【F:frontend/context/AuthContext.tsx†L295-L402】
+- Cualquier hook o componente que dependa de la sesión debe consumir `useAuth()`, que valida que el contexto se utilice dentro del árbol de `AuthProvider` para evitar estados inconsistentes.【F:frontend/context/AuthContext.tsx†L419-L424】
 
 ### Carga dinámica del SDK de Firebase
 - `frontend/lib/firebase.ts` realiza la carga diferida del SDK compat de Firebase insertando etiquetas `<script>` sólo en entorno de navegador y reutilizándolas si ya existen. El helper `ensureFirebaseNamespace()` serializa la carga de scripts y reutiliza la misma promesa para evitar condiciones de carrera.【F:frontend/lib/firebase.ts†L69-L156】
