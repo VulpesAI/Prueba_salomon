@@ -16,7 +16,7 @@ import type {
   PersonalizedRecommendation,
 } from '@/types/dashboard'
 import type { FinancialSummary } from '@/hooks/useConversationEngine'
-import type { GoalsApiResponse, GoalPace } from '@/types/goals'
+import type { FinancialGoal, GoalsApiResponse, GoalPace } from '@/types/goals'
 import type { NormalizedStatement } from '@/lib/statements/parser'
 
 const CATEGORY_COLORS = [
@@ -335,7 +335,7 @@ const buildGoal = ({
   expectedMonthlyContribution: number
   startDate: Date
   targetDate: Date
-}) => {
+}): FinancialGoal => {
   const now = new Date()
   const monthsElapsed = Math.max(0, differenceInMonths(startDate, now))
   const expectedAmountByNow = expectedMonthlyContribution
@@ -522,13 +522,13 @@ const buildNotificationsFromStatement = (
     .sort(([, amountA], [, amountB]) => amountB - amountA)
     .at(0)
 
-  const notifications = [
+  const notifications: DashboardNotificationsResponse['notifications'] = [
     {
       id: createId('notification'),
       message: `Analizamos ${transactionsCount} transacciones de tu cartola y actualizamos tu tablero demo.`,
       read: false,
-      channel: 'in_app' as const,
-      severity: 'info' as const,
+      channel: 'in_app',
+      severity: 'info',
       createdAt: now.toISOString(),
     },
   ]
@@ -539,7 +539,7 @@ const buildNotificationsFromStatement = (
       id: createId('notification'),
       message: `Detectamos ${clampNumber(amount).toLocaleString('es-CL')} en gastos de ${category} durante el período analizado.`,
       read: false,
-      channel: 'push' as const,
+      channel: 'push',
       severity: amount / (statement.totals.expenses || 1) > 0.3 ? 'warning' : 'info',
       createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
       metadata: { category, amount: clampNumber(amount) },
@@ -553,7 +553,7 @@ const buildNotificationsFromStatement = (
         ? 'Tu saldo proyectado se mantiene positivo. Considera aumentar tus aportes a metas.'
         : 'Tu flujo de caja está negativo. Revisamos recomendaciones para equilibrarlo.',
     read: false,
-    channel: 'email' as const,
+    channel: 'email',
     severity: netFlow >= 0 ? 'info' : 'critical',
     createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(),
     metadata: {
@@ -587,7 +587,20 @@ type DemoFinancialDataContextValue = {
 }
 
 const DemoFinancialDataContext =
-  createContext<DemoFinancialDataContextValue | undefined>(undefined)
+  createContext<DemoFinancialDataContextValue | null>(null)
+
+const defaultDemoContextValue: DemoFinancialDataContextValue = {
+  sessionId: null,
+  setSessionId: () => {},
+  statement: null,
+  overview: null,
+  intelligence: null,
+  notifications: null,
+  goals: null,
+  financialSummary: null,
+  updateFromStatement: () => {},
+  reset: () => {},
+}
 
 export function DemoFinancialDataProvider({
   children,
@@ -690,10 +703,5 @@ export function DemoFinancialDataProvider({
 
 export const useDemoFinancialData = () => {
   const context = useContext(DemoFinancialDataContext)
-  if (context === undefined) {
-    throw new Error(
-      'useDemoFinancialData debe utilizarse dentro de un DemoFinancialDataProvider'
-    )
-  }
-  return context
+  return context ?? defaultDemoContextValue
 }
