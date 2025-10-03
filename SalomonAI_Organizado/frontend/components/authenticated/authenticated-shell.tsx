@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -47,25 +47,10 @@ export function AuthenticatedShell({
 }: {
   children: React.ReactNode
 }) {
-  const { user, isLoading, logout, isAuthDisabled } = useAuth()
-  const router = useRouter()
+  const { user, logout } = useAuth()
   const pathname = usePathname() ?? ""
 
-  React.useEffect(() => {
-    if (isAuthDisabled) {
-      return
-    }
-
-    if (!isLoading && !user) {
-      router.replace("/login")
-    }
-  }, [isAuthDisabled, isLoading, router, user])
-
-  if (isLoading) {
-    return <LoadingShell />
-  }
-
-  if (!user && !isAuthDisabled) {
+  if (!user) {
     return <LoadingShell />
   }
 
@@ -111,7 +96,7 @@ export function AuthenticatedShell({
                 <Breadcrumbs navigation={postLoginNavigation} />
               </div>
             </div>
-            {user ? <TopbarActions user={user} onLogout={logout} /> : null}
+            <TopbarActions user={user} onLogout={logout} />
           </div>
         </header>
         <main className="flex-1 px-4 py-8 md:px-6">
