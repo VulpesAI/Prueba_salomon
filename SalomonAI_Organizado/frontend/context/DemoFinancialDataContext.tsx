@@ -11,6 +11,7 @@ import type {
   DashboardNotificationsResponse,
   DashboardOverviewResponse,
   DashboardInsight,
+  ForecastDirection,
   PredictiveAlert,
   PersonalizedRecommendation,
 } from '@/types/dashboard'
@@ -144,7 +145,7 @@ const buildIntelligenceFromStatement = (
   const savingsRate = statement.totals.income
     ? (netFlow / statement.totals.income) * 100
     : 0
-  const direction: DashboardIntelligenceResponse['forecastSummary']['trend']['direction'] =
+  const direction: ForecastDirection =
     netFlow > 0 ? 'upward' : netFlow < 0 ? 'downward' : 'stable'
 
   const weeklyNet = netFlow / 4
