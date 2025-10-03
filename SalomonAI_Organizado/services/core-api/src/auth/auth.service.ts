@@ -1,4 +1,9 @@
-import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
@@ -13,13 +18,19 @@ export class AuthService {
     private readonly configService: ConfigService
   ) {}
 
-  async firebaseLogin({ token }: FirebaseLoginDto) {
+  async firebaseLogin({ token, idToken, id_token }: FirebaseLoginDto) {
+    const firebaseToken = token ?? idToken ?? id_token;
+
     if (!this.firebaseAdminService.isEnabled()) {
       throw new ServiceUnavailableException('Firebase authentication is disabled');
     }
 
+    if (typeof firebaseToken !== 'string' || firebaseToken.length < 10) {
+      throw new BadRequestException('A valid Firebase token is required');
+    }
+
     try {
-      const decoded = await this.firebaseAdminService.verifyIdToken(token);
+      const decoded = await this.firebaseAdminService.verifyIdToken(firebaseToken);
       const payload = {
         sub: decoded.uid,
         email: decoded.email,
