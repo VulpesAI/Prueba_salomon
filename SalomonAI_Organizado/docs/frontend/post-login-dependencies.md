@@ -27,7 +27,7 @@ Configura el archivo `.env` (usado por los contenedores backend) con los siguien
 - **Base de datos:** `POSTGRES_*` apuntando a Supabase (host pooler, puerto 6543) y `FORECASTING_DATABASE_URL` con `?sslmode=require`.
 - **Servicios internos:** `FINANCIAL_CONNECTOR_URL`, `RECOMMENDATION_ENGINE_URL`, `FORECASTING_ENGINE_URL`, `CORE_API_URL`.
 - **Mensajería:** `KAFKA_BROKER`, `KAFKA_TOPIC`, `KAFKA_CLIENT_ID`, `KAFKA_GROUP_ID`.
-- **Autenticación:** `JWT_SECRET`, `API_KEY_SECRET`, credenciales de Firebase cuando se valide el token del frontend.
+- **Autenticación:** `JWT_SECRET`, `API_KEY_SECRET`, `ENABLE_FIREBASE=true` y credenciales de Firebase (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` o `FIREBASE_SERVICE_ACCOUNT_KEY`) cuando se valide el token del frontend. Si `ENABLE_FIREBASE` permanece en `false`, el endpoint `/api/v1/auth/firebase-login` responderá `503` y el login fallará.
 
 Para el frontend (`frontend/.env.local`):
 

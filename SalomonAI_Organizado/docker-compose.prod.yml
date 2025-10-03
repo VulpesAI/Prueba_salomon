@@ -66,7 +66,7 @@ services:
       context: ./services/conversation-engine
       dockerfile: Dockerfile
     environment:
-      - CORE_API_BASE_URL=http://core-api:3000
+      - CORE_API_BASE_URL=http://core-api:${CORE_API_PORT:-8080}
     depends_on:
       core-api:
         condition: service_started
