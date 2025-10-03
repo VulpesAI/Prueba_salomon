@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Brain,
@@ -19,9 +19,12 @@ import {
 import { Navigation } from '../../components/Navigation';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { ManualStatementUploadCard } from '../../components/authenticated/manual-statement-upload-card';
 import { useConversationEngine } from '../../hooks/useConversationEngine';
 import { useVoiceGateway } from '../../hooks/useVoiceGateway';
 import { useFinancialSummary } from '../../hooks/useFinancialSummary';
+import type { FinancialSummary } from '../../hooks/useConversationEngine';
+import type { NormalizedStatement } from '../../lib/statements/parser';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('es-CL', {
@@ -48,6 +51,27 @@ export default function DemoPage() {
     error: summaryError,
     updateSummary
   } = useFinancialSummary(sessionId);
+
+  const handleStatementParsed = useCallback(
+    (statement: NormalizedStatement) => {
+      const mappedSummary: FinancialSummary = {
+        total_balance: statement.totals.balance,
+        monthly_income: statement.totals.income,
+        monthly_expenses: statement.totals.expenses,
+        expense_breakdown: statement.expenseByCategory,
+        recent_transactions: statement.transactions.slice(-10).map(transaction => ({
+          date: transaction.date,
+          description: transaction.description,
+          amount: transaction.amount,
+          category: transaction.category ?? 'Sin categoría'
+        })),
+        generated_at: new Date().toISOString()
+      };
+
+      updateSummary(mappedSummary);
+    },
+    [updateSummary]
+  );
 
   const {
     messages,
@@ -142,6 +166,10 @@ export default function DemoPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
+              <ManualStatementUploadCard
+                className="border-primary/20"
+                onStatementParsed={handleStatementParsed}
+              />
               <Card className="p-6 bg-gradient-card border-primary/20">
                 <h2 className="text-xl font-semibold mb-6 flex items-center">
                   <Play className="w-5 h-5 mr-2 text-primary" />
@@ -207,8 +235,8 @@ export default function DemoPage() {
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              <Card className="p-6 bg-gradient-card border-primary/20 h-full">
-                <div className="flex items-center justify-between mb-6">
+              <Card className="p-6 bg-gradient-card border-primary/20 h-full flex flex-col">
+                <div className="flex items-center justify-between pb-6 mb-4">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="w-5 h-5 text-primary" />
                     <h2 className="text-xl font-semibold">Conversación con SalomonAI</h2>
@@ -232,12 +260,13 @@ export default function DemoPage() {
                   </Button>
                 </div>
 
-                <div className="space-y-4 mb-6 h-72 overflow-y-auto pr-1">
-                  {messages.map(message => (
-                    <div key={message.id} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                      {message.role === 'assistant' && (
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                          <Brain className="w-4 h-4 text-primary-foreground" />
+                <div className="flex-1 overflow-y-auto pr-1 min-h-[18rem]">
+                  <div className="flex flex-col gap-4">
+                    {messages.map(message => (
+                      <div key={message.id} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                        {message.role === 'assistant' && (
+                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                            <Brain className="w-4 h-4 text-primary-foreground" />
                         </div>
                       )}
                       <div
@@ -258,9 +287,10 @@ export default function DemoPage() {
                       {chatError}
                     </p>
                   )}
+                  </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="flex gap-3">
+                <form onSubmit={handleSubmit} className="mt-6 flex gap-3">
                   <input
                     value={currentInput}
                     onChange={event => {
