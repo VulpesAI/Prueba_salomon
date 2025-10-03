@@ -19,7 +19,7 @@ const getContainerClasses = (layout: PlaceholderSection["layout"]) => {
     return "space-y-3"
   }
 
-  return "grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+  return "grid gap-4 sm:grid-cols-2"
 }
 
 export function PlaceholderPage({
