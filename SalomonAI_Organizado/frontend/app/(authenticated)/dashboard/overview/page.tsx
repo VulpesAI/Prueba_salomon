@@ -303,7 +303,7 @@ export default function DashboardOverviewPage() {
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2">
         {overview.isLoading
           ? Array.from({ length: 4 }).map((_, index) => (
               <Card key={`overview-skeleton-${index}`} className="shadow-sm">
@@ -337,7 +337,7 @@ export default function DashboardOverviewPage() {
       </section>
 
       <section className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           {overview.isLoading
             ? Array.from({ length: 3 }).map((_, index) => (
                 <Card key={`quick-skeleton-${index}`} className="shadow-sm">
@@ -410,7 +410,7 @@ export default function DashboardOverviewPage() {
       ) : null}
 
       {isDetailed ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[7fr_5fr]">
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="space-y-6">
             <Card className="border border-border/70 shadow-sm">
               <CardHeader>
