@@ -314,7 +314,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const expiresInSeconds =
         payload.expiresIn ?? payload.expires_in ?? undefined
 
-      const resolvedExpiresAt = (() => {
+      const cookieExpiresAt = (() => {
         const explicitExpiresAt = payload.expiresAt
         if (typeof explicitExpiresAt === "number") {
           return explicitExpiresAt
@@ -331,8 +331,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return Date.now() + expiresInSeconds * 1000
         }
 
-        return Date.now()
+        return undefined
       })()
+
+      const resolvedExpiresAt = cookieExpiresAt ?? Date.now()
 
       const nextSession: AuthSession = {
         accessToken,
@@ -359,11 +361,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearRefreshTimer()
       }
 
-      await notifySessionHandler(
-        accessToken,
-        refreshToken,
-        nextSession.expiresAt
-      )
+      await notifySessionHandler(accessToken, refreshToken, cookieExpiresAt)
 
       return nextSession
     },
