@@ -37,6 +37,7 @@ type BackendUser = {
 type BackendSessionResponse = {
   accessToken?: string
   access_token?: string
+  token?: string
   refreshToken?: string
   refresh_token?: string
   tokenType?: string
@@ -101,7 +102,7 @@ const parseBackendErrorMessage = async (
 
 export type AuthSession = {
   accessToken: string
-  refreshToken: string
+  refreshToken?: string
   tokenType: string
   expiresAt: number
   refreshTokenExpiresAt?: string
@@ -219,7 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const notifySessionHandler = useCallback(
-    async (token: string, refreshToken: string, expiresAt?: number) => {
+    async (token: string, refreshToken?: string, expiresAt?: number) => {
       try {
         await fetch("/api/auth/session", {
           method: "POST",
@@ -301,16 +302,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const applyBackendSession = useCallback(
     async (payload: BackendSessionResponse, firebaseUid: string) => {
-      const accessToken = payload.accessToken ?? payload.access_token
+      const accessToken =
+        payload.accessToken ?? payload.access_token ?? payload.token
       const refreshToken = payload.refreshToken ?? payload.refresh_token
       const tokenType = payload.tokenType ?? payload.token_type ?? "Bearer"
 
       if (!accessToken) {
         throw new Error("Backend session missing access token")
-      }
-
-      if (!refreshToken) {
-        throw new Error("Backend session missing refresh token")
       }
 
       const expiresInSeconds =
@@ -349,10 +347,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       sessionRef.current = nextSession
       setSession(nextSession)
-      persistSessionTokens(accessToken, refreshToken)
+      if (refreshToken) {
+        persistSessionTokens(accessToken, refreshToken)
 
-      if (Number.isFinite(nextSession.expiresAt)) {
-        scheduleRefresh(nextSession.expiresAt)
+        if (Number.isFinite(nextSession.expiresAt)) {
+          scheduleRefresh(nextSession.expiresAt)
+        } else {
+          clearRefreshTimer()
+        }
       } else {
         clearRefreshTimer()
       }
