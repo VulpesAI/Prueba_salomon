@@ -77,6 +77,26 @@ describe('AuthController - /auth/firebase-login (e2e)', () => {
     expect(firebaseAdminServiceMock.verifyIdToken).toHaveBeenCalledWith('valid-firebase-token');
   });
 
+  it('accepts the legacy idToken payload field for backwards compatibility', async () => {
+    firebaseAdminServiceMock.verifyIdToken.mockResolvedValue({
+      uid: 'firebase-user-456'
+    } as any);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/firebase-login')
+      .send({ idToken: 'legacy-firebase-token' })
+      .expect(201);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        token: expect.any(String),
+        user: expect.objectContaining({ uid: 'firebase-user-456' })
+      })
+    );
+
+    expect(firebaseAdminServiceMock.verifyIdToken).toHaveBeenCalledWith('legacy-firebase-token');
+  });
+
   it('returns 503 when Firebase authentication is disabled', async () => {
     firebaseAdminServiceMock.isEnabled.mockReturnValue(false);
 
@@ -88,6 +108,19 @@ describe('AuthController - /auth/firebase-login (e2e)', () => {
     expect(response.body).toMatchObject({
       statusCode: 503,
       message: 'Firebase authentication is disabled'
+    });
+    expect(firebaseAdminServiceMock.verifyIdToken).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when no Firebase token is provided', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/firebase-login')
+      .send({})
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+      message: 'A valid Firebase token is required'
     });
     expect(firebaseAdminServiceMock.verifyIdToken).not.toHaveBeenCalled();
   });
