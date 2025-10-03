@@ -24,14 +24,26 @@ Este documento lista los servicios y recursos que deben estar activos para ejecu
 
 Configura el archivo `.env` (usado por los contenedores backend) con los siguientes bloques:
 
-- **Base de datos:** `POSTGRES_*` apuntando a Supabase (host pooler, puerto 6543) y `FORECASTING_DATABASE_URL` con `?sslmode=require`.
+- **Base de datos:** `POSTGRES_*` apuntando a Supabase (host pooler, puerto 6543) y `FORECASTING_DATABASE_URL` con `?sslmode=require`. Para el entorno compartido:
+  ```env
+  POSTGRES_HOST=db.yyfyhjxjofgrfywawlme.supabase.co
+  POSTGRES_PORT=5432
+  POSTGRES_USER=postgres
+  POSTGRES_PASSWORD=ftI0ZzKJgFKQ1eGs
+  POSTGRES_DB=postgres
+  FORECASTING_DATABASE_URL=postgresql://postgres:ftI0ZzKJgFKQ1eGs@db.yyfyhjxjofgrfywawlme.supabase.co:5432/postgres?sslmode=require
+  ```
 - **Servicios internos:** `FINANCIAL_CONNECTOR_URL`, `RECOMMENDATION_ENGINE_URL`, `FORECASTING_ENGINE_URL`, `CORE_API_URL`.
 - **Mensajería:** `KAFKA_BROKER`, `KAFKA_TOPIC`, `KAFKA_CLIENT_ID`, `KAFKA_GROUP_ID`.
 - **Autenticación:** `JWT_SECRET`, `API_KEY_SECRET`, `ENABLE_FIREBASE=true` y credenciales de Firebase (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` o `FIREBASE_SERVICE_ACCOUNT_KEY`) cuando se valide el token del frontend. Si `ENABLE_FIREBASE` permanece en `false`, el endpoint `/api/v1/auth/firebase-login` responderá `503` y el login fallará.
 
 Para el frontend (`frontend/.env.local`):
 
-- `SUPABASE_URL` y `SUPABASE_ANON_KEY` si el frontend interactúa con servicios directos de Supabase (por ejemplo, Auth).
+- `SUPABASE_URL` y `SUPABASE_ANON_KEY` si el frontend interactúa con servicios directos de Supabase (por ejemplo, Auth). En el proyecto activo los valores compartidos son:
+  ```env
+  SUPABASE_URL=https://yyfyhjxjofgrfywawlme.supabase.co
+  SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5Znloanhqb2ZncmZ5d2F3bG1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNTUyNjcsImV4cCI6MjA3NDkzMTI2N30.Pw_AxMp8YOYXhHOUJlRN_wTmRjHSh6Tfa22BsIJwTj0
+  ```
 
 - `NEXT_PUBLIC_API_URL` apuntando a `http://localhost:3000` (expuesto por `core-api`).
 - `NEXT_PUBLIC_CONVERSATION_ENGINE_URL` con `http://localhost:8002`.
