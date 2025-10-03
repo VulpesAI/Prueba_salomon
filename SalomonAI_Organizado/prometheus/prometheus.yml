@@ -24,7 +24,7 @@ scrape_configs:
   # Core API monitoring
   - job_name: 'core-api'
     static_configs:
-      - targets: ['core-api:3000']
+      - targets: ['core-api:8080']
     metrics_path: '/metrics'
     scrape_interval: 30s
 

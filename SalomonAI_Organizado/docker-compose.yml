@@ -23,7 +23,7 @@ services:
       context: ./services/core-api
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3000:${CORE_API_PORT:-8080}"
     volumes:
       - uploads_volume:/uploads # Volumen para compartir archivos con el parser
     env_file:

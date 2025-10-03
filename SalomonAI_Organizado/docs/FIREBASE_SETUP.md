@@ -80,6 +80,8 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef...
 
 #### Backend (.env):
 ```bash
+# Activa la integración y expone las credenciales antes de iniciar core-api.
+ENABLE_FIREBASE=true
 # Extraer del JSON descargado:
 FIREBASE_PROJECT_ID=tu-proyecto
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----\n"
@@ -87,7 +89,11 @@ FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@tu-proyecto.iam.gserviceaccount.co
 FIREBASE_CLIENT_ID=123456789...
 FIREBASE_PRIVATE_KEY_ID=abcdef123...
 FIREBASE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-xxxxx%40tu-proyecto.iam.gserviceaccount.com
+# Alternativa: pega el JSON completo (minificado) en una sola línea.
+FIREBASE_SERVICE_ACCOUNT_KEY='{"type":"service_account",...}'
 ```
+
+> **Importante:** reemplaza los saltos de línea del `private_key` por `\n` (doble barra invertida) si usas la variable `FIREBASE_PRIVATE_KEY`. Sin `ENABLE_FIREBASE=true` y credenciales válidas, el endpoint `/api/v1/auth/firebase-login` responderá `503` y el frontend no podrá completar el login.
 
 ### 7. Configurar Firebase Security Rules (Opcional)
 
@@ -117,7 +123,7 @@ service cloud.firestore {
 ```bash
 cd services/core-api
 npm run start:dev
-# Verificar que no hay errores de Firebase
+# Verificar que el arranque confirme "Firebase Admin inicializado" y que no hay errores de credenciales.
 ```
 
 #### Test Frontend:
@@ -130,12 +136,14 @@ npm run start:dev
 
 ### Verificar conexión Firebase Admin (Backend):
 ```bash
-curl -X POST http://localhost:3001/auth/firebase-login \
+curl -X POST http://localhost:3000/api/v1/auth/firebase-login \
   -H "Content-Type: application/json" \
   -d '{ "idToken": "TU_FIREBASE_TOKEN" }'
 ```
 
 > También puedes enviar el token en el header: `-H "Authorization: Bearer TU_FIREBASE_TOKEN"`. Ambos formatos son aceptados por el backend.
+>
+> **Requisito previo:** asegúrate de que `ENABLE_FIREBASE=true` y las variables del service account estén configuradas; de lo contrario el endpoint responderá `503`.
 
 ### Verificar autenticación (Frontend):
 - Abrir http://localhost:3000

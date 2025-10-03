@@ -7,7 +7,7 @@ Este documento resume la topología declarada en [`docker-compose.yml`](../../do
 | Servicio | Imagen / Build | Puertos expuestos | Dependencias | Healthcheck | Rol principal |
 |----------|----------------|-------------------|--------------|-------------|---------------|
 | `qdrant` | `qdrant/qdrant:latest` | `6333`, `6334` | — | `curl http://localhost:6333/health` | Base de datos vectorial para embeddings y búsquedas semánticas. |
-| `core-api` | Build `./services/core-api` | `3000` | Supabase (externo), `qdrant` (started) | `curl http://localhost:3000/api/health` | API Node.js central: orquesta autenticación, ingesta de documentos y coordinación con microservicios. |
+| `core-api` | Build `./services/core-api` | `3000->8080` | Supabase (externo), `qdrant` (started) | `curl http://localhost:3000/api/health` | API Node.js central: orquesta autenticación, ingesta de documentos y coordinación con microservicios. |
 | `frontend` | Build `./frontend` (`npm run dev`) | `3001->3000` | — | `wget http://localhost:3000` | Aplicación Next.js para experiencia web; consume `core-api`, `conversation-engine` y `voice-gateway`. |
 | `parsing-engine` | Build `./services/parsing-engine` | — | `kafka`, `core-api` | — | Microservicio Python que procesa documentos publicados en Kafka y guarda resultados compartiendo volumen `/uploads`. |
 | `recommendation-engine` | Build `./services/recommendation-engine` | `8001->8000` | — | `curl http://localhost:8000/health` | API FastAPI que entrega recomendaciones financieras al `core-api`. |
@@ -42,7 +42,7 @@ Las variables provienen de [`docker-compose.yml`](../../docker-compose.yml), [`d
 
 ### Núcleo y coordinación
 
-- `CORE_API_BASE_URL` (usada por `conversation-engine`): URL interna de la API principal; debe resolverse en la red Docker.
+- `CORE_API_BASE_URL` (usada por `conversation-engine`): URL interna de la API principal; debe resolverse en la red Docker. Ejemplo: `http://core-api:8080`.
 - `INTERNAL_API_KEY`, `API_KEY_SECRET`: claves que controlan invocaciones internas y emisión de API Keys.
 - `JWT_SECRET`, `JWT_SECRET_FILE` (producción): tokenización y autenticación en `core-api`.
 - `INTERNAL_API_KEY_FILE` (producción): provee la API key interna desde secretos montados.

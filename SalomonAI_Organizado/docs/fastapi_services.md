@@ -22,7 +22,7 @@ Este documento resume los endpoints, modelos de datos, configuración y flujos i
 ### Configuración y dependencias
 
 - Variables de entorno:
-  - `CORE_API_BASE_URL`: URL base para llamar a `core-api` (por ejemplo `http://core-api:3000`).【F:services/conversation-engine/app/core_client.py†L36-L74】
+  - `CORE_API_BASE_URL`: URL base para llamar a `core-api` (por ejemplo `http://core-api:8080`).【F:services/conversation-engine/app/core_client.py†L36-L74】
   - `SPACY_MODEL`: modelo spaCy en español; si no está disponible se usa `es_core_news_md` y cae a un pipeline vacío si falta.【F:services/conversation-engine/app/nlu.py†L20-L33】
 - Dependencias externas: `httpx` para invocar `core-api`, spaCy para NLU y FastAPI.
 
