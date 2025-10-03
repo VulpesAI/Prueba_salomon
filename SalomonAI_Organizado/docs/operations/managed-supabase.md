@@ -28,7 +28,17 @@ Esta guía explica cómo configurar el archivo `.env`, validar la conectividad y
    - Ajusta `POSTGRES_DB` si utilizas un esquema distinto.
    - Asegúrate de mantener `?sslmode=require`; los clientes de Python (`sqlalchemy[psycopg]`) y Node.js lo necesitan para establecer TLS.
 
-3. Revisa que otros servicios lean las mismas credenciales (por ejemplo `CORE_API_DATABASE_URL` si lo tienes definido en tus secretos).
+3. Añade las variables de autenticación para el Core API:
+   ```dotenv
+   SUPABASE_URL=https://<tu-proyecto>.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   SUPABASE_JWT_AUDIENCE=authenticated  # opcional, usa el valor de la consola si aplicable
+   ```
+
+   - Obtén estos valores en **Project Settings → API** dentro del panel de Supabase.
+   - Copia el `Project URL` en `SUPABASE_URL` y el `service_role` en `SUPABASE_SERVICE_ROLE_KEY`. Guarda la clave solo en gestores de secretos.
+
+4. Revisa que otros servicios lean las mismas credenciales (por ejemplo `CORE_API_DATABASE_URL` si lo tienes definido en tus secretos).
 
 ## 3. Probar la conectividad
 
@@ -60,5 +70,11 @@ Si la conexión es exitosa deberías ver el prompt de PostgreSQL. En caso contra
 - Considera crear usuarios específicos por microservicio con permisos limitados si tu arquitectura lo requiere.
 - Habilita reglas de firewall/VPC en Supabase para permitir únicamente las IP públicas desde donde ejecutas Docker.
 - Mantén los backups automáticos de Supabase activos y revisa el panel de métricas para detectar conexiones agotadas en el pool.
+
+## 7. Autenticación contra Supabase
+
+- El Core API reemplazó el intercambio `POST /auth/firebase-login` por `POST /auth/supabase-login`.
+- El frontend debe enviar `{ "access_token": "<token emitido por Supabase>" }` y recibirá un JWT propio de la plataforma.
+- Valida los tokens del frontend obteniéndolos a través de `supabase.auth.signInWithPassword` u otros flujos soportados por Supabase y reenvía el `access_token` al Core API.
 
 Con estos pasos ya puedes trabajar exclusivamente con la base de datos administrada sin desplegar el contenedor `postgres` local.

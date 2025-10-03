@@ -21,49 +21,6 @@ const toBoolean = (value: unknown): boolean => {
   return false;
 };
 
-const firebaseSecretsSatisfied = (firebaseEnabled: boolean): {
-  minimalConfigured: boolean;
-  missingMinimal: string[];
-  optionalMissing: string[];
-  usingServiceAccountKey: boolean;
-} => {
-  if (!firebaseEnabled) {
-    return {
-      minimalConfigured: true,
-      missingMinimal: [],
-      optionalMissing: [],
-      usingServiceAccountKey: false,
-    };
-  }
-
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (hasValue(serviceAccountKey)) {
-    return { minimalConfigured: true, missingMinimal: [], optionalMissing: [], usingServiceAccountKey: true };
-  }
-
-  const firebaseMinimalKeys: (keyof NodeJS.ProcessEnv)[] = [
-    'FIREBASE_PROJECT_ID',
-    'FIREBASE_CLIENT_EMAIL',
-    'FIREBASE_PRIVATE_KEY',
-  ];
-  const firebaseOptionalKeys: (keyof NodeJS.ProcessEnv)[] = [
-    'FIREBASE_PRIVATE_KEY_ID',
-    'FIREBASE_CLIENT_ID',
-    'FIREBASE_CLIENT_CERT_URL',
-    'FIREBASE_DATABASE_URL',
-  ];
-
-  const missingMinimal = firebaseMinimalKeys.filter((key) => !hasValue(process.env[key])) as string[];
-  const optionalMissing = firebaseOptionalKeys.filter((key) => !hasValue(process.env[key])) as string[];
-
-  return {
-    minimalConfigured: missingMinimal.length === 0,
-    missingMinimal,
-    optionalMissing,
-    usingServiceAccountKey: false,
-  };
-};
-
 const run = (): number => {
   loadRootEnv();
 
@@ -83,7 +40,6 @@ const run = (): number => {
   const strictMode: EnvStrictnessMode = strictEnvEnabled ? 'strict' : 'minimal';
   const isStrictMode = strictMode === 'strict';
   const appConfig = configuration();
-  const firebaseEnabled = appConfig.firebase.enabled;
 
   const dependencyStatuses: { name: string; enabled: boolean; reason?: string }[] = [];
 
@@ -128,8 +84,6 @@ const run = (): number => {
         : 'Configura RECOMMENDATION_ENGINE_URL para habilitar las recomendaciones.',
   });
 
-  const firebaseStatus = firebaseSecretsSatisfied(firebaseEnabled);
-
   console.log('🔍  Revisión de entorno para core-api');
   console.log(`• Modo estricto detectado: ${strictMode}`);
   console.log(`• Perfil configurado: ${appConfig.app.profile}`);
@@ -152,6 +106,16 @@ const run = (): number => {
   }
 
   const allowedOriginsPresent = hasValue(process.env.ALLOWED_ORIGINS);
+  const supabaseUrlPresent = hasValue(process.env.SUPABASE_URL);
+  const supabaseServiceRolePresent = hasValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!supabaseUrlPresent) {
+    missingCriticalItems.push('SUPABASE_URL');
+  }
+
+  if (!supabaseServiceRolePresent) {
+    missingCriticalItems.push('SUPABASE_SERVICE_ROLE_KEY');
+  }
 
   const requiredForMinimal: { name: string; present: boolean; detail?: string }[] = [
     { name: 'JWT_SECRET', present: jwtSecretPresent },
@@ -161,13 +125,18 @@ const run = (): number => {
       detail: 'Puedes usar CORS_ORIGIN como respaldo solo si ALLOWED_ORIGINS no está disponible.',
     },
     {
-      name: 'Configuración de Firebase',
-      present: firebaseStatus.minimalConfigured,
-      detail: firebaseEnabled
-        ? !firebaseStatus.minimalConfigured
-          ? `Requeridas para modo completo: ${formatList(firebaseStatus.missingMinimal)}`
-          : undefined
-        : 'Firebase Admin se encuentra deshabilitado.',
+      name: 'SUPABASE_URL',
+      present: supabaseUrlPresent,
+      detail: supabaseUrlPresent
+        ? undefined
+        : 'Obtén la URL desde Project Settings → API en la consola de Supabase.',
+    },
+    {
+      name: 'SUPABASE_SERVICE_ROLE_KEY',
+      present: supabaseServiceRolePresent,
+      detail: supabaseServiceRolePresent
+        ? undefined
+        : 'Copia el Service Role Key desde Project Settings → API en Supabase y guárdalo como secreto.',
     },
   ];
 
@@ -187,13 +156,8 @@ const run = (): number => {
     }
   });
 
-  if (!firebaseEnabled) {
-    console.log('\nℹ️  Firebase: Firebase Admin deshabilitado. No se requieren claves.');
-  } else if (firebaseStatus.usingServiceAccountKey) {
-    console.log('\nℹ️  Firebase: Se detectó FIREBASE_SERVICE_ACCOUNT_KEY, se omite la verificación de claves individuales.');
-  } else if (firebaseStatus.optionalMissing.length) {
-    console.log('\nℹ️  Firebase: Claves opcionales ausentes (requeridas para modo completo o características avanzadas):');
-    firebaseStatus.optionalMissing.forEach((key) => console.log(`  - ${key}`));
+  if (!supabaseUrlPresent || !supabaseServiceRolePresent) {
+    console.log('\nℹ️  Supabase: faltan credenciales obligatorias para validar sesiones.');
   }
 
   console.log('\nConsejo: ejecuta este script después de cargar tus variables para verificar el impacto en la configuración.');

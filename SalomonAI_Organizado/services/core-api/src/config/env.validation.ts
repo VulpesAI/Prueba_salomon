@@ -12,27 +12,7 @@ export const envValidationSchema = Joi.object({
   JWT_EXPIRES_IN: Joi.string().default('1h'),
   ALLOWED_ORIGINS: Joi.string().allow('', null).optional(),
   CORS_ORIGIN: Joi.string().allow('', null).optional(),
-  ENABLE_FIREBASE: Joi.boolean().truthy('true').falsy('false').default(false),
-  FIREBASE_PROJECT_ID: Joi.string().when('ENABLE_FIREBASE', {
-    is: true,
-    then: Joi.string().required(),
-    otherwise: Joi.string().allow('', null).optional()
-  }),
-  FIREBASE_CLIENT_EMAIL: Joi.string().email().when('ENABLE_FIREBASE', {
-    is: true,
-    then: Joi.string().required(),
-    otherwise: Joi.string().allow('', null).optional()
-  }),
-  FIREBASE_PRIVATE_KEY: Joi.string().when('ENABLE_FIREBASE', {
-    is: true,
-    then: Joi.string().required(),
-    otherwise: Joi.string().allow('', null).optional()
-  }),
-  FIREBASE_SERVICE_ACCOUNT_KEY: Joi.string().allow('', null).optional(),
-  FIREBASE_DATABASE_URL: Joi.string().uri().allow('', null).optional(),
-  FIREBASE_PRIVATE_KEY_ID: Joi.string().allow('', null).optional(),
-  FIREBASE_CLIENT_ID: Joi.string().allow('', null).optional(),
-  FIREBASE_CLIENT_CERT_URL: Joi.string().uri().allow('', null).optional(),
-  FIREBASE_AUTH_PROVIDER_X509_CERT_URL: Joi.string().uri().allow('', null).optional(),
-  FIREBASE_TOKEN_URI: Joi.string().uri().allow('', null).optional()
+  SUPABASE_URL: Joi.string().uri().required(),
+  SUPABASE_SERVICE_ROLE_KEY: Joi.string().min(20).required(),
+  SUPABASE_JWT_AUDIENCE: Joi.string().allow('', null).optional()
 });
