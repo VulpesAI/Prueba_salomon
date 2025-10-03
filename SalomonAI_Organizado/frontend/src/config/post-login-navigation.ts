@@ -221,7 +221,7 @@ export const postLoginNavigation: NavigationGroup[] = [
         title: "Perfil",
         href: "/settings/profile",
         icon: Settings,
-        description: "Datos personales y preferencias",
+        description: "Datos personales, preferencias y carga manual de cartolas",
       },
       {
         title: "Seguridad",
