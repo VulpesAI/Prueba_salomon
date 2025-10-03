@@ -23,7 +23,7 @@ import { ManualStatementUploadCard } from '../../components/authenticated/manual
 import { useConversationEngine } from '../../hooks/useConversationEngine';
 import { useVoiceGateway } from '../../hooks/useVoiceGateway';
 import { useFinancialSummary } from '../../hooks/useFinancialSummary';
-import type { FinancialSummary } from '../../hooks/useConversationEngine';
+import { useDemoFinancialData } from '../../context/DemoFinancialDataContext';
 import type { NormalizedStatement } from '../../lib/statements/parser';
 
 const formatCurrency = (amount: number) =>
@@ -51,26 +51,24 @@ export default function DemoPage() {
     error: summaryError,
     updateSummary
   } = useFinancialSummary(sessionId);
+  const { updateFromStatement, financialSummary, setSessionId: shareSessionId } =
+    useDemoFinancialData();
+
+  useEffect(() => {
+    shareSessionId(sessionId);
+  }, [sessionId, shareSessionId]);
+
+  useEffect(() => {
+    if (financialSummary) {
+      updateSummary(financialSummary);
+    }
+  }, [financialSummary, updateSummary]);
 
   const handleStatementParsed = useCallback(
     (statement: NormalizedStatement) => {
-      const mappedSummary: FinancialSummary = {
-        total_balance: statement.totals.balance,
-        monthly_income: statement.totals.income,
-        monthly_expenses: statement.totals.expenses,
-        expense_breakdown: statement.expenseByCategory,
-        recent_transactions: statement.transactions.slice(-10).map(transaction => ({
-          date: transaction.date,
-          description: transaction.description,
-          amount: transaction.amount,
-          category: transaction.category ?? 'Sin categoría'
-        })),
-        generated_at: new Date().toISOString()
-      };
-
-      updateSummary(mappedSummary);
+      updateFromStatement(statement);
     },
-    [updateSummary]
+    [updateFromStatement]
   );
 
   const {

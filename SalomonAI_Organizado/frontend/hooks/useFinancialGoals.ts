@@ -2,56 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type GoalPace = 'ahead' | 'on_track' | 'off_track' | 'completed';
-
-type GoalMetrics = {
-  totalActual: number;
-  expectedAmountByNow: number;
-  deviationAmount: number;
-  deviationRatio: number;
-  progressPercentage: number;
-  pace: GoalPace;
-  eta: string | null;
-  lastRecordedAt: string | null;
-};
-
-type GoalProgress = {
-  id: string;
-  actualAmount: number;
-  expectedAmount: number | null;
-  note?: string;
-  recordedAt: string;
-};
-
-type GoalStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
-
-export type FinancialGoal = {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  status: GoalStatus;
-  targetAmount: number;
-  initialAmount: number;
-  expectedMonthlyContribution: number | null;
-  deviationThreshold: number;
-  startDate: string;
-  targetDate: string;
-  metrics: GoalMetrics;
-  progressHistory: GoalProgress[];
-};
-
-type GoalsApiResponse = {
-  goals: FinancialGoal[];
-  summary: {
-    total: number;
-    active: number;
-    completed: number;
-    onTrack: number;
-    offTrack: number;
-    ahead: number;
-  };
-};
+import { useDemoFinancialData } from '@/context/DemoFinancialDataContext';
+import type { FinancialGoal, GoalsApiResponse } from '@/types/goals';
 
 const FALLBACK_RESPONSE: GoalsApiResponse = {
   goals: [
@@ -130,8 +82,10 @@ const FALLBACK_RESPONSE: GoalsApiResponse = {
 };
 
 export function useFinancialGoals(token?: string) {
-  const [data, setData] = useState<GoalsApiResponse>(FALLBACK_RESPONSE);
-  const [isLoading, setIsLoading] = useState(true);
+  const { goals: demoGoals } = useDemoFinancialData();
+
+  const [data, setData] = useState<GoalsApiResponse>(demoGoals ?? FALLBACK_RESPONSE);
+  const [isLoading, setIsLoading] = useState(() => !demoGoals);
   const [error, setError] = useState<string | null>(null);
 
   const baseUrl = useMemo(() => {
@@ -139,6 +93,10 @@ export function useFinancialGoals(token?: string) {
   }, []);
 
   const fetchGoals = useCallback(async () => {
+    if (demoGoals) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch(`${baseUrl}/api/v1/goals`, {
@@ -162,11 +120,18 @@ export function useFinancialGoals(token?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [baseUrl, token]);
+  }, [baseUrl, demoGoals, token]);
 
   useEffect(() => {
+    if (demoGoals) {
+      setData(demoGoals);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
     void fetchGoals();
-  }, [fetchGoals]);
+  }, [demoGoals, fetchGoals]);
 
   return {
     goals: data.goals,
