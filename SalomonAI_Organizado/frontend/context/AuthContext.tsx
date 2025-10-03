@@ -34,6 +34,14 @@ type BackendUser = {
 type BackendSessionResponse = {
   token: string
   user: BackendUser
+  tokenType?: string | null
+  refreshToken?: string | null
+  refresh_token?: string | null
+  expiresAt?: string | number | Date | null
+  expires_at?: string | number | Date | null
+  expiresIn?: number | string | null
+  expires_in?: number | string | null
+  [key: string]: unknown
 }
 
 export type AuthSession = {
@@ -41,6 +49,8 @@ export type AuthSession = {
   tokenType: string
   backendUser: BackendUser
   firebaseUid: string
+  refreshToken?: string | null
+  expiresAt?: string | number | Date | null
 }
 
 type AuthContextType = {
@@ -148,10 +158,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(nextSession)
   }, [])
 
-  const logout = useCallback(async () => {
+  const clearSessionCookies = useCallback(async () => {
+    try {
+      await fetch("/api/auth/session", {
+        method: "DELETE",
+        credentials: "include",
+      })
+    } catch (error) {
+      console.error("Failed to clear authentication cookies", error)
+    }
+  }, [])
+
+  const performLogout = useCallback(async () => {
     setSessionState(null)
     setUser(null)
     setIsLoading(false)
+
+    await clearSessionCookies()
 
     try {
       const auth = await getFirebaseAuth()
@@ -159,12 +182,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to sign out from Firebase", error)
     }
-  }, [setSessionState])
+  }, [clearSessionCookies, setSessionState])
+
+  const logout = useCallback(async () => {
+    await performLogout()
+  }, [performLogout])
 
   const handleUnauthorizedSession = useCallback(async () => {
-    await logout()
+    await performLogout()
     router.push("/login")
-  }, [logout, router])
+  }, [performLogout, router])
 
   useEffect(() => {
     configureApiClientAuth({
@@ -172,6 +199,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       onUnauthorized: handleUnauthorizedSession,
     })
   }, [handleUnauthorizedSession])
+
+  const persistLocalSession = useCallback(
+    async ({
+      token,
+      refreshToken,
+      expiresAt,
+    }: {
+      token: string
+      refreshToken?: string | null
+      expiresAt?: string | number | Date | null
+    }) => {
+      const sessionPayload: Record<string, unknown> = { token }
+
+      if (refreshToken !== undefined && refreshToken !== null) {
+        sessionPayload.refreshToken = refreshToken
+      }
+
+      if (expiresAt !== undefined && expiresAt !== null) {
+        sessionPayload.expiresAt = expiresAt
+      }
+
+      const localResponse = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(sessionPayload),
+      })
+
+      if (!localResponse.ok) {
+        throw new Error(
+          `Failed to persist authentication session (${localResponse.status})`
+        )
+      }
+    },
+    []
+  )
 
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
@@ -200,17 +265,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Backend session missing access token")
       }
 
+      const refreshToken =
+        typeof payload.refreshToken === "string" && payload.refreshToken.length > 0
+          ? payload.refreshToken
+          : typeof payload.refresh_token === "string" &&
+              payload.refresh_token.length > 0
+            ? payload.refresh_token
+            : null
+
+      const directExpiresAt =
+        payload.expiresAt ?? payload.expires_at ?? null
+
+      let expiresAt: string | number | Date | null = null
+
+      if (
+        typeof directExpiresAt === "string" ||
+        typeof directExpiresAt === "number" ||
+        directExpiresAt instanceof Date
+      ) {
+        expiresAt = directExpiresAt
+      } else {
+        const expiresInRaw = payload.expiresIn ?? payload.expires_in ?? null
+
+        if (typeof expiresInRaw === "number" && Number.isFinite(expiresInRaw)) {
+          expiresAt = new Date(Date.now() + expiresInRaw * 1000).toISOString()
+        } else if (
+          typeof expiresInRaw === "string" &&
+          expiresInRaw.trim().length > 0
+        ) {
+          const parsed = Number.parseFloat(expiresInRaw)
+          if (Number.isFinite(parsed)) {
+            expiresAt = new Date(Date.now() + parsed * 1000).toISOString()
+          }
+        }
+      }
+
+      await persistLocalSession({
+        token: payload.token,
+        refreshToken,
+        expiresAt,
+      })
+
       const nextSession: AuthSession = {
         accessToken: payload.token,
-        tokenType: "Bearer",
+        tokenType:
+          typeof payload.tokenType === "string" && payload.tokenType.length > 0
+            ? payload.tokenType
+            : "Bearer",
         backendUser: payload.user,
         firebaseUid: firebaseUser.uid,
+        refreshToken,
+        expiresAt,
       }
 
       setSessionState(nextSession)
       return nextSession.backendUser
     },
-    [buildApiUrl, setSessionState]
+    [buildApiUrl, persistLocalSession, setSessionState]
   )
 
   useEffect(() => {
