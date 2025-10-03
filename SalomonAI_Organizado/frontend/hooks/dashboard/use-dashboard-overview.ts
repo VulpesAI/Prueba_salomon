@@ -11,7 +11,7 @@ import type { DashboardOverviewResponse } from "@/types/dashboard"
 type OverviewQueryResult = DashboardOverviewResponse | undefined
 
 export const useDashboardOverview = () => {
-  const { session, isLoading: isAuthLoading } = useAuth()
+  const { session, isLoading: isAuthLoading, isAuthDisabled } = useAuth()
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
@@ -21,7 +21,7 @@ export const useDashboardOverview = () => {
   const overviewQuery = useApiQuery<DashboardOverviewResponse, Error, OverviewQueryResult>({
     queryKey: queryKeys.dashboard.overview(),
     queryFn: (_, context) => getDashboardOverview({ signal: context.signal }),
-    enabled: Boolean(session?.accessToken),
+    enabled: Boolean(session?.accessToken) || isAuthDisabled,
     staleTime: 60_000,
   })
 
@@ -31,9 +31,11 @@ export const useDashboardOverview = () => {
     ? overviewQuery.error.message || "No pudimos cargar el resumen financiero."
     : null
 
-  const isQueryEnabled = Boolean(session?.accessToken)
+  const hasAccessToken = Boolean(session?.accessToken)
+  const isQueryEnabled = hasAccessToken || isAuthDisabled
   const isLoading =
-    isAuthLoading || (isQueryEnabled ? overviewQuery.isPending || overviewQuery.isFetching : false)
+    (!isAuthDisabled && isAuthLoading) ||
+    (isQueryEnabled ? overviewQuery.isPending || overviewQuery.isFetching : false)
 
   return {
     totals: overview?.totals ?? null,
