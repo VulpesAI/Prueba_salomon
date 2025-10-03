@@ -183,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(loginPayload),
 
       })
 
