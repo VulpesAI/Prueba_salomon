@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Brain, Eye, EyeOff, UserPlus, Check } from 'lucide-react';
+import { Brain, Eye, EyeOff, UserPlus, Check } from 'lucide-react';
 
 import { Navigation } from '../../components/Navigation';
 import { Button } from '../../components/ui/button';
@@ -24,13 +24,13 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const { signup, user, isLoading } = useAuth();
+  const { signup, user } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && user) {
+    if (user) {
       router.replace('/dashboard/overview');
     }
-  }, [isLoading, router, user]);
+  }, [router, user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -39,7 +39,7 @@ export default function SignupPage() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
@@ -55,15 +55,9 @@ export default function SignupPage() {
     setError(null);
     setIsSubmitting(true);
 
-    try {
-      await signup(formData.email, formData.password, formData.name);
-      router.push('/dashboard/overview');
-    } catch (err) {
-      console.error('Firebase signup error:', err);
-      setError('No pudimos crear tu cuenta. Verifica los datos e inténtalo nuevamente.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    signup(formData.email, formData.password, formData.name);
+    router.push('/dashboard/overview');
+    setIsSubmitting(false);
   };
 
   const passwordStrength = (password: string) => {
@@ -221,20 +215,19 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  checked={acceptTerms}
-                  onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="rounded border-input"
-                />
-                <label htmlFor="terms" className="text-sm flex items-center space-x-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  <span>
-                    Acepto los términos y condiciones
-                  </span>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={() => setAcceptTerms(prev => !prev)}
+                    className="rounded border-input"
+                  />
+                  <span>Acepto los términos y condiciones</span>
                 </label>
+                <Link href="/terms" className="text-sm text-primary hover:underline">
+                  Ver términos
+                </Link>
               </div>
 
               {error && (
@@ -246,43 +239,35 @@ export default function SignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
-                disabled={isLoading || isSubmitting || !acceptTerms}
+                disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Creando cuenta...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <UserPlus className="w-4 h-4" />
-                    <span>Crear Cuenta</span>
-                  </div>
-                )}
+                <UserPlus className="mr-2 h-4 w-4" />
+                {isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
               </Button>
             </form>
+
+            <div className="mt-6 space-y-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500" />
+                <span>Acceso inmediato a tu panel financiero</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500" />
+                <span>Recomendaciones personalizadas en tiempo real</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500" />
+                <span>Reportes automatizados y alertas predictivas</span>
+              </div>
+            </div>
           </Card>
 
-          {/* Sign In Link */}
-          <div className="text-center mt-6">
-            <p className="text-sm text-muted-foreground">
-              ¿Ya tienes cuenta?{' '}
-              <Link href="/login" className="text-primary hover:underline font-medium">
-                Inicia sesión
-              </Link>
-            </p>
-          </div>
-
-          {/* Demo Access */}
-          <div className="text-center mt-4">
-            <Link
-              href="/demo"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              <span>Probar demo sin cuenta</span>
-              <ArrowRight className="w-3 h-3 ml-1" />
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            ¿Ya tienes una cuenta?
+            <Link href="/login" className="text-primary hover:underline font-medium">
+              Inicia sesión
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </div>

@@ -5,7 +5,6 @@ import { useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/config/query-keys"
-import { useAuth } from "@/context/AuthContext"
 import { useApiMutation, useApiQuery } from "@/hooks/use-api"
 import {
   getDashboardNotifications,
@@ -19,7 +18,6 @@ import type {
 type NotificationsQueryResult = DashboardNotificationsResponse | undefined
 
 export const useDashboardNotifications = () => {
-  const { session, isLoading: isAuthLoading, isAuthDisabled } = useAuth()
   const queryClient = useQueryClient()
 
   const apiBaseUrl = useMemo(
@@ -34,7 +32,6 @@ export const useDashboardNotifications = () => {
   >({
     queryKey: queryKeys.dashboard.notifications(),
     queryFn: (_, context) => getDashboardNotifications({ signal: context.signal }),
-    enabled: Boolean(session?.accessToken) || isAuthDisabled,
     staleTime: 45_000,
   })
 
@@ -62,11 +59,7 @@ export const useDashboardNotifications = () => {
     ? notificationsQuery.error.message || "No pudimos cargar las notificaciones."
     : null
 
-  const hasAccessToken = Boolean(session?.accessToken)
-  const isQueryEnabled = hasAccessToken || isAuthDisabled
-  const isLoading =
-    (!isAuthDisabled && isAuthLoading) ||
-    (isQueryEnabled ? notificationsQuery.isPending || notificationsQuery.isFetching : false)
+  const isLoading = notificationsQuery.isPending || notificationsQuery.isFetching
 
   const refresh = notificationsQuery.refetch
 

@@ -17,27 +17,21 @@ export default function ForgotPasswordPage() {
 
   const { resetPassword } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
-    try {
-      await resetPassword(email);
-      setEmailSent(true);
-    } catch (err) {
-      console.error('Firebase reset password error:', err);
-      setError('No pudimos enviar el correo de recuperación. Verifica el email e inténtalo nuevamente.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    resetPassword(email);
+    setEmailSent(true);
+    setIsSubmitting(false);
   };
 
   if (emailSent) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        
+
         <div className="min-h-screen flex items-center justify-center px-6 py-20">
           <div className="max-w-md w-full text-center">
             <div className="mb-8">
@@ -64,7 +58,7 @@ export default function ForgotPasswordPage() {
                   <li>• Espera unos minutos, puede tardar en llegar</li>
                 </ul>
               </div>
-              
+
               <div className="mt-6 space-y-3">
                 <Button
                   variant="outline"
@@ -101,7 +95,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <div className="min-h-screen flex items-center justify-center px-6 py-20">
         <div className="max-w-md w-full">
           {/* Header */}
@@ -138,7 +132,7 @@ export default function ForgotPasswordPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 pl-10 border border-input bg-background rounded-md text-sm 
+                    className="w-full px-3 py-2 pl-10 border border-input bg-background rounded-md text-sm
                              focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     placeholder="tu@email.com"
                     required
@@ -158,41 +152,28 @@ export default function ForgotPasswordPage() {
                 className="w-full bg-gradient-primary hover:opacity-90"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Enviando...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Mail className="w-4 h-4" />
-                    <span>Enviar Instrucciones</span>
-                  </div>
-                )}
+                {isSubmitting ? 'Enviando...' : 'Enviar instrucciones'}
               </Button>
             </form>
+
+            <Button
+              variant="ghost"
+              className="mt-4 w-full"
+              asChild
+            >
+              <Link href="/login" className="flex items-center justify-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Volver al login
+              </Link>
+            </Button>
           </Card>
 
-          {/* Back to Login */}
-          <div className="text-center mt-6">
-            <Link 
-              href="/login"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al login
-            </Link>
-          </div>
-
-          {/* Support */}
-          <div className="text-center mt-4">
-            <p className="text-xs text-muted-foreground">
-              ¿Necesitas ayuda?{' '}
-              <a href="mailto:soporte@salomonai.cl" className="text-primary hover:underline">
-                Contacta con soporte
-              </a>
-            </p>
-          </div>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            ¿Necesitas ayuda adicional?
+            <a href="mailto:soporte@salomonai.cl" className="text-primary hover:underline ml-1">
+              Contacta a soporte
+            </a>
+          </p>
         </div>
       </div>
     </div>

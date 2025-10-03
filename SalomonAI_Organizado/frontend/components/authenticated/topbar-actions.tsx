@@ -14,14 +14,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import type { FirebaseUser } from "@/lib/firebase"
+import type { AuthUser } from "@/context/AuthContext"
 import { postLoginNavigation } from "@/src/config/post-login-navigation"
 import { flattenNavigation } from "./navigation-utils"
 import { Bell, LogOut, Search } from "lucide-react"
 
 type TopbarActionsProps = {
-  user: FirebaseUser
-  onLogout?: () => Promise<void>
+  user: AuthUser
+  onLogout?: () => void
 }
 
 const quickActions = flattenNavigation(postLoginNavigation)
@@ -29,9 +29,9 @@ const quickActions = flattenNavigation(postLoginNavigation)
   .map(({ item }) => item)
   .slice(0, 3)
 
-const getInitials = (user: FirebaseUser) => {
-  if (user.displayName) {
-    return user.displayName
+const getInitials = (user: AuthUser) => {
+  if (user.name) {
+    return user.name
       .split(" ")
       .map((part) => part[0])
       .join("")
@@ -49,11 +49,11 @@ const getInitials = (user: FirebaseUser) => {
 export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
-  const handleLogout = React.useCallback(async () => {
+  const handleLogout = React.useCallback(() => {
     if (!onLogout) return
     setIsLoggingOut(true)
     try {
-      await onLogout()
+      onLogout()
     } finally {
       setIsLoggingOut(false)
     }
@@ -86,11 +86,13 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="gap-2">
             <Avatar className="h-8 w-8">
-              {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.displayName ?? ""} /> : null}
+              {user.avatarUrl ? (
+                <AvatarImage src={user.avatarUrl} alt={user.name} />
+              ) : null}
               <AvatarFallback>{getInitials(user)}</AvatarFallback>
             </Avatar>
             <div className="hidden flex-col text-left leading-tight sm:flex">
-              <span className="text-sm font-medium">{user.displayName ?? "Usuario"}</span>
+              <span className="text-sm font-medium">{user.name}</span>
               {user.email ? (
                 <span className="text-xs text-muted-foreground">{user.email}</span>
               ) : null}

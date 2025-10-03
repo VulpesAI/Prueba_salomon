@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { queryKeys } from "@/config/query-keys"
-import { useAuth } from "@/context/AuthContext"
 import { useApiMutation, useApiQuery } from "@/hooks/use-api"
 import {
   getDashboardIntelligence,
@@ -18,7 +17,6 @@ import type {
 type IntelligenceQueryResult = DashboardIntelligenceResponse | undefined
 
 export const useDashboardIntelligence = () => {
-  const { session, isLoading: isAuthLoading, isAuthDisabled } = useAuth()
   const [recommendationFeedback, setRecommendationFeedback] = useState<
     Record<string, FeedbackStatus>
   >({})
@@ -35,7 +33,6 @@ export const useDashboardIntelligence = () => {
   >({
     queryKey: queryKeys.dashboard.intelligence(),
     queryFn: (_, context) => getDashboardIntelligence({ signal: context.signal }),
-    enabled: Boolean(session?.accessToken) || isAuthDisabled,
     staleTime: 60_000,
   })
 
@@ -74,11 +71,7 @@ export const useDashboardIntelligence = () => {
     ? intelligenceQuery.error.message || "No pudimos cargar los datos analíticos."
     : null
 
-  const hasAccessToken = Boolean(session?.accessToken)
-  const isQueryEnabled = hasAccessToken || isAuthDisabled
-  const isLoading =
-    (!isAuthDisabled && isAuthLoading) ||
-    (isQueryEnabled ? intelligenceQuery.isPending || intelligenceQuery.isFetching : false)
+  const isLoading = intelligenceQuery.isPending || intelligenceQuery.isFetching
 
   const sendRecommendationFeedback = async (
     recommendationId: string,
