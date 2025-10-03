@@ -3,6 +3,7 @@ const FIREBASE_SDK_VERSION = process.env.NEXT_PUBLIC_FIREBASE_SDK_VERSION ?? "10
 export type FirebaseOptions = {
   apiKey?: string;
   authDomain?: string;
+  databaseURL?: string;
   projectId?: string;
   storageBucket?: string;
   messagingSenderId?: string;
@@ -169,8 +170,9 @@ const getEnvVar = (name: string): string | undefined => {
 const fallbackConfig: Required<FirebaseOptions> = {
   apiKey: "AIzaSyCGuUfWuw-AjYQGWBpZPrPnulkKAZCz_Y0",
   authDomain: "gen-lang-client-0516565338.firebaseapp.com",
+  databaseURL: "https://gen-lang-client-0516565338-default-rtdb.firebaseio.com",
   projectId: "gen-lang-client-0516565338",
-  storageBucket: "gen-lang-client-0516565338.appspot.com",
+  storageBucket: "gen-lang-client-0516565338.firebasestorage.app",
   messagingSenderId: "238194040857",
   appId: "1:238194040857:web:0d9c659382fe7049c88a88",
   measurementId: "",
@@ -180,6 +182,8 @@ const firebaseConfig: FirebaseOptions = {
   apiKey: getEnvVar("NEXT_PUBLIC_FIREBASE_API_KEY") ?? fallbackConfig.apiKey,
   authDomain:
     getEnvVar("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN") ?? fallbackConfig.authDomain,
+  databaseURL:
+    getEnvVar("NEXT_PUBLIC_FIREBASE_DATABASE_URL") ?? fallbackConfig.databaseURL,
   projectId: getEnvVar("NEXT_PUBLIC_FIREBASE_PROJECT_ID") ?? fallbackConfig.projectId,
   storageBucket:
     getEnvVar("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET") ?? fallbackConfig.storageBucket,
