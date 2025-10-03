@@ -53,11 +53,37 @@ export type AuthSession = {
   expiresAt?: string | number | Date | null
 }
 
+const authDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true"
+
+const DEMO_BACKEND_USER: BackendUser = {
+  uid: "demo-user",
+  email: "demo@example.com",
+  name: "Demo User",
+}
+
+const DEMO_SESSION: AuthSession = {
+  accessToken: "demo-access-token",
+  tokenType: "Bearer",
+  backendUser: DEMO_BACKEND_USER,
+  firebaseUid: DEMO_BACKEND_USER.uid,
+  refreshToken: null,
+  expiresAt: null,
+}
+
+const createDemoFirebaseUser = (): FirebaseUser =>
+  ({
+    uid: DEMO_BACKEND_USER.uid,
+    email: DEMO_BACKEND_USER.email ?? null,
+    displayName: DEMO_BACKEND_USER.name ?? null,
+    getIdToken: async () => DEMO_SESSION.accessToken,
+  } as unknown as FirebaseUser)
+
 type AuthContextType = {
   user: FirebaseUser | null
   backendUser: BackendUser | null
   session: AuthSession | null
   isLoading: boolean
+  isAuthDisabled: boolean
   login: (email: string, password: string) => Promise<BackendUser>
   signup: (
     email: string,
@@ -121,11 +147,14 @@ const parseBackendErrorMessage = async (
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [user, setUser] = useState<FirebaseUser | null>(null)
-  const [session, setSession] = useState<AuthSession | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const initialDemoUser = authDisabled ? createDemoFirebaseUser() : null
+  const initialSession = authDisabled ? DEMO_SESSION : null
+  const [user, setUser] = useState<FirebaseUser | null>(initialDemoUser)
+  const [session, setSession] = useState<AuthSession | null>(initialSession)
+  const [isLoading, setIsLoading] = useState(!authDisabled)
 
-  const sessionRef = useRef<AuthSession | null>(null)
+  const sessionRef = useRef<AuthSession | null>(initialSession)
+  const demoFirebaseUserRef = useRef<FirebaseUser | null>(initialDemoUser)
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
@@ -159,6 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const clearSessionCookies = useCallback(async () => {
+    if (authDisabled) {
+      return
+    }
     try {
       await fetch("/api/auth/session", {
         method: "DELETE",
@@ -174,6 +206,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setIsLoading(false)
 
+    if (authDisabled) {
+      return
+    }
+
     await clearSessionCookies()
 
     try {
@@ -185,10 +221,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearSessionCookies, setSessionState])
 
   const logout = useCallback(async () => {
+    if (authDisabled) {
+      setSessionState(DEMO_SESSION)
+      if (!demoFirebaseUserRef.current) {
+        demoFirebaseUserRef.current = createDemoFirebaseUser()
+      }
+      setUser(demoFirebaseUserRef.current)
+      setIsLoading(false)
+      await clearSessionCookies()
+      return
+    }
     await performLogout()
-  }, [performLogout])
+  }, [clearSessionCookies, performLogout])
 
   const handleUnauthorizedSession = useCallback(async () => {
+    if (authDisabled) {
+      setSessionState(DEMO_SESSION)
+      if (!demoFirebaseUserRef.current) {
+        demoFirebaseUserRef.current = createDemoFirebaseUser()
+      }
+      setUser(demoFirebaseUserRef.current)
+      setIsLoading(false)
+      return
+    }
     await performLogout()
     router.push("/login")
   }, [performLogout, router])
@@ -218,6 +273,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (expiresAt !== undefined && expiresAt !== null) {
         sessionPayload.expiresAt = expiresAt
+      }
+
+      if (authDisabled) {
+        return
       }
 
       const localResponse = await fetch("/api/auth/session", {
@@ -325,6 +384,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   useEffect(() => {
+    if (authDisabled) {
+      setSessionState(DEMO_SESSION)
+      if (!demoFirebaseUserRef.current) {
+        demoFirebaseUserRef.current = createDemoFirebaseUser()
+      }
+      setUser(demoFirebaseUserRef.current)
+      setIsLoading(false)
+      return
+    }
+
     if (typeof window === "undefined") {
       return
     }
@@ -408,6 +477,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
+      if (authDisabled) {
+        setSessionState(DEMO_SESSION)
+        if (!demoFirebaseUserRef.current) {
+          demoFirebaseUserRef.current = createDemoFirebaseUser()
+        }
+        setUser(demoFirebaseUserRef.current)
+        return DEMO_BACKEND_USER
+      }
       const auth = await getFirebaseAuth()
       const credential = await auth.signInWithEmailAndPassword(email, password)
       setUser(credential.user)
@@ -424,6 +501,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(
     async (email: string, password: string, displayName?: string) => {
+      if (authDisabled) {
+        setSessionState(DEMO_SESSION)
+        if (!demoFirebaseUserRef.current) {
+          demoFirebaseUserRef.current = createDemoFirebaseUser()
+        }
+        setUser(demoFirebaseUserRef.current)
+        return DEMO_BACKEND_USER
+      }
       const auth = await getFirebaseAuth()
       const credential = await auth.createUserWithEmailAndPassword(email, password)
 
@@ -444,6 +529,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const loginWithGoogle = useCallback(async () => {
+    if (authDisabled) {
+      setSessionState(DEMO_SESSION)
+      if (!demoFirebaseUserRef.current) {
+        demoFirebaseUserRef.current = createDemoFirebaseUser()
+      }
+      setUser(demoFirebaseUserRef.current)
+      return DEMO_BACKEND_USER
+    }
     const auth = await getFirebaseAuth()
     const provider = await getGoogleAuthProvider()
     provider.setCustomParameters({ prompt: "select_account" })
@@ -499,6 +592,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [exchangeFirebaseUser])
 
   const resetPassword = useCallback(async (email: string) => {
+    if (authDisabled) {
+      return
+    }
     const auth = await getFirebaseAuth()
     await auth.sendPasswordResetEmail(email)
   }, [])
@@ -509,6 +605,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       backendUser: session?.backendUser ?? null,
       session,
       isLoading,
+      isAuthDisabled: authDisabled,
       login,
       signup,
       loginWithGoogle,
@@ -519,6 +616,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       session,
       isLoading,
+      authDisabled,
       login,
       signup,
       loginWithGoogle,
