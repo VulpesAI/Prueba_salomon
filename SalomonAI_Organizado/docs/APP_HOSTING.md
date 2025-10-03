@@ -10,10 +10,19 @@ Cloud Run expects the container to listen on the port provided by the `PORT` env
 
 | Scope | Variables | Notes |
 | --- | --- | --- |
-| Minimal | `PORT`, `ENVIRONMENT`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` | Required to boot the API, listen on the correct port, and validate Firebase ID tokens. |
+| Minimal | `PORT`, `CORE_API_PROFILE=minimal`, `JWT_SECRET`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` | Use this set when no external services are required. Keep the profile on `minimal` to avoid loading unused dependencies. |
 | Full | _Minimal set_ plus: `DATABASE_URL`, `REDIS_URL`, `GOOGLE_APPLICATION_CREDENTIALS`, `SENTRY_DSN`, `ALLOWED_ORIGINS`, `SERVICE_BASE_URL` | Include these when enabling persistence layers, telemetry, or stricter CORS. Adjust the list to match the service’s feature set. |
 
-Store secrets with Google Secret Manager and mount them as environment variables. Keep the private key formatted with escaped newlines (`\n`) so that it parses correctly in the container.
+Store secrets with Google Secret Manager or Firebase App Hosting secrets and mount them as environment variables. Keep the private key formatted with escaped newlines (`\n`) so that it parses correctly in the container.
+
+### Cargar secretos en Firebase App Hosting
+
+1. Abre la consola de Firebase y navega a **Hosting → App Hosting**.
+2. Selecciona la app correspondiente y elige **Manage environment variables**.
+3. Crea (o actualiza) las variables `JWT_SECRET`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PRIVATE_KEY` con los valores reales.
+4. Guarda los cambios y redepliega el servicio para que el runtime reciba los secretos.
+
+Los archivos versionados en `services/core-api/apphosting.yaml` contienen únicamente el marcador `<SET-IN-FIREBASE-SECRETS>` para estas claves. Mantén los valores reales fuera del repositorio.
 
 ### TLS Termination
 
