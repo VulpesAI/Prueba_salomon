@@ -1,4 +1,22 @@
-import Papa from "papaparse"
+type PapaparseModule = typeof import("papaparse")
+
+let cachedPapa: PapaparseModule | null = null
+
+async function getPapaparse(): Promise<PapaparseModule> {
+  if (cachedPapa) return cachedPapa
+
+  try {
+    const papaparseModule = await import("papaparse")
+    cachedPapa = papaparseModule.default
+      ? (papaparseModule.default as unknown as PapaparseModule)
+      : (papaparseModule as PapaparseModule)
+    return cachedPapa
+  } catch {
+    throw new Error(
+      "La dependencia opcional 'papaparse' es necesaria para procesar cartolas CSV en el entorno demo. Añádela a las dependencias del proyecto o ajusta la configuración de despliegue para instalarla."
+    )
+  }
+}
 
 export interface NormalizedTransaction {
   /** Fecha del movimiento en formato ISO 8601 (YYYY-MM-DD) */
@@ -55,7 +73,8 @@ export async function parseStatementFiles(files: StatementFileInput[]): Promise<
     const extension = file.filename.split(".").pop()?.toLowerCase() ?? ""
 
     if (extension === "csv" || CSV_MIME_TYPES.has(file.mimetype ?? "")) {
-      transactions.push(...parseCsvTransactions(file.buffer))
+      const csvTransactions = await parseCsvTransactions(file.buffer)
+      transactions.push(...csvTransactions)
       continue
     }
 
@@ -71,7 +90,8 @@ export async function parseStatementFiles(files: StatementFileInput[]): Promise<
   return buildNormalizedStatement(transactions)
 }
 
-function parseCsvTransactions(buffer: Buffer): NormalizedTransaction[] {
+async function parseCsvTransactions(buffer: Buffer): Promise<NormalizedTransaction[]> {
+  const Papa = await getPapaparse()
   const csvContent = buffer.toString("utf-8")
   const { data, errors, meta } = Papa.parse<Record<string, string>>(csvContent, {
     header: true,
@@ -110,10 +130,15 @@ let cachedPdfParser: PdfParse | null = null
 async function getPdfParser(): Promise<PdfParse> {
   if (cachedPdfParser) return cachedPdfParser
 
-  const { default: parser } = (await import("pdf-parse")) as { default: PdfParse }
-
-  cachedPdfParser = parser
-  return cachedPdfParser
+  try {
+    const { default: parser } = (await import("pdf-parse")) as { default: PdfParse }
+    cachedPdfParser = parser
+    return cachedPdfParser
+  } catch {
+    throw new Error(
+      "La dependencia opcional 'pdf-parse' es necesaria para procesar cartolas en PDF en el entorno demo. Añádela a las dependencias del proyecto o ajusta la configuración de despliegue para instalarla."
+    )
+  }
 }
 
 async function parsePdfTransactions(buffer: Buffer): Promise<NormalizedTransaction[]> {
