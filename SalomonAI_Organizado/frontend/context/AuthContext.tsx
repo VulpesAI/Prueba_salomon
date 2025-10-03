@@ -15,7 +15,13 @@ import type {
   User,
 } from "@supabase/supabase-js"
 
+import { useRouter } from "next/navigation"
+
 import { supabase } from "@/lib/supabase"
+
+type ResetPasswordForEmailResponse = Awaited<
+  ReturnType<typeof supabase.auth.resetPasswordForEmail>
+>
 
 type AuthUser = {
   id: string
@@ -34,6 +40,7 @@ type AuthContextType = {
     password: string,
     displayName?: string
   ) => Promise<AuthResponse>
+  resetPassword: (email: string) => Promise<ResetPasswordForEmailResponse>
   resetPassword: (email: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -67,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     let isMounted = true
@@ -111,6 +119,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const hash = window.location.hash
+    if (!hash || !hash.includes("access_token")) {
+      return
+    }
+
+    const params = new URLSearchParams(hash.slice(1))
+    const type = params.get("type")
+    if (!type || !["signup", "magiclink", "recovery", "invite"].includes(type)) {
+      return
+    }
+
+    const accessToken = params.get("access_token")
+    const refreshToken = params.get("refresh_token")
+    if (!accessToken || !refreshToken) {
+      return
+    }
+
+    let isMounted = true
+
+    const handleAuthCallback = async () => {
+      try {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+
+        if (error) {
+          throw error
+        }
+
+        let redirectTo = "/dashboard/overview"
+        const redirectParam = params.get("redirect_to")
+        if (redirectParam) {
+          try {
+            const redirectUrl = new URL(redirectParam, window.location.origin)
+            if (redirectUrl.origin === window.location.origin) {
+              redirectTo = `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`
+            }
+          } catch {
+            // Ignore invalid redirect values and fall back to the default path
+          }
+        }
+
+        if (isMounted) {
+          router.replace(redirectTo)
+        }
+      } catch (error) {
+        console.error("Failed to handle Supabase auth callback", error)
+      } finally {
+        if (isMounted) {
+          window.history.replaceState(
+            {},
+            document.title,
+            `${window.location.pathname}${window.location.search}`
+          )
+        }
+      }
+    }
+
+    void handleAuthCallback()
+
+    return () => {
+      isMounted = false
+    }
+  }, [router])
 
   const login = useCallback<AuthContextType["login"]>(async (email, password) => {
     const response = await supabase.auth.signInWithPassword({
