@@ -26,17 +26,16 @@ describe('HealthController (e2e)', () => {
     await app.close();
   });
 
-  it('GET /health should return ok', async () => {
-    await request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect({ ok: true });
-  });
+  it('GET /health should expose the service status snapshot', async () => {
+    const response = await request(app.getHttpServer()).get('/health').expect(200);
 
-  it('GET /api/v1/health should remain available', async () => {
-    await request(app.getHttpServer())
-      .get('/api/v1/health')
-      .expect(200)
-      .expect({ ok: true });
+    expect(response.body).toMatchObject({
+      ok: true,
+      status: 'ok',
+    });
+    expect(response.body).toHaveProperty('environment');
+    expect(response.body).toHaveProperty('profile');
+    expect(response.body).toHaveProperty('version');
+    expect(typeof response.body.timestamp).toBe('string');
   });
 });

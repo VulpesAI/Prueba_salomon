@@ -1,10 +1,9 @@
 #!/usr/bin/env ts-node
+import configuration from '../src/config/configuration';
 import { loadRootEnv } from '../src/config/env.loader';
-import {
-  baseEnvSchema,
-  envSchema,
-  type EnvStrictnessMode,
-} from '../src/config/env.validation';
+import { envValidationSchema } from '../src/config/env.validation';
+
+type EnvStrictnessMode = 'minimal' | 'strict';
 
 const hasValue = (value: string | undefined | null): boolean =>
   typeof value === 'string' && value.trim().length > 0;
@@ -22,12 +21,21 @@ const toBoolean = (value: unknown): boolean => {
   return false;
 };
 
-const firebaseSecretsSatisfied = (): {
+const firebaseSecretsSatisfied = (firebaseEnabled: boolean): {
   minimalConfigured: boolean;
   missingMinimal: string[];
   optionalMissing: string[];
   usingServiceAccountKey: boolean;
 } => {
+  if (!firebaseEnabled) {
+    return {
+      minimalConfigured: true,
+      missingMinimal: [],
+      optionalMissing: [],
+      usingServiceAccountKey: false,
+    };
+  }
+
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (hasValue(serviceAccountKey)) {
     return { minimalConfigured: true, missingMinimal: [], optionalMissing: [], usingServiceAccountKey: true };
@@ -59,18 +67,23 @@ const firebaseSecretsSatisfied = (): {
 const run = (): number => {
   loadRootEnv();
 
-  const validationResult = envSchema.safeParse(process.env);
-  const validationIssues = validationResult.success
-    ? []
-    : validationResult.error.issues.map((issue) => `${issue.path.join('.') || 'env'}: ${issue.message}`);
+  const { error, value } = envValidationSchema.validate(process.env, {
+    abortEarly: false,
+    allowUnknown: true,
+    convert: true,
+  });
+  const validationIssues = error
+    ? error.details.map((detail) => `${detail.path.join('.') || 'env'}: ${detail.message}`)
+    : [];
 
-  const partialResult = baseEnvSchema.partial().safeParse(process.env);
-  const envVars = partialResult.success ? partialResult.data : {};
-  const strictEnvEnabled = validationResult.success
-    ? validationResult.data.STRICT_ENV
-    : toBoolean(envVars.STRICT_ENV);
+  const validatedEnv = value as { STRICT_ENV?: boolean };
+  const strictEnvEnabled = typeof validatedEnv.STRICT_ENV === 'boolean'
+    ? validatedEnv.STRICT_ENV
+    : toBoolean(process.env.STRICT_ENV);
   const strictMode: EnvStrictnessMode = strictEnvEnabled ? 'strict' : 'minimal';
   const isStrictMode = strictMode === 'strict';
+  const appConfig = configuration();
+  const firebaseEnabled = appConfig.firebase.enabled;
 
   const dependencyStatuses: { name: string; enabled: boolean; reason?: string }[] = [];
 
@@ -115,10 +128,11 @@ const run = (): number => {
         : 'Configura RECOMMENDATION_ENGINE_URL para habilitar las recomendaciones.',
   });
 
-  const firebaseStatus = firebaseSecretsSatisfied();
+  const firebaseStatus = firebaseSecretsSatisfied(firebaseEnabled);
 
   console.log('🔍  Revisión de entorno para core-api');
   console.log(`• Modo estricto detectado: ${strictMode}`);
+  console.log(`• Perfil configurado: ${appConfig.app.profile}`);
   if (strictMode !== 'minimal') {
     console.log('  (El script reporta dependencias considerando el modo mínimo).');
   }
@@ -137,19 +151,23 @@ const run = (): number => {
     missingCriticalItems.push('JWT_SECRET');
   }
 
+  const allowedOriginsPresent = hasValue(process.env.ALLOWED_ORIGINS);
+
   const requiredForMinimal: { name: string; present: boolean; detail?: string }[] = [
     { name: 'JWT_SECRET', present: jwtSecretPresent },
     {
       name: 'ALLOWED_ORIGINS',
-      present: hasValue(process.env.ALLOWED_ORIGINS),
+      present: allowedOriginsPresent,
       detail: 'Puedes usar CORS_ORIGIN como respaldo solo si ALLOWED_ORIGINS no está disponible.',
     },
     {
-      name: 'Credenciales de Firebase (modo mínimo)',
+      name: 'Configuración de Firebase',
       present: firebaseStatus.minimalConfigured,
-      detail: firebaseStatus.minimalConfigured
-        ? undefined
-        : `Requeridas para modo mínimo: ${formatList(firebaseStatus.missingMinimal)}`,
+      detail: firebaseEnabled
+        ? !firebaseStatus.minimalConfigured
+          ? `Requeridas para modo completo: ${formatList(firebaseStatus.missingMinimal)}`
+          : undefined
+        : 'Firebase Admin se encuentra deshabilitado.',
     },
   ];
 
@@ -169,7 +187,9 @@ const run = (): number => {
     }
   });
 
-  if (firebaseStatus.usingServiceAccountKey) {
+  if (!firebaseEnabled) {
+    console.log('\nℹ️  Firebase: Firebase Admin deshabilitado. No se requieren claves.');
+  } else if (firebaseStatus.usingServiceAccountKey) {
     console.log('\nℹ️  Firebase: Se detectó FIREBASE_SERVICE_ACCOUNT_KEY, se omite la verificación de claves individuales.');
   } else if (firebaseStatus.optionalMissing.length) {
     console.log('\nℹ️  Firebase: Claves opcionales ausentes (requeridas para modo completo o características avanzadas):');

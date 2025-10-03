@@ -3,6 +3,10 @@ import * as Joi from 'joi';
 export const envValidationSchema = Joi.object({
   ENVIRONMENT: Joi.string().default('development'),
   CORE_API_PROFILE: Joi.string().valid('minimal', 'full').default('minimal'),
+  STRICT_ENV: Joi.boolean()
+    .truthy('true', '1', 'yes', 'y', 'on')
+    .falsy('false', '0', 'no', 'n', 'off')
+    .default(false),
   PORT: Joi.number().port().default(8080),
   JWT_SECRET: Joi.string().min(8).default('test-secret'),
   JWT_EXPIRES_IN: Joi.string().default('1h'),
