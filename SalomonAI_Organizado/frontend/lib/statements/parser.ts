@@ -110,9 +110,10 @@ let cachedPdfParser: PdfParse | null = null
 async function getPdfParser(): Promise<PdfParse> {
   if (cachedPdfParser) return cachedPdfParser
 
+  const { default: parser } = (await import("pdf-parse")) as { default: PdfParse }
 
   cachedPdfParser = parser
-  return parser
+  return cachedPdfParser
 }
 
 async function parsePdfTransactions(buffer: Buffer): Promise<NormalizedTransaction[]> {
