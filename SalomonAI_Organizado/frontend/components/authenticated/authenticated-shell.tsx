@@ -47,21 +47,25 @@ export function AuthenticatedShell({
 }: {
   children: React.ReactNode
 }) {
-  const { user, isLoading, logout } = useAuth()
+  const { user, isLoading, logout, isAuthDisabled } = useAuth()
   const router = useRouter()
   const pathname = usePathname() ?? ""
 
   React.useEffect(() => {
+    if (isAuthDisabled) {
+      return
+    }
+
     if (!isLoading && !user) {
       router.replace("/login")
     }
-  }, [isLoading, router, user])
+  }, [isAuthDisabled, isLoading, router, user])
 
   if (isLoading) {
     return <LoadingShell />
   }
 
-  if (!user) {
+  if (!user && !isAuthDisabled) {
     return <LoadingShell />
   }
 
@@ -107,7 +111,7 @@ export function AuthenticatedShell({
                 <Breadcrumbs navigation={postLoginNavigation} />
               </div>
             </div>
-            <TopbarActions user={user} onLogout={logout} />
+            {user ? <TopbarActions user={user} onLogout={logout} /> : null}
           </div>
         </header>
         <main className="flex-1 px-4 py-8 md:px-6">

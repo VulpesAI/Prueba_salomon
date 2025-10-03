@@ -18,7 +18,7 @@ import type {
 type IntelligenceQueryResult = DashboardIntelligenceResponse | undefined
 
 export const useDashboardIntelligence = () => {
-  const { session, isLoading: isAuthLoading } = useAuth()
+  const { session, isLoading: isAuthLoading, isAuthDisabled } = useAuth()
   const [recommendationFeedback, setRecommendationFeedback] = useState<
     Record<string, FeedbackStatus>
   >({})
@@ -35,7 +35,7 @@ export const useDashboardIntelligence = () => {
   >({
     queryKey: queryKeys.dashboard.intelligence(),
     queryFn: (_, context) => getDashboardIntelligence({ signal: context.signal }),
-    enabled: Boolean(session?.accessToken),
+    enabled: Boolean(session?.accessToken) || isAuthDisabled,
     staleTime: 60_000,
   })
 
@@ -74,9 +74,10 @@ export const useDashboardIntelligence = () => {
     ? intelligenceQuery.error.message || "No pudimos cargar los datos analíticos."
     : null
 
-  const isQueryEnabled = Boolean(session?.accessToken)
+  const hasAccessToken = Boolean(session?.accessToken)
+  const isQueryEnabled = hasAccessToken || isAuthDisabled
   const isLoading =
-    isAuthLoading ||
+    (!isAuthDisabled && isAuthLoading) ||
     (isQueryEnabled ? intelligenceQuery.isPending || intelligenceQuery.isFetching : false)
 
   const sendRecommendationFeedback = async (

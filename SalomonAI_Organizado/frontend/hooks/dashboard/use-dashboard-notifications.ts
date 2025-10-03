@@ -19,7 +19,7 @@ import type {
 type NotificationsQueryResult = DashboardNotificationsResponse | undefined
 
 export const useDashboardNotifications = () => {
-  const { session, isLoading: isAuthLoading } = useAuth()
+  const { session, isLoading: isAuthLoading, isAuthDisabled } = useAuth()
   const queryClient = useQueryClient()
 
   const apiBaseUrl = useMemo(
@@ -34,7 +34,7 @@ export const useDashboardNotifications = () => {
   >({
     queryKey: queryKeys.dashboard.notifications(),
     queryFn: (_, context) => getDashboardNotifications({ signal: context.signal }),
-    enabled: Boolean(session?.accessToken),
+    enabled: Boolean(session?.accessToken) || isAuthDisabled,
     staleTime: 45_000,
   })
 
@@ -62,9 +62,10 @@ export const useDashboardNotifications = () => {
     ? notificationsQuery.error.message || "No pudimos cargar las notificaciones."
     : null
 
-  const isQueryEnabled = Boolean(session?.accessToken)
+  const hasAccessToken = Boolean(session?.accessToken)
+  const isQueryEnabled = hasAccessToken || isAuthDisabled
   const isLoading =
-    isAuthLoading ||
+    (!isAuthDisabled && isAuthLoading) ||
     (isQueryEnabled ? notificationsQuery.isPending || notificationsQuery.isFetching : false)
 
   const refresh = notificationsQuery.refetch
