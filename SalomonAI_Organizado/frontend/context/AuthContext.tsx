@@ -34,7 +34,9 @@ type AuthContextType = {
     password: string,
     displayName?: string
   ) => Promise<AuthResponse>
-  resetPassword: (email: string) => Promise<void>
+  resetPassword: (
+    email: string
+  ) => ReturnType<typeof supabase.auth.resetPasswordForEmail>
   logout: () => Promise<void>
 }
 
@@ -146,16 +148,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = useCallback<AuthContextType["resetPassword"]>(
     async (email) => {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const response = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo:
           typeof window !== "undefined"
             ? `${window.location.origin}/reset-password`
             : undefined,
       })
 
-      if (error) {
-        throw error
+      if (response.error) {
+        throw response.error
       }
+
+      return response
     },
     []
   )
