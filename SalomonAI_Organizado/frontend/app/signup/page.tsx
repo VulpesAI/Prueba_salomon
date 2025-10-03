@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Brain, Eye, EyeOff, UserPlus, Check } from 'lucide-react';
+import { Brain, Eye, EyeOff, UserPlus, Check, MailCheck } from 'lucide-react';
 
 import { Navigation } from '../../components/Navigation';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 
 export default function SignupPage() {
@@ -22,15 +23,16 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmationPending, setConfirmationPending] = useState(false);
 
   const router = useRouter();
-  const { signup, user } = useAuth();
+  const { signup, user, isLoading } = useAuth();
 
   useEffect(() => {
-    if (user) {
+    if (!isLoading && user) {
       router.replace('/dashboard/overview');
     }
-  }, [router, user]);
+  }, [isLoading, router, user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -39,25 +41,41 @@ export default function SignupPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      alert('Las contraseñas no coinciden');
+      setError('Las contraseñas no coinciden');
       return;
     }
 
     if (!acceptTerms) {
-      alert('Debes aceptar los términos y condiciones');
+      setError('Debes aceptar los términos y condiciones');
       return;
     }
 
     setError(null);
+    setConfirmationPending(false);
     setIsSubmitting(true);
 
-    signup(formData.email, formData.password, formData.name);
-    router.push('/dashboard/overview');
-    setIsSubmitting(false);
+    try {
+      const response = await signup(formData.email, formData.password, formData.name);
+
+      if (response.data.session) {
+        router.replace('/dashboard/overview');
+        return;
+      }
+
+      setConfirmationPending(true);
+    } catch (submissionError) {
+      const message =
+        submissionError instanceof Error
+          ? submissionError.message
+          : 'No pudimos crear la cuenta. Inténtalo nuevamente.';
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const passwordStrength = (password: string) => {
@@ -100,19 +118,26 @@ export default function SignupPage() {
 
           {/* Signup Form */}
           <Card className="p-6 bg-gradient-card border-primary/20">
+            {confirmationPending && (
+              <div className="mb-4 flex items-center gap-3 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm">
+                <MailCheck className="h-4 w-4 text-primary" />
+                <span>
+                  Te enviamos un correo de confirmación. Revisa tu bandeja de entrada para activar la cuenta.
+                </span>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium mb-2">
                   Nombre Completo
                 </label>
-                <input
+                <Input
                   id="name"
                   name="name"
                   type="text"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm
-                           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   placeholder="Juan Pérez"
                   required
                 />
@@ -122,15 +147,14 @@ export default function SignupPage() {
                 <label htmlFor="email" className="block text-sm font-medium mb-2">
                   Correo Electrónico
                 </label>
-                <input
+                <Input
                   id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm
-                           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   placeholder="juan@email.com"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -140,15 +164,14 @@ export default function SignupPage() {
                   Contraseña
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm
-                             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     required
                   />
                   <button
@@ -194,15 +217,14 @@ export default function SignupPage() {
                   Confirmar Contraseña
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 pr-10 border border-input bg-background rounded-md text-sm
-                             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     required
                   />
                   <button

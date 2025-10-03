@@ -21,7 +21,7 @@ import { Bell, LogOut, Search } from "lucide-react"
 
 type TopbarActionsProps = {
   user: AuthUser
-  onLogout?: () => void
+  onLogout?: () => Promise<void> | void
 }
 
 const quickActions = flattenNavigation(postLoginNavigation)
@@ -49,11 +49,13 @@ const getInitials = (user: AuthUser) => {
 export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
-  const handleLogout = React.useCallback(() => {
+  const handleLogout = React.useCallback(async () => {
     if (!onLogout) return
     setIsLoggingOut(true)
     try {
-      onLogout()
+      await onLogout()
+    } catch (error) {
+      console.error("Failed to logout", error)
     } finally {
       setIsLoggingOut(false)
     }
@@ -112,7 +114,7 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
           <DropdownMenuItem
             onSelect={(event) => {
               event.preventDefault()
-              handleLogout()
+              void handleLogout()
             }}
             disabled={isLoggingOut}
           >

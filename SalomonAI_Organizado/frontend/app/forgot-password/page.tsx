@@ -7,6 +7,7 @@ import { Brain, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Navigation } from '../../components/Navigation';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ForgotPasswordPage() {
@@ -17,14 +18,23 @@ export default function ForgotPasswordPage() {
 
   const { resetPassword } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
-    resetPassword(email);
-    setEmailSent(true);
-    setIsSubmitting(false);
+    try {
+      await resetPassword(email);
+      setEmailSent(true);
+    } catch (submissionError) {
+      const message =
+        submissionError instanceof Error
+          ? submissionError.message
+          : 'No pudimos enviar las instrucciones. Inténtalo nuevamente.';
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (emailSent) {
@@ -127,14 +137,14 @@ export default function ForgotPasswordPage() {
                   Correo Electrónico
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 pl-10 border border-input bg-background rounded-md text-sm
-                             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    className="pl-10"
                     placeholder="tu@email.com"
+                    autoComplete="email"
                     required
                   />
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
