@@ -445,7 +445,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({
+          token: idToken,
+          idToken,
+        }),
       })
 
       if (!response.ok) {
