@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { postLoginNavigation } from "@/src/config/post-login-navigation"
 
 import { NavigationGroup } from "./navigation-group"
@@ -16,14 +17,16 @@ const getQuickActions = () =>
 
 export function SidebarNav({
   navigation = postLoginNavigation,
+  className,
 }: {
   navigation?: typeof postLoginNavigation
+  className?: string
 }) {
   const pathname = usePathname() ?? ""
   const quickActions = getQuickActions()
 
   return (
-    <aside className="hidden border-r bg-muted/10 lg:block">
+    <aside className={cn("border-r bg-muted/10", className)}>
       <div className="flex h-full w-72 flex-col">
         <div className="flex h-16 items-center px-6">
           <Link
