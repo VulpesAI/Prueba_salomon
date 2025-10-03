@@ -56,6 +56,10 @@ export default function DemoPage() {
 
   useEffect(() => {
     shareSessionId(sessionId);
+
+    return () => {
+      shareSessionId(null);
+    };
   }, [sessionId, shareSessionId]);
 
   useEffect(() => {

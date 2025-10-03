@@ -575,7 +575,7 @@ const buildNotificationsFromStatement = (
 
 type DemoFinancialDataContextValue = {
   sessionId: string | null
-  setSessionId: (sessionId: string) => void
+  setSessionId: (sessionId: string | null) => void
   statement: NormalizedStatement | null
   overview: DashboardOverviewResponse | null
   intelligence: DashboardIntelligenceResponse | null
@@ -619,7 +619,7 @@ export function DemoFinancialDataProvider({
   const [financialSummary, setFinancialSummary] =
     useState<FinancialSummary | null>(null)
 
-  const setSessionId = useCallback((value: string) => {
+  const setSessionId = useCallback((value: string | null) => {
     setSessionIdState(value)
   }, [])
 
@@ -638,9 +638,18 @@ export function DemoFinancialDataProvider({
       setNotifications(nextNotifications)
       setFinancialSummary(nextSummary)
 
-      queryClient.setQueryData(queryKeys.dashboard.overview(), nextOverview)
-      queryClient.setQueryData(queryKeys.dashboard.intelligence(), nextIntelligence)
-      queryClient.setQueryData(queryKeys.dashboard.notifications(), nextNotifications)
+      queryClient.setQueryData<DashboardOverviewResponse>(
+        queryKeys.dashboard.overview(),
+        nextOverview
+      )
+      queryClient.setQueryData<DashboardIntelligenceResponse>(
+        queryKeys.dashboard.intelligence(),
+        nextIntelligence
+      )
+      queryClient.setQueryData<DashboardNotificationsResponse>(
+        queryKeys.dashboard.notifications(),
+        nextNotifications
+      )
     },
     [queryClient]
   )
