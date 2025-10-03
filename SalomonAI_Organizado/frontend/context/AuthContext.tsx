@@ -176,12 +176,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const exchangeFirebaseUser = useCallback(
     async (firebaseUser: FirebaseUser) => {
       const idToken = await firebaseUser.getIdToken()
+      const loginPayload = { token: idToken, idToken } as const
+
       const response = await fetch(buildApiUrl("/auth/firebase-login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token: idToken, idToken }),
+        body: JSON.stringify(loginPayload),
       })
 
       if (!response.ok) {
