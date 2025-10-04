@@ -47,3 +47,22 @@ El proyecto incluye un modo demo que evita llamadas al backend y precarga datos 
    - Estas variables deshabilitan los refetch al iniciar la demo y mantienen los mismos formatos regionales que el frontend.
 
 Con estas variables activadas puedes navegar por el dashboard y el asistente sin levantar servicios adicionales: las consultas se resuelven desde el `DemoFinancialDataProvider` y los hooks evitan solicitudes HTTP reales.
+
+## Demo para inversionistas (post-login)
+
+La experiencia demo que se muestra a inversionistas utiliza exclusivamente variables públicas del frontend. Configura `frontend/.env.local` con los siguientes valores visibles por el cliente web:
+
+- `NEXT_PUBLIC_DEMO_MODE=true`
+- `NEXT_PUBLIC_DEFAULT_CURRENCY=CLP`
+- `NEXT_PUBLIC_DEFAULT_LOCALE=es-CL`
+
+La bandera `NEXT_PUBLIC_DEMO_MODE` habilita el recorrido guiado dentro de la sesión personal ficticia en pesos chilenos (CLP). Tras iniciar sesión con las credenciales compartidas para demos:
+
+1. Aterriza en el **dashboard** para revisar el resumen de flujo de caja y objetivos de corto plazo.
+2. Entra a **Transacciones** y aplica el filtro de categoría "Restaurantes" para resaltar el control de gastos cotidianos.
+3. Abre **Metas** y muestra el progreso de ahorro a mediano plazo con cifras autogeneradas en CLP.
+4. Visita **Alertas** para evidenciar las notificaciones proactivas sobre desvíos presupuestarios.
+5. Continúa al **Asistente** donde se ilustran recomendaciones personalizadas basadas en el historial simulado.
+6. Cierra la presentación con la **exportación CSV**, enfatizando cómo se puede compartir el historial financiero completo sin salir del flujo demo.
+
+Todo el trayecto funciona sobre datos embebidos en el bundle del cliente, por lo que no se requiere configuración adicional de servicios backend para la demostración.
