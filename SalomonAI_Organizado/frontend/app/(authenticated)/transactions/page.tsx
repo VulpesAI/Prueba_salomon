@@ -34,101 +34,106 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { esCL } from "@/i18n/es-CL"
+import { formatCurrency, formatCurrencyAbsolute, formatDate } from "@/lib/intl"
+
+const t = esCL.transactions.main
+
 const mockTransactions = [
   {
     id: "trx-001",
     date: "2024-03-12",
-    description: "Pago plataforma anuncios",
-    amount: -12450.75,
-    category: "Marketing",
-    status: "Conciliado",
-    channel: "Tarjeta crédito",
+    description: "Pago arriendo departamento",
+    amount: -550_000,
+    category: "Arriendo",
+    status: "Confirmada",
+    channel: "Transferencia bancaria",
   },
   {
     id: "trx-002",
     date: "2024-03-11",
-    description: "Ingreso suscripción enterprise",
-    amount: 28999.0,
-    category: "Ventas",
-    status: "Conciliado",
-    channel: "Transferencia",
+    description: "Depósito sueldo",
+    amount: 1_650_000,
+    category: "Ingresos",
+    status: "Confirmada",
+    channel: "Depósito automático",
   },
   {
     id: "trx-003",
     date: "2024-03-10",
-    description: "Factura proveedor logística",
-    amount: -7890.22,
-    category: "Operaciones",
-    status: "En revisión",
-    channel: "Débito automático",
+    description: "Compra supermercado Lider",
+    amount: -86_500,
+    category: "Supermercado",
+    status: "Confirmada",
+    channel: "Tarjeta de débito",
   },
   {
     id: "trx-004",
     date: "2024-03-09",
-    description: "Reembolso cliente premium",
-    amount: -1599.0,
-    category: "Ventas",
-    status: "Conciliado",
-    channel: "Tarjeta crédito",
+    description: "Aplicación transporte Didi",
+    amount: -6_500,
+    category: "Transporte",
+    status: "Confirmada",
+    channel: "Tarjeta de crédito",
   },
   {
     id: "trx-005",
     date: "2024-03-08",
-    description: "Pago SaaS analítica",
-    amount: -950.0,
-    category: "Tecnología",
+    description: "Cena restaurante italiano",
+    amount: -24_500,
+    category: "Restaurantes",
     status: "Pendiente",
-    channel: "Tarjeta crédito",
+    channel: "Tarjeta de crédito",
   },
   {
     id: "trx-006",
     date: "2024-03-07",
-    description: "Retiro de caja chica",
-    amount: -3000.0,
-    category: "Operaciones",
-    status: "Conciliado",
-    channel: "Efectivo",
+    description: "Pago cuenta de luz",
+    amount: -38_000,
+    category: "Servicios",
+    status: "Confirmada",
+    channel: "Débito automático",
   },
   {
     id: "trx-007",
     date: "2024-03-06",
-    description: "Ingreso campaña referidos",
-    amount: 5400.0,
-    category: "Marketing",
-    status: "Conciliado",
-    channel: "Transferencia",
+    description: "Suscripción streaming familiar",
+    amount: -12_990,
+    category: "Suscripciones",
+    status: "Revisar",
+    channel: "Tarjeta de crédito",
   },
   {
     id: "trx-008",
     date: "2024-03-05",
-    description: "Pago póliza seguros",
-    amount: -2200.0,
-    category: "Administración",
-    status: "Conciliado",
-    channel: "Transferencia",
+    description: "Reembolso seguro de salud",
+    amount: 45_000,
+    category: "Salud",
+    status: "Confirmada",
+    channel: "Transferencia bancaria",
   },
   {
     id: "trx-009",
     date: "2024-03-04",
-    description: "Ingreso marketplace",
-    amount: 3350.0,
-    category: "Ventas",
-    status: "Conciliado",
-    channel: "Pasarela digital",
+    description: "Recarga tarjeta Bip!",
+    amount: -5_000,
+    category: "Transporte",
+    status: "Confirmada",
+    channel: "Efectivo",
   },
   {
     id: "trx-010",
     date: "2024-03-03",
-    description: "Pago servicios nube",
-    amount: -1800.0,
-    category: "Tecnología",
-    status: "Conciliado",
-    channel: "Tarjeta crédito",
+    description: "Pago app de meditación",
+    amount: -5_990,
+    category: "Suscripciones",
+    status: "Confirmada",
+    channel: "Tarjeta de débito",
   },
 ]
 
-const categories = ["Todas", "Ventas", "Marketing", "Operaciones", "Tecnología", "Administración"]
-const statuses = ["Todos", "Conciliado", "En revisión", "Pendiente"]
+const categories = t.filters.categories
+const statuses = t.filters.statuses
 
 export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -168,7 +173,7 @@ export default function TransactionsPage() {
   const totalExpenses = mockTransactions
     .filter((transaction) => transaction.amount < 0)
     .reduce((acc, transaction) => acc + transaction.amount, 0)
-  const pendingReview = mockTransactions.filter((transaction) => transaction.status !== "Conciliado")
+  const pendingReview = mockTransactions.filter((transaction) => transaction.status !== "Confirmada")
     .length
 
   const toggleSelectAll = (checked: boolean) => {
@@ -203,25 +208,22 @@ export default function TransactionsPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Transacciones</h1>
-          <p className="text-muted-foreground">
-            Supervisa cada movimiento, activa reglas inteligentes y exporta los datos a tus
-            herramientas de BI.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground">{t.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link href="/transactions/classification">Ir a Clasificación</Link>
+            <Link href="/transactions/classification">{t.navigation.classification}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/transactions/summaries">Ver resúmenes</Link>
+            <Link href="/transactions/summaries">{t.navigation.summaries}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/transactions/advanced-search">Búsqueda avanzada</Link>
+            <Link href="/transactions/advanced-search">{t.navigation.advancedSearch}</Link>
           </Button>
           <Button asChild>
             <Link href="/transactions/export">
-              <Download className="mr-2 h-4 w-4" /> Nueva exportación
+              <Download className="mr-2 h-4 w-4" /> {t.navigation.export}
             </Link>
           </Button>
         </div>
@@ -230,52 +232,51 @@ export default function TransactionsPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Ingresos del periodo</CardDescription>
-            <CardTitle className="text-3xl font-semibold">
-              {totalIncome.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}
-            </CardTitle>
+            <CardDescription>{t.stats.income.label}</CardDescription>
+            <CardTitle className="text-3xl font-semibold">{formatCurrency(totalIncome)}</CardTitle>
           </CardHeader>
           <CardContent>
             <Badge variant="secondary" className="gap-1">
-              <ArrowUpRight className="h-3 w-3" /> +12.4% vs. mes anterior
+              <ArrowUpRight className="h-3 w-3" /> {t.stats.income.badge}
             </Badge>
+            <p className="mt-2 text-sm text-muted-foreground">{t.stats.income.description}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Gastos del periodo</CardDescription>
+            <CardDescription>{t.stats.expenses.label}</CardDescription>
             <CardTitle className="text-3xl font-semibold">
-              {Math.abs(totalExpenses).toLocaleString("es-MX", { style: "currency", currency: "MXN" })}
+              {formatCurrencyAbsolute(totalExpenses)}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Badge variant="outline" className="gap-1 text-destructive">
-              <Tag className="h-3 w-3" /> Etiqueta desviaciones
+              <Tag className="h-3 w-3" /> {t.stats.expenses.badge}
             </Badge>
+            <p className="mt-2 text-sm text-muted-foreground">{t.stats.expenses.description}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Registros revisados hoy</CardDescription>
-            <CardTitle className="text-3xl font-semibold">36</CardTitle>
+            <CardDescription>{t.stats.reviews.label}</CardDescription>
+            <CardTitle className="text-3xl font-semibold">{mockTransactions.length - pendingReview}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Incluye reglas automáticas y aprobación manual del equipo financiero.
-            </p>
+            <p className="text-sm text-muted-foreground">{t.stats.reviews.helper}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Pendientes por validar</CardDescription>
+            <CardDescription>{t.stats.pending.label}</CardDescription>
             <CardTitle className="text-3xl font-semibold">{pendingReview}</CardTitle>
           </CardHeader>
           <CardContent>
             <Button variant="ghost" className="gap-2 px-0" asChild>
               <Link href="/transactions/classification">
-                <ListChecks className="h-4 w-4" /> Abrir bandeja de revisión
+                <ListChecks className="h-4 w-4" /> {t.stats.pending.cta}
               </Link>
             </Button>
+            <p className="mt-2 text-sm text-muted-foreground">{t.stats.pending.helper}</p>
           </CardContent>
         </Card>
       </div>
@@ -284,17 +285,20 @@ export default function TransactionsPage() {
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-1">
-              <CardTitle>Listado principal</CardTitle>
-              <CardDescription>
-                Filtra por múltiples dimensiones, aplica reglas y exporta resultados en segundos.
-              </CardDescription>
+              <CardTitle>{t.tableCard.title}</CardTitle>
+              <CardDescription>{t.tableCard.description}</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="gap-2">
-                <RefreshCcw className="h-4 w-4" /> Sincronizar ahora
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                aria-label={t.tableCard.refreshAria}
+              >
+                <RefreshCcw className="h-4 w-4" /> {t.tableCard.refresh}
               </Button>
               <Button size="sm" className="gap-2">
-                <ArrowUpRight className="h-4 w-4" /> Registrar movimiento
+                <ArrowUpRight className="h-4 w-4" /> {t.tableCard.add}
               </Button>
             </div>
           </div>
@@ -303,12 +307,13 @@ export default function TransactionsPage() {
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar por descripción, referencia o nota"
+              placeholder={t.tableCard.searchPlaceholder}
+              aria-label={t.tableCard.searchPlaceholder}
             />
             <div className="grid gap-3 sm:grid-cols-2">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger aria-label="Filtrar por categoría">
-                  <SelectValue placeholder="Categoría" />
+                  <SelectValue placeholder={t.tableCard.categoryPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -320,7 +325,7 @@ export default function TransactionsPage() {
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger aria-label="Filtrar por estado">
-                  <SelectValue placeholder="Estado" />
+                  <SelectValue placeholder={t.tableCard.statusPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {statuses.map((status) => (
@@ -332,7 +337,7 @@ export default function TransactionsPage() {
               </Select>
             </div>
             <Button variant="secondary" className="gap-2" size="sm">
-              <Filter className="h-4 w-4" /> Guardar vista
+              <Filter className="h-4 w-4" /> {t.tableCard.saveView}
             </Button>
           </div>
         </CardHeader>
@@ -349,20 +354,22 @@ export default function TransactionsPage() {
                 aria-label="Seleccionar todas las transacciones de la página"
               />
               <label htmlFor="select-all" className="text-muted-foreground">
-                {selectedRows.length > 0
-                  ? `${selectedRows.length} transacciones seleccionadas`
-                  : "Seleccionar página actual"}
+                <span aria-live="polite">
+                  {selectedRows.length > 0
+                    ? t.tableCard.selectionLabel.selected(selectedRows.length)
+                    : t.tableCard.selectionLabel.default}
+                </span>
               </label>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" disabled={selectedRows.length === 0}>
-                Aplicar etiqueta
+                {t.tableCard.bulkActions.tag}
               </Button>
               <Button variant="outline" size="sm" disabled={selectedRows.length === 0}>
-                Ejecutar regla
+                {t.tableCard.bulkActions.markReviewed}
               </Button>
               <Button variant="default" size="sm" disabled={selectedRows.length === 0}>
-                Exportar selección
+                {t.tableCard.bulkActions.export}
               </Button>
             </div>
           </div>
@@ -371,11 +378,11 @@ export default function TransactionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12" />
-                <TableHead>Detalle</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Canal</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead className="text-right">Estado</TableHead>
+                <TableHead>{t.tableCard.tableHeaders.detail}</TableHead>
+                <TableHead>{t.tableCard.tableHeaders.category}</TableHead>
+                <TableHead>{t.tableCard.tableHeaders.channel}</TableHead>
+                <TableHead className="text-right">{t.tableCard.tableHeaders.amount}</TableHead>
+                <TableHead className="text-right">{t.tableCard.tableHeaders.status}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -395,10 +402,7 @@ export default function TransactionsPage() {
                       <div className="space-y-1">
                         <p className="font-medium">{transaction.description}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(transaction.date).toLocaleDateString("es-MX", {
-                            day: "2-digit",
-                            month: "short",
-                          })}
+                          {formatDate(transaction.date)}
                         </p>
                       </div>
                     </TableCell>
@@ -407,15 +411,12 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{transaction.channel}</TableCell>
                     <TableCell className="text-right font-semibold">
-                      {transaction.amount.toLocaleString("es-MX", {
-                        style: "currency",
-                        currency: "MXN",
-                      })}
+                      {formatCurrency(transaction.amount)}
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge
-                        variant={transaction.status === "Conciliado" ? "secondary" : "outline"}
-                        className={transaction.status !== "Conciliado" ? "text-amber-600" : undefined}
+                        variant={transaction.status === "Confirmada" ? "secondary" : "outline"}
+                        className={transaction.status !== "Confirmada" ? "text-amber-600" : undefined}
                       >
                         {transaction.status}
                       </Badge>
@@ -426,7 +427,7 @@ export default function TransactionsPage() {
               {paginatedTransactions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    No encontramos transacciones con los filtros aplicados.
+                    {t.tableCard.empty}
                     <Button
                       variant="link"
                       className="ml-2 px-0"
@@ -436,7 +437,7 @@ export default function TransactionsPage() {
                         setStatusFilter("Todos")
                       }}
                     >
-                      Limpiar filtros
+                      {t.tableCard.clearFilters}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -485,7 +486,11 @@ export default function TransactionsPage() {
               </PaginationItem>
             </PaginationContent>
             <div className="text-sm text-muted-foreground">
-              Página {page} de {totalPages} · {filteredTransactions.length} resultados totales
+              {t.tableCard.paginationLabel({
+                page,
+                total: totalPages,
+                count: filteredTransactions.length,
+              })}
             </div>
           </Pagination>
         </CardContent>
@@ -493,30 +498,20 @@ export default function TransactionsPage() {
 
       <Card className="border border-dashed">
         <CardHeader>
-          <CardTitle>Integraciones y automatización</CardTitle>
-          <CardDescription>
-            Exporta resultados filtrados hacia data warehouses o dispara acciones en herramientas
-            externas.
-          </CardDescription>
+          <CardTitle>{t.tableCard.downloadCard.title}</CardTitle>
+          <CardDescription>{t.tableCard.downloadCard.description}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1 text-sm text-muted-foreground">
-            <p>
-              Las integraciones con BigQuery, Snowflake y Sheets pueden orquestarse desde este panel.
-            </p>
-            <p>
-              {/* TODO: Reemplazar estados mock con la respuesta real de los servicios de exportación */}
-              Conecta aquí el servicio real de exportación para mostrar trabajos recientes y estado en
-              tiempo real.
-            </p>
+            <p>{t.tableCard.downloadCard.helper}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" className="gap-2">
-              <Download className="h-4 w-4" /> Descargar CSV
+              <Download className="h-4 w-4" /> {t.tableCard.downloadCard.download}
             </Button>
             <Button variant="outline" className="gap-2" asChild>
               <Link href="/transactions/summaries">
-                <ArrowUpRight className="h-4 w-4" /> Ver resumen ejecutivo
+                <ArrowUpRight className="h-4 w-4" /> {t.tableCard.downloadCard.summary}
               </Link>
             </Button>
           </div>

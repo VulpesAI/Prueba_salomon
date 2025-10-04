@@ -33,47 +33,36 @@ import {
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 
+import { esCL } from "@/i18n/es-CL"
+
 const profileSchema = z.object({
   fullName: z
     .string()
-    .min(2, "Ingresa al menos 2 caracteres")
-    .max(120, "Nombre demasiado largo"),
-  email: z.string().email("Ingresa un correo válido"),
+    .min(2, esCL.settings.profile.validation.fullName.min)
+    .max(120, esCL.settings.profile.validation.fullName.max),
+  email: z.string().email(esCL.settings.profile.validation.email),
   phone: z
     .string()
-    .min(8, "El teléfono debe tener al menos 8 dígitos")
-    .max(20, "Verifica el teléfono"),
-  taxId: z.string().optional(),
+    .min(9, esCL.settings.profile.validation.phone.min)
+    .max(20, esCL.settings.profile.validation.phone.max),
 })
 
 const preferencesSchema = z.object({
-  language: z.string().min(2, "Selecciona un idioma"),
-  currency: z.string().min(1, "Selecciona una moneda"),
-  timezone: z.string().min(2, "Selecciona una zona horaria"),
+  language: z.string().min(2, esCL.settings.profile.validation.language),
+  currency: z.string().min(1, esCL.settings.profile.validation.currency),
+  timezone: z.string().min(2, esCL.settings.profile.validation.timezone),
   weeklyDigest: z.boolean(),
-  betaAccess: z.boolean(),
+  goalReminders: z.boolean(),
 })
 
 type ProfileFormValues = z.infer<typeof profileSchema>
 type PreferencesFormValues = z.infer<typeof preferencesSchema>
 
-const integrationsCatalogue = [
-  {
-    id: "google-calendar",
-    name: "Google Calendar",
-    description: "Sincroniza eventos financieros con tu agenda personal.",
-  },
-  {
-    id: "notion",
-    name: "Notion",
-    description: "Envía resúmenes diarios a tu espacio de trabajo.",
-  },
-  {
-    id: "hubspot",
-    name: "HubSpot",
-    description: "Comparte actividades relevantes con tu CRM.",
-  },
-]
+const profileCopy = esCL.settings.profile.forms.profile
+const preferencesCopy = esCL.settings.profile.forms.preferences
+const integrationsCopy = esCL.settings.profile.integrations
+const defaults = esCL.settings.profile.defaults
+const integrationsCatalogue = integrationsCopy.catalogue
 
 export default function SettingsProfilePage() {
   const [profileStatus, setProfileStatus] = React.useState<
@@ -84,30 +73,25 @@ export default function SettingsProfilePage() {
   >("idle")
   const [connectedIntegrations, setConnectedIntegrations] = React.useState<
     Record<string, boolean>
-  >({
-    "google-calendar": true,
-    notion: false,
-    hubspot: false,
-  })
+  >({ ...defaults.integrations })
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: "María González",
-      email: "maria@empresa.com",
-      phone: "+52 55 1234 5678",
-      taxId: "MAGO850101XX1",
+      fullName: defaults.fullName,
+      email: defaults.email,
+      phone: defaults.phone,
     },
   })
 
   const preferencesForm = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
-      language: "Español (Latam)",
-      currency: "MXN",
-      timezone: "GMT-6 Ciudad de México",
-      weeklyDigest: true,
-      betaAccess: false,
+      language: defaults.language,
+      currency: defaults.currency,
+      timezone: defaults.timezone,
+      weeklyDigest: defaults.weeklyDigest,
+      goalReminders: defaults.goalReminders,
     },
   })
 
@@ -142,10 +126,8 @@ export default function SettingsProfilePage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Información básica</CardTitle>
-            <CardDescription>
-              Actualiza los datos que se utilizan en documentos y resúmenes.
-            </CardDescription>
+            <CardTitle>{profileCopy.title}</CardTitle>
+            <CardDescription>{profileCopy.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...profileForm}>
@@ -158,12 +140,16 @@ export default function SettingsProfilePage() {
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre completo</FormLabel>
+                      <FormLabel>{profileCopy.labels.fullName}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Como aparecerá en los reportes" {...field} />
+                        <Input
+                          placeholder={profileCopy.placeholders.fullName}
+                          {...field}
+                          aria-label={profileCopy.labels.fullName}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Usa tu nombre legal para facturación.
+                        {profileCopy.descriptions.fullName}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -174,12 +160,17 @@ export default function SettingsProfilePage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Correo electrónico</FormLabel>
+                      <FormLabel>{profileCopy.labels.email}</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="nombre@empresa.com" {...field} />
+                        <Input
+                          type="email"
+                          placeholder={profileCopy.placeholders.email}
+                          {...field}
+                          aria-label={profileCopy.labels.email}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Lo utilizaremos para enviarte confirmaciones y alertas.
+                        {profileCopy.descriptions.email}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -190,28 +181,16 @@ export default function SettingsProfilePage() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Teléfono de contacto</FormLabel>
+                      <FormLabel>{profileCopy.labels.phone}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. +52 55 0000 0000" {...field} />
+                        <Input
+                          placeholder={profileCopy.placeholders.phone}
+                          {...field}
+                          aria-label={profileCopy.labels.phone}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Usado para verificaciones críticas.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={profileForm.control}
-                  name="taxId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>RFC / ID fiscal (opcional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ingresa tu RFC si necesitas facturas" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Se incluirá en CFDIs y reportes fiscales.
+                        {profileCopy.descriptions.phone}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -219,16 +198,20 @@ export default function SettingsProfilePage() {
                 />
                 <CardFooter className="flex flex-col items-start gap-2 px-0">
                   <Button type="submit" disabled={profileForm.formState.isSubmitting}>
-                    {profileForm.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
+                    {profileForm.formState.isSubmitting ? profileCopy.saving : profileCopy.submit}
                   </Button>
-                  {profileStatus === "success" && (
-                    <p className="text-sm text-green-600">Perfil actualizado correctamente.</p>
-                  )}
-                  {profileStatus === "error" && (
-                    <p className="text-sm text-destructive">
-                      No pudimos guardar los cambios. Intenta nuevamente.
-                    </p>
-                  )}
+                  <div aria-live="polite">
+                    {profileStatus === "success" && (
+                      <p className="text-sm text-green-600" role="status">
+                        {profileCopy.success}
+                      </p>
+                    )}
+                    {profileStatus === "error" && (
+                      <p className="text-sm text-destructive" role="status">
+                        {profileCopy.error}
+                      </p>
+                    )}
+                  </div>
                 </CardFooter>
               </form>
             </Form>
@@ -237,10 +220,8 @@ export default function SettingsProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Preferencias de producto</CardTitle>
-            <CardDescription>
-              Define cómo quieres que mostremos saldos, fechas y novedades.
-            </CardDescription>
+            <CardTitle>{preferencesCopy.title}</CardTitle>
+            <CardDescription>{preferencesCopy.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...preferencesForm}>
@@ -253,12 +234,16 @@ export default function SettingsProfilePage() {
                   name="language"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Idioma</FormLabel>
+                      <FormLabel>{preferencesCopy.labels.language}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. Español" {...field} />
+                        <Input
+                          placeholder={preferencesCopy.placeholders.language}
+                          {...field}
+                          aria-label={preferencesCopy.labels.language}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Afecta a reportes, correos y asistentes en pantalla.
+                        {preferencesCopy.descriptions.language}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -269,12 +254,16 @@ export default function SettingsProfilePage() {
                   name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Moneda predeterminada</FormLabel>
+                      <FormLabel>{preferencesCopy.labels.currency}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. MXN, USD" {...field} />
+                        <Input
+                          placeholder={preferencesCopy.placeholders.currency}
+                          {...field}
+                          aria-label={preferencesCopy.labels.currency}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Se usa para normalizar saldos multi-moneda.
+                        {preferencesCopy.descriptions.currency}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -285,12 +274,16 @@ export default function SettingsProfilePage() {
                   name="timezone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Zona horaria</FormLabel>
+                      <FormLabel>{preferencesCopy.labels.timezone}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. GMT-6" {...field} />
+                        <Input
+                          placeholder={preferencesCopy.placeholders.timezone}
+                          {...field}
+                          aria-label={preferencesCopy.labels.timezone}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Determina el corte de tus reportes diarios.
+                        {preferencesCopy.descriptions.timezone}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -303,9 +296,11 @@ export default function SettingsProfilePage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">Resúmenes semanales</FormLabel>
+                          <FormLabel className="text-base">
+                            {preferencesCopy.toggles.weeklyDigest.label}
+                          </FormLabel>
                           <FormDescription>
-                            Recibe un resumen consolidado de resultados cada lunes.
+                            {preferencesCopy.toggles.weeklyDigest.description}
                           </FormDescription>
                         </div>
                         <FormControl>
@@ -316,13 +311,15 @@ export default function SettingsProfilePage() {
                   />
                   <FormField
                     control={preferencesForm.control}
-                    name="betaAccess"
+                    name="goalReminders"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">Acceso a funciones beta</FormLabel>
+                          <FormLabel className="text-base">
+                            {preferencesCopy.toggles.goalReminders.label}
+                          </FormLabel>
                           <FormDescription>
-                            Prueba integraciones y reportes antes de su lanzamiento.
+                            {preferencesCopy.toggles.goalReminders.description}
                           </FormDescription>
                         </div>
                         <FormControl>
@@ -335,19 +332,21 @@ export default function SettingsProfilePage() {
                 <CardFooter className="flex flex-col items-start gap-2 px-0">
                   <Button type="submit" disabled={preferencesForm.formState.isSubmitting}>
                     {preferencesForm.formState.isSubmitting
-                      ? "Guardando..."
-                      : "Actualizar preferencias"}
+                      ? preferencesCopy.saving
+                      : preferencesCopy.submit}
                   </Button>
-                  {preferencesStatus === "success" && (
-                    <p className="text-sm text-green-600">
-                      Preferencias actualizadas correctamente.
-                    </p>
-                  )}
-                  {preferencesStatus === "error" && (
-                    <p className="text-sm text-destructive">
-                      Ocurrió un error al guardar. Intenta nuevamente más tarde.
-                    </p>
-                  )}
+                  <div aria-live="polite">
+                    {preferencesStatus === "success" && (
+                      <p className="text-sm text-green-600" role="status">
+                        {preferencesCopy.success}
+                      </p>
+                    )}
+                    {preferencesStatus === "error" && (
+                      <p className="text-sm text-destructive" role="status">
+                        {preferencesCopy.error}
+                      </p>
+                    )}
+                  </div>
                 </CardFooter>
               </form>
             </Form>
@@ -357,10 +356,8 @@ export default function SettingsProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Integraciones personales</CardTitle>
-          <CardDescription>
-            Controla qué herramientas externas pueden acceder a tu información.
-          </CardDescription>
+          <CardTitle>{integrationsCopy.title}</CardTitle>
+          <CardDescription>{integrationsCopy.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Accordion type="multiple" className="w-full">
@@ -375,13 +372,13 @@ export default function SettingsProfilePage() {
                     <div className="space-y-1">
                       <p className="text-sm font-medium">
                         {connectedIntegrations[integration.id]
-                          ? "Integración activa"
-                          : "Integración desactivada"}
+                          ? integrationsCopy.states.active
+                          : integrationsCopy.states.inactive}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {connectedIntegrations[integration.id]
-                          ? "Tus datos se sincronizan automáticamente."
-                          : "Actívala para comenzar a compartir datos."}
+                          ? integrationsCopy.states.activeHelper
+                          : integrationsCopy.states.inactiveHelper}
                       </p>
                     </div>
                     <Switch

@@ -28,39 +28,43 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 
+import { esCL } from "@/i18n/es-CL"
+
+const t = esCL.transactions.classification
+
 const mockRules = [
   {
     id: "rule-1",
-    name: "Clasificar suscripciones recurrentes",
-    conditions: ["Descripción contiene 'Stripe'", "Monto > 1000"],
-    action: "Asignar categoría Ventas",
-    accuracy: 98,
+    name: "Clasificar compras de supermercado",
+    conditions: ["Descripción contiene 'Jumbo'", "Monto > 40000"],
+    action: "Asignar categoría Supermercado",
+    accuracy: 96,
     status: "Activa",
-    lastRun: "2024-03-12 09:45",
+    lastRun: "2024-03-12 08:45",
   },
   {
     id: "rule-2",
-    name: "Viáticos en el extranjero",
-    conditions: ["Canal es Tarjeta crédito", "Moneda != MXN"],
-    action: "Agregar etiqueta 'Requiere comprobante'",
-    accuracy: 82,
+    name: "Detectar duplicados de suscripciones",
+    conditions: ["Descripción contiene 'Spotify'", "Monto = 12990"],
+    action: "Agregar etiqueta 'Revisar suscripción'",
+    accuracy: 84,
     status: "Borrador",
-    lastRun: "2024-03-11 17:20",
+    lastRun: "2024-03-11 18:10",
   },
   {
     id: "rule-3",
-    name: "Alertar gastos atípicos",
-    conditions: ["Monto < -5000", "Categoría != Presupuestada"],
-    action: "Enviar alerta al equipo financiero",
-    accuracy: 71,
+    name: "Avisar cuando sube el transporte",
+    conditions: ["Categoría = Transporte", "Monto > 10000"],
+    action: "Enviar recordatorio de presupuesto",
+    accuracy: 73,
     status: "En prueba",
-    lastRun: "2024-03-10 08:10",
+    lastRun: "2024-03-10 07:30",
   },
   {
     id: "rule-4",
-    name: "Clasificar nómina",
-    conditions: ["Descripción contiene 'Nómina'"],
-    action: "Asignar categoría Nómina",
+    name: "Clasificar depósitos de sueldo",
+    conditions: ["Descripción contiene 'Sueldo'"],
+    action: "Asignar categoría Ingresos",
     accuracy: 99,
     status: "Activa",
     lastRun: "2024-03-09 19:05",
@@ -111,21 +115,18 @@ export default function TransactionsClassificationPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Clasificación inteligente</h1>
-          <p className="text-muted-foreground">
-            Automatiza el etiquetado de transacciones con reglas visuales y controla los resultados
-            antes de publicarlos.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground">{t.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link href="/transactions">Volver a transacciones</Link>
+            <Link href="/transactions">{t.navigation.backToTransactions}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/transactions/advanced-search">Búsqueda avanzada</Link>
+            <Link href="/transactions/advanced-search">{t.navigation.goToAdvancedSearch}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/transactions/summaries">Ver resúmenes</Link>
+            <Link href="/transactions/summaries">{t.navigation.goToSummaries}</Link>
           </Button>
         </div>
       </div>
@@ -133,47 +134,50 @@ export default function TransactionsClassificationPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Reglas activas</CardDescription>
+            <CardDescription>{t.stats.activeRules.label}</CardDescription>
             <CardTitle className="text-3xl font-semibold">12</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Incluye modelos automáticos entrenados.</p>
+            <p className="text-sm text-muted-foreground">{t.stats.activeRules.helper}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Movimientos automatizados</CardDescription>
+            <CardDescription>{t.stats.automatedMovements.label}</CardDescription>
             <CardTitle className="text-3xl font-semibold">2,430</CardTitle>
           </CardHeader>
           <CardContent>
             <Badge variant="secondary" className="gap-1">
               <Sparkles className="h-3 w-3" /> 86% sin intervención manual
             </Badge>
+            <p className="mt-2 text-sm text-muted-foreground">{t.stats.automatedMovements.helper}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Tasa de acierto</CardDescription>
+            <CardDescription>{t.stats.accuracy.label}</CardDescription>
             <CardTitle className="text-3xl font-semibold">93%</CardTitle>
           </CardHeader>
           <CardContent>
             <Button variant="ghost" className="px-0" asChild>
               <Link href="/transactions/advanced-search">
-                Revisa falsos positivos
+                {t.stats.accuracy.button}
                 <ArrowUpRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
+            <p className="mt-2 text-sm text-muted-foreground">{t.stats.accuracy.helper}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Última exportación</CardDescription>
+            <CardDescription>{t.stats.lastExport.label}</CardDescription>
             <CardTitle className="text-3xl font-semibold">Hace 3 h</CardTitle>
           </CardHeader>
           <CardContent>
             <Button variant="secondary" className="gap-2">
-              <Upload className="h-4 w-4" /> Exportar reglas
+              <Upload className="h-4 w-4" /> {t.stats.lastExport.button}
             </Button>
+            <p className="mt-2 text-sm text-muted-foreground">{t.stats.lastExport.helper}</p>
           </CardContent>
         </Card>
       </div>
@@ -182,18 +186,15 @@ export default function TransactionsClassificationPage() {
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="space-y-1">
-              <CardTitle>Constructor visual</CardTitle>
-              <CardDescription>
-                Diseña reglas arrastrando condiciones; guarda borradores y pruébalos sobre datos
-                históricos.
-              </CardDescription>
+              <CardTitle>{t.builder.title}</CardTitle>
+              <CardDescription>{t.builder.description}</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" /> Nueva regla
+                <Plus className="h-4 w-4" /> {t.builder.newRule}
               </Button>
               <Button variant="outline" size="sm" className="gap-2">
-                <Upload className="h-4 w-4" /> Importar JSON
+                <Upload className="h-4 w-4" /> {t.builder.import}
               </Button>
             </div>
           </div>
@@ -201,35 +202,43 @@ export default function TransactionsClassificationPage() {
         <CardContent className="space-y-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div className="space-y-3 rounded-lg border bg-muted/40 p-4">
-              <p className="text-sm font-medium text-muted-foreground">Condiciones</p>
+              <p className="text-sm font-medium text-muted-foreground">{t.builder.conditionsTitle}</p>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">Descripción contiene</Badge>
-                <Badge variant="outline">Monto mayor a</Badge>
-                <Badge variant="outline">Canal de pago</Badge>
-                <Badge variant="outline">Etiqueta existente</Badge>
+                {t.builder.conditionBadges.map((badge) => (
+                  <Badge key={badge} variant="outline">
+                    {badge}
+                  </Badge>
+                ))}
               </div>
               <Textarea
                 rows={4}
-                value={"Descripción contiene 'Stripe'\nMonto mayor a 1000"}
+                value={t.builder.textareaValue}
                 onChange={() => {
                   /* TODO: Reemplazar por actualización de la regla seleccionada desde el servicio real */
                 }}
+                aria-label={t.builder.conditionsTitle}
               />
             </div>
             <div className="space-y-3 rounded-lg border bg-muted/40 p-4">
-              <p className="text-sm font-medium text-muted-foreground">Acciones</p>
+              <p className="text-sm font-medium text-muted-foreground">{t.builder.actionsTitle}</p>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">Categorizar</Badge>
-                <Badge variant="secondary">Etiquetar</Badge>
-                <Badge variant="secondary">Notificar</Badge>
+                {t.builder.actionBadges.map((badge) => (
+                  <Badge key={badge} variant="secondary">
+                    {badge}
+                  </Badge>
+                ))}
               </div>
-              <Input placeholder="Ej. Asignar categoría Ventas" defaultValue="Asignar categoría Ventas" />
+              <Input
+                placeholder={t.builder.actionPlaceholder}
+                defaultValue={t.builder.actionPlaceholder}
+                aria-label={t.builder.actionPlaceholder}
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm">Probar contra últimos 30 días</Button>
+            <Button size="sm">{t.builder.testButton}</Button>
             <Button variant="outline" size="sm">
-              Guardar como borrador
+              {t.builder.draftButton}
             </Button>
           </div>
         </CardContent>
@@ -239,10 +248,8 @@ export default function TransactionsClassificationPage() {
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-1">
-              <CardTitle>Motor de reglas</CardTitle>
-              <CardDescription>
-                Prioriza reglas, monitorea precisión y comparte configuraciones con tu equipo.
-              </CardDescription>
+              <CardTitle>{t.engine.title}</CardTitle>
+              <CardDescription>{t.engine.description}</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
               <Input
@@ -251,8 +258,9 @@ export default function TransactionsClassificationPage() {
                   setPage(1)
                   setSearchTerm(event.target.value)
                 }}
-                placeholder="Buscar por nombre de regla"
+                placeholder={t.engine.searchPlaceholder}
                 className="w-full sm:w-60"
+                aria-label={t.engine.searchPlaceholder}
               />
               <Select
                 value={statusFilter}
@@ -262,7 +270,7 @@ export default function TransactionsClassificationPage() {
                 }}
               >
                 <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Estado" />
+                  <SelectValue placeholder={t.engine.statusPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {ruleStatuses.map((status) => (
@@ -285,20 +293,22 @@ export default function TransactionsClassificationPage() {
                 aria-label="Seleccionar reglas"
               />
               <label htmlFor="select-all-rules" className="text-muted-foreground">
-                {selectedRules.length > 0
-                  ? `${selectedRules.length} reglas seleccionadas`
-                  : "Seleccionar página actual"}
+                <span aria-live="polite">
+                  {selectedRules.length > 0
+                    ? t.engine.selectionLabel.selected(selectedRules.length)
+                    : t.engine.selectionLabel.default}
+                </span>
               </label>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" disabled={selectedRules.length === 0}>
-                Publicar
+                {t.engine.bulkActions.apply}
               </Button>
               <Button variant="outline" size="sm" disabled={selectedRules.length === 0}>
-                Duplicar
+                {t.engine.bulkActions.duplicate}
               </Button>
               <Button variant="default" size="sm" disabled={selectedRules.length === 0}>
-                Ejecutar en lote
+                {t.engine.bulkActions.run}
               </Button>
             </div>
           </div>
@@ -307,11 +317,11 @@ export default function TransactionsClassificationPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12" />
-                <TableHead>Nombre</TableHead>
-                <TableHead>Condiciones</TableHead>
-                <TableHead>Acción</TableHead>
-                <TableHead className="text-right">Precisión</TableHead>
-                <TableHead className="text-right">Última ejecución</TableHead>
+                <TableHead>{t.engine.tableHeaders.name}</TableHead>
+                <TableHead>{t.engine.tableHeaders.conditions}</TableHead>
+                <TableHead>{t.engine.tableHeaders.action}</TableHead>
+                <TableHead className="text-right">{t.engine.tableHeaders.accuracy}</TableHead>
+                <TableHead className="text-right">{t.engine.tableHeaders.lastRun}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -346,7 +356,7 @@ export default function TransactionsClassificationPage() {
               {paginatedRules.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    Sin coincidencias para los filtros seleccionados.
+                    {t.engine.empty}
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -394,7 +404,11 @@ export default function TransactionsClassificationPage() {
               </PaginationItem>
             </PaginationContent>
             <div className="text-sm text-muted-foreground">
-              Página {page} de {totalPages} · {filteredRules.length} reglas
+              {t.engine.paginationLabel({
+                page,
+                total: totalPages,
+                count: filteredRules.length,
+              })}
             </div>
           </Pagination>
         </CardContent>
