@@ -40,14 +40,14 @@ import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts"
 
 const comparisonChartConfig = {
   retention: {
-    label: "Retención",
+    label: "Variación del gasto",
     theme: {
       light: "hsl(158 65% 45%)",
       dark: "hsl(158 65% 65%)",
     },
   },
   growth: {
-    label: "Crecimiento",
+    label: "Avance de ahorro",
     theme: {
       light: "hsl(220 90% 45%)",
       dark: "hsl(220 90% 70%)",
@@ -55,7 +55,8 @@ const comparisonChartConfig = {
   },
 } satisfies ChartConfig
 
-const formatPercentage = (value: number) => `${Math.round(value * 100)}%`
+const formatPercentage = (value: number) =>
+  `${value > 0 ? "+" : ""}${Math.round(value * 100)}%`
 
 export default function AnalyticsInsightsPage() {
   const { narratives, comparisons, executiveMetrics, actions, quickActions } =
@@ -66,23 +67,23 @@ export default function AnalyticsInsightsPage() {
       <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Insights avanzados
+            Insights de tus finanzas
           </h1>
           <p className="text-sm text-muted-foreground">
-            Convierte la analítica en historias accionables con cohortes,
-            resúmenes ejecutivos y enlaces directos al flujo financiero.
+            Convierte tus movimientos en historias accionables para administrar
+            gastos, ajustar tu presupuesto y avanzar hacia tus metas de ahorro.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild size="sm" variant="secondary">
             <Link href="/analytics/categories">
-              Revisar categorías
+              Revisar transacciones relacionadas
               <ArrowUpRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
           <Button asChild size="sm">
             <Link href="/assistant">
-              Crear narrativa
+              Generar historia personalizada
               <ArrowUpRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
@@ -94,34 +95,42 @@ export default function AnalyticsInsightsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
-              Narrativas generadas
+              Historias sobre tu dinero
             </CardTitle>
             <CardDescription>
-              Historias listas para compartir con directorio o stakeholders.
+              Descubre eventos relevantes en tus gastos y ahorros con contexto
+              listo para compartir.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {narratives.map((narrative) => (
-              <div key={narrative.id} className="rounded-lg border border-dashed p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="text-base font-semibold">{narrative.title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {narrative.summary}
-                    </p>
+            {narratives.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aún no hay insights; conecta tus cuentas o carga datos de
+                ejemplo.
+              </p>
+            ) : (
+              narratives.map((narrative) => (
+                <div key={narrative.id} className="rounded-lg border border-dashed p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">{narrative.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {narrative.summary}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="whitespace-nowrap">
+                      {narrative.highlight}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="whitespace-nowrap">
-                    {narrative.highlight}
-                  </Badge>
+                  <Button asChild className="mt-3" size="sm" variant="outline">
+                    <Link href={narrative.href}>
+                      Revisar detalle relacionado
+                      <ArrowUpRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
                 </div>
-                <Button asChild className="mt-3" size="sm" variant="outline">
-                  <Link href={narrative.href}>
-                    Abrir módulo relacionado
-                    <ArrowUpRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -129,69 +138,90 @@ export default function AnalyticsInsightsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Columns className="h-5 w-5 text-indigo-500" />
-              Comparativo de cohortes
+              Comparativo de hábitos
             </CardTitle>
             <CardDescription>
-              Visualiza diferencias clave en retención, crecimiento y CLV.
+              Compara cómo cambian tus gastos y avances de ahorro entre
+              categorías relevantes.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={comparisonChartConfig} className="h-[320px] w-full">
-              <BarChart data={comparisons}>
-                <CartesianGrid strokeDasharray="4 4" vertical={false} />
-                <XAxis dataKey="cohort" tickLine={false} axisLine={false} />
-                <YAxis
-                  yAxisId="left"
-                  orientation="left"
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={formatPercentage}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
-                />
-                <Legend />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) =>
-                        name === "clv"
-                          ? [
-                              new Intl.NumberFormat("es-CL", {
-                                style: "currency",
-                                currency: "CLP",
-                                maximumFractionDigits: 0,
-                              }).format(Number(value)),
-                              "CLV",
-                            ]
-                          : [formatPercentage(Number(value)), comparisonChartConfig[name as keyof typeof comparisonChartConfig]?.label ?? name]
+            {comparisons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aún no hay insights; conecta tus cuentas o carga datos de
+                ejemplo.
+              </p>
+            ) : (
+              <>
+                <ChartContainer config={comparisonChartConfig} className="h-[320px] w-full">
+                  <BarChart data={comparisons}>
+                    <CartesianGrid strokeDasharray="4 4" vertical={false} />
+                    <XAxis dataKey="cohort" tickLine={false} axisLine={false} />
+                    <YAxis
+                      yAxisId="left"
+                      orientation="left"
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={formatPercentage}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                    />
+                    <Legend />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) =>
+                            name === "clv"
+                              ? [
+                                  new Intl.NumberFormat("es-CL", {
+                                    style: "currency",
+                                    currency: "CLP",
+                                    maximumFractionDigits: 0,
+                                  }).format(Number(value)),
+                                  "Gasto promedio mensual",
+                                ]
+                              : [
+                                  formatPercentage(Number(value)),
+                                  comparisonChartConfig[name as keyof typeof comparisonChartConfig]?.label ?? name,
+                                ]
+                          }
+                        />
                       }
                     />
-                  }
-                />
-                <Bar
-                  yAxisId="left"
-                  dataKey="retention"
-                  fill="var(--color-retention)"
-                  radius={[6, 6, 0, 0]}
-                />
-                <Bar
-                  yAxisId="left"
-                  dataKey="growth"
-                  fill="var(--color-growth)"
-                  radius={[6, 6, 0, 0]}
-                />
-                <Bar yAxisId="right" dataKey="clv" fill="hsl(27 96% 61%)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-            <p className="mt-4 text-sm text-muted-foreground">
-              CLV expresado en pesos chilenos. Retención y crecimiento calculados
-              a 6 meses después de la adquisición.
-            </p>
+                    <Bar
+                      yAxisId="left"
+                      dataKey="retention"
+                      fill="var(--color-retention)"
+                      radius={[6, 6, 0, 0]}
+                      name="Variación del gasto"
+                    />
+                    <Bar
+                      yAxisId="left"
+                      dataKey="growth"
+                      fill="var(--color-growth)"
+                      radius={[6, 6, 0, 0]}
+                      name="Avance de ahorro"
+                    />
+                    <Bar
+                      yAxisId="right"
+                      dataKey="clv"
+                      fill="hsl(27 96% 61%)"
+                      radius={[6, 6, 0, 0]}
+                      name="Gasto promedio mensual"
+                    />
+                  </BarChart>
+                </ChartContainer>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Los montos están expresados en pesos chilenos e incluyen tus
+                  gastos promedio en cada categoría.
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -201,43 +231,51 @@ export default function AnalyticsInsightsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Radar className="h-5 w-5 text-rose-500" />
-              Resumen ejecutivo
+              Resumen de tu situación
             </CardTitle>
             <CardDescription>
-              KPIs clave para compartir con stakeholders en segundos.
+              Indicadores clave para saber cómo vas con tu presupuesto y tus
+              metas.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
-              {executiveMetrics.map((metric) => (
-                <div
-                  key={metric.title}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div>
-                    <p className="text-sm text-muted-foreground">{metric.title}</p>
-                    <p className="text-lg font-semibold">{metric.value}</p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      metric.tone === "positive"
-                        ? "border-emerald-500 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-200"
-                        : metric.tone === "negative"
-                        ? "border-red-500 text-red-600 dark:border-red-500/60 dark:text-red-200"
-                        : "border-muted-foreground/40 text-muted-foreground",
-                    )}
+              {executiveMetrics.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aún no hay insights; conecta tus cuentas o carga datos de
+                  ejemplo.
+                </p>
+              ) : (
+                executiveMetrics.map((metric) => (
+                  <div
+                    key={metric.title}
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
-                    {metric.delta}
-                  </Badge>
-                </div>
-              ))}
+                    <div>
+                      <p className="text-sm text-muted-foreground">{metric.title}</p>
+                      <p className="text-lg font-semibold">{metric.value}</p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        metric.tone === "positive"
+                          ? "border-emerald-500 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-200"
+                          : metric.tone === "negative"
+                          ? "border-red-500 text-red-600 dark:border-red-500/60 dark:text-red-200"
+                          : "border-muted-foreground/40 text-muted-foreground",
+                      )}
+                    >
+                      {metric.delta}
+                    </Badge>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
           <CardFooter>
             <Button asChild size="sm" variant="outline">
               <Link href="/alerts">
-                Configurar alertas clave
+                Ajustar presupuesto
                 <ArrowUpRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
@@ -248,10 +286,11 @@ export default function AnalyticsInsightsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-purple-500" />
-              Próximos pasos sugeridos
+              Recomendaciones para ti
             </CardTitle>
             <CardDescription>
-              Alinea responsables y módulos relacionados a cada insight.
+              Sigue estas acciones para optimizar tus gastos y alcanzar tus
+              metas personales.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -264,20 +303,28 @@ export default function AnalyticsInsightsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {actions.map((action) => (
-                  <TableRow key={action.id}>
-                    <TableCell className="font-medium">{action.label}</TableCell>
-                    <TableCell>{action.description}</TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild size="sm" variant="secondary">
-                        <Link href={action.href}>
-                          Abrir
-                          <ArrowUpRight className="ml-1 h-4 w-4" />
-                        </Link>
-                      </Button>
+                {actions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">
+                      Aún no hay insights; conecta tus cuentas o carga datos de ejemplo.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  actions.map((action) => (
+                    <TableRow key={action.id}>
+                      <TableCell className="font-medium">{action.label}</TableCell>
+                      <TableCell>{action.description}</TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild size="sm" variant="secondary">
+                          <Link href={action.href}>
+                            Abrir
+                            <ArrowUpRight className="ml-1 h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -288,30 +335,36 @@ export default function AnalyticsInsightsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Acciones inmediatas
+            Atajos para actuar hoy
           </CardTitle>
           <CardDescription>
-            Conecta tus insights con módulos complementarios del flujo de
-            inteligencia financiera.
+            Complementa tus insights con herramientas que te ayudan a tomar
+            decisiones rápidas.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
-          {quickActions.map((action) => (
-            <div key={action.id} className="flex flex-col justify-between rounded-lg border p-4">
-              <div className="space-y-1">
-                <h3 className="font-semibold">{action.label}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {action.description}
-                </p>
+          {quickActions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aún no hay insights; conecta tus cuentas o carga datos de ejemplo.
+            </p>
+          ) : (
+            quickActions.map((action) => (
+              <div key={action.id} className="flex flex-col justify-between rounded-lg border p-4">
+                <div className="space-y-1">
+                  <h3 className="font-semibold">{action.label}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {action.description}
+                  </p>
+                </div>
+                <Button asChild className="mt-4" size="sm" variant="outline">
+                  <Link href={action.href}>
+                    Abrir
+                    <ArrowUpRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
-              <Button asChild className="mt-4" size="sm" variant="outline">
-                <Link href={action.href}>
-                  Abrir módulo
-                  <ArrowUpRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          ))}
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
