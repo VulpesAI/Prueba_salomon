@@ -1,3 +1,7 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Menu, X } from "lucide-react";
@@ -5,6 +9,21 @@ import { useState } from "react";
 
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const router = useRouter();
+
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleLogin = () => {
+    setIsMenuOpen(false);
+    router.push("/login");
+  };
+
+  /**
+   * El CTA "Probar Gratis" lleva a la sección `#contact`, definida en Contact.tsx.
+   * El botón "Ver Demo" del hero utiliza la sección `#demo`, provista por InteractiveDemo.tsx.
+   */
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-primary/20">
@@ -40,16 +59,16 @@ export const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
+            <Button
+              asChild
+              variant="ghost"
               className="text-muted-foreground hover:text-foreground"
-              onClick={() => alert('Funcionalidad de login próximamente')}
             >
-              Iniciar Sesión
+              <Link href="/login">Iniciar Sesión</Link>
             </Button>
-            <Button 
+            <Button
               className="bg-gradient-primary hover:opacity-90"
-              onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => scrollToSection("contact")}
             >
               Probar Gratis
             </Button>
@@ -68,31 +87,43 @@ export const Navigation = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-primary/20">
             <div className="flex flex-col space-y-4">
-              <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a
+                href="#features"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Funciones
               </a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a
+                href="#pricing"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Precios
               </a>
-              <a href="#contact" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a
+                href="#contact"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  scrollToSection("contact");
+                }}
+              >
                 Contacto
               </a>
               <div className="pt-4 space-y-2">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full justify-start"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    alert('Funcionalidad de login próximamente');
-                  }}
+                  onClick={handleLogin}
                 >
                   Iniciar Sesión
                 </Button>
-                <Button 
+                <Button
                   className="w-full bg-gradient-primary hover:opacity-90"
                   onClick={() => {
                     setIsMenuOpen(false);
-                    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                    scrollToSection("contact");
                   }}
                 >
                   Probar Gratis
