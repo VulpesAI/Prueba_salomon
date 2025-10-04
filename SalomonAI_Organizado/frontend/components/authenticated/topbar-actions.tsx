@@ -81,8 +81,10 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
           </Button>
         ))}
       </div>
-      <Button variant="ghost" size="icon" aria-label="Notificaciones">
-        <Bell className="h-5 w-5" />
+      <Button variant="ghost" size="icon" asChild>
+        <Link href="/notifications" aria-label="Notificaciones" className="flex items-center justify-center">
+          <Bell className="h-5 w-5" />
+        </Link>
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
