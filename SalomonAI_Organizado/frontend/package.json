@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:demo": "NEXT_PUBLIC_DEMO_MODE=true next dev",
     "build": "next build",
-    "build:demo": "NEXT_PUBLIC_DEMO_MODE=true next build",
+    "build:demo": "NEXT_PUBLIC_DEMO_MODE=true NEXT_SHOULD_EXPORT=true next build",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "NEXT_PUBLIC_DEMO_MODE=true next lint --fix",
