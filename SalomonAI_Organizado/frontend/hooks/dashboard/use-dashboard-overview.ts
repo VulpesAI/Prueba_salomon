@@ -6,13 +6,17 @@ import { queryKeys } from "@/config/query-keys"
 import { useApiQuery } from "@/hooks/use-api"
 import { getDashboardOverview } from "@/services/dashboard"
 import type { DashboardOverviewResponse } from "@/types/dashboard"
-import { useDemoFinancialData } from "@/context/DemoFinancialDataContext"
+import {
+  IS_DEMO_MODE,
+  useDemoFinancialData,
+} from "@/context/DemoFinancialDataContext"
 
 type OverviewQueryResult = DashboardOverviewResponse | undefined
 
 export const useDashboardOverview = () => {
   const { overview } = useDemoFinancialData()
   const hasLocalOverview = Boolean(overview)
+  const isDemoMode = IS_DEMO_MODE
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
@@ -23,21 +27,29 @@ export const useDashboardOverview = () => {
     queryKey: queryKeys.dashboard.overview(),
     queryFn: (_, context) => getDashboardOverview({ signal: context.signal }),
     staleTime: 60_000,
-    enabled: !hasLocalOverview,
+    enabled: !isDemoMode && !hasLocalOverview,
     initialData: overview ?? undefined,
   })
 
   const overviewData = overview ?? overviewQuery.data
 
-  const errorMessage = hasLocalOverview
+  const errorMessage = isDemoMode
     ? null
-    : overviewQuery.error
-      ? overviewQuery.error.message || "No pudimos cargar el resumen financiero."
-      : null
+    : hasLocalOverview
+      ? null
+      : overviewQuery.error
+        ? overviewQuery.error.message || "No pudimos cargar el resumen financiero."
+        : null
 
-  const isLoading = hasLocalOverview
+  const isLoading = isDemoMode
     ? false
-    : overviewQuery.isPending || overviewQuery.isFetching
+    : hasLocalOverview
+      ? false
+      : overviewQuery.isPending || overviewQuery.isFetching
+
+  const refresh = isDemoMode
+    ? async () => undefined
+    : overviewQuery.refetch
 
   return {
     totals: overviewData?.totals ?? null,
@@ -46,7 +58,7 @@ export const useDashboardOverview = () => {
     categoryBreakdown: overviewData?.categoryBreakdown ?? [],
     isLoading,
     error: errorMessage,
-    refresh: overviewQuery.refetch,
+    refresh,
     apiBaseUrl,
   }
 }

@@ -10,6 +10,10 @@ import {
 } from "@tanstack/react-query"
 
 import { AuthenticatedShell } from "@/components/authenticated/authenticated-shell"
+import {
+  DemoFinancialDataProvider,
+  IS_DEMO_MODE,
+} from "@/context/DemoFinancialDataContext"
 import { ReactQueryDevtools } from "@/components/react-query-devtools"
 
 type AuthenticatedLayoutClientProps = {
@@ -45,10 +49,16 @@ export default function AuthenticatedLayoutClient({
 
   const [state] = useState(() => dehydratedState)
 
+  const shell = <AuthenticatedShell>{children}</AuthenticatedShell>
+
   return (
     <QueryClientProvider client={queryClient}>
       <HydrationBoundary state={state}>
-        <AuthenticatedShell>{children}</AuthenticatedShell>
+        {IS_DEMO_MODE ? (
+          <DemoFinancialDataProvider>{shell}</DemoFinancialDataProvider>
+        ) : (
+          shell
+        )}
       </HydrationBoundary>
       {process.env.NODE_ENV === "development" ? <ReactQueryDevtools /> : null}
     </QueryClientProvider>

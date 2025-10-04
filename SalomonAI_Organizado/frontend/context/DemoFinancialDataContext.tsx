@@ -1,6 +1,13 @@
 'use client'
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import type { ReactNode } from 'react'
 
 import { useQueryClient } from '@tanstack/react-query'
@@ -18,6 +25,15 @@ import type {
 import type { FinancialSummary } from '@/hooks/useConversationEngine'
 import type { FinancialGoal, GoalsApiResponse, GoalPace } from '@/types/goals'
 import type { NormalizedStatement } from '@/lib/statements/parser'
+
+import { CHILE_DEMO_STATEMENT } from './demo-statement.fixture'
+
+const demoModeFlag = process.env.NEXT_PUBLIC_DEMO_MODE?.toLowerCase()
+export const IS_DEMO_MODE =
+  demoModeFlag === 'true' ||
+  demoModeFlag === '1' ||
+  demoModeFlag === 'yes' ||
+  demoModeFlag === 'y'
 
 const CATEGORY_COLORS = [
   '#1d4ed8',
@@ -654,14 +670,20 @@ export function DemoFinancialDataProvider({
     [queryClient]
   )
 
-  const reset = useCallback(() => {
-    setStatement(null)
-    setOverview(null)
-    setIntelligence(null)
-    setGoals(null)
-    setNotifications(null)
-    setFinancialSummary(null)
+  useEffect(() => {
+    if (!IS_DEMO_MODE) {
+      return
+    }
 
+    if (statement) {
+      return
+    }
+
+    setSessionIdState((current) => current ?? 'demo-session')
+    updateFromStatement(CHILE_DEMO_STATEMENT)
+  }, [statement, updateFromStatement, setSessionIdState])
+
+  const reset = useCallback(() => {
     queryClient.removeQueries({
       queryKey: queryKeys.dashboard.overview(),
       exact: true,
@@ -674,7 +696,21 @@ export function DemoFinancialDataProvider({
       queryKey: queryKeys.dashboard.notifications(),
       exact: true,
     })
-  }, [queryClient])
+
+    if (IS_DEMO_MODE) {
+      setSessionIdState('demo-session')
+      updateFromStatement(CHILE_DEMO_STATEMENT)
+      return
+    }
+
+    setSessionIdState(null)
+    setStatement(null)
+    setOverview(null)
+    setIntelligence(null)
+    setGoals(null)
+    setNotifications(null)
+    setFinancialSummary(null)
+  }, [queryClient, setSessionIdState, updateFromStatement])
 
   const value = useMemo<DemoFinancialDataContextValue>(
     () => ({

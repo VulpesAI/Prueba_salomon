@@ -14,7 +14,10 @@ import type {
   DashboardNotificationsResponse,
   UserNotificationPreferences,
 } from "@/types/dashboard"
-import { useDemoFinancialData } from "@/context/DemoFinancialDataContext"
+import {
+  IS_DEMO_MODE,
+  useDemoFinancialData,
+} from "@/context/DemoFinancialDataContext"
 
 type NotificationsQueryResult = DashboardNotificationsResponse | undefined
 
@@ -22,6 +25,7 @@ export const useDashboardNotifications = () => {
   const queryClient = useQueryClient()
   const { notifications: localNotifications } = useDemoFinancialData()
   const hasLocalNotifications = Boolean(localNotifications)
+  const isDemoMode = IS_DEMO_MODE
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
@@ -36,7 +40,7 @@ export const useDashboardNotifications = () => {
     queryKey: queryKeys.dashboard.notifications(),
     queryFn: (_, context) => getDashboardNotifications({ signal: context.signal }),
     staleTime: 45_000,
-    enabled: !hasLocalNotifications,
+    enabled: !isDemoMode && !hasLocalNotifications,
     initialData: localNotifications ?? undefined,
   })
 
@@ -61,19 +65,36 @@ export const useDashboardNotifications = () => {
   const notifications = notificationsData?.notifications ?? []
   const preferences = notificationsData?.preferences ?? null
 
-  const errorMessage = hasLocalNotifications
+  const errorMessage = isDemoMode
     ? null
-    : notificationsQuery.error
-      ? notificationsQuery.error.message || "No pudimos cargar las notificaciones."
-      : null
+    : hasLocalNotifications
+      ? null
+      : notificationsQuery.error
+        ? notificationsQuery.error.message || "No pudimos cargar las notificaciones."
+        : null
 
-  const isLoading = hasLocalNotifications
+  const isLoading = isDemoMode
     ? false
-    : notificationsQuery.isPending || notificationsQuery.isFetching
+    : hasLocalNotifications
+      ? false
+      : notificationsQuery.isPending || notificationsQuery.isFetching
 
-  const refresh = notificationsQuery.refetch
+  const refresh = isDemoMode
+    ? async () => undefined
+    : notificationsQuery.refetch
 
   const updatePreferences = async (preferencesInput: UserNotificationPreferences) => {
+    if (isDemoMode) {
+      queryClient.setQueryData<DashboardNotificationsResponse | undefined>(
+        queryKeys.dashboard.notifications(),
+        (previous) =>
+          previous
+            ? { ...previous, preferences: preferencesInput }
+            : { notifications: [], preferences: preferencesInput }
+      )
+      return
+    }
+
     await updatePreferencesMutation.mutateAsync(preferencesInput)
   }
 

@@ -13,7 +13,10 @@ import type {
   FeedbackStatus,
   RecommendationFeedbackPayload,
 } from "@/types/dashboard"
-import { useDemoFinancialData } from "@/context/DemoFinancialDataContext"
+import {
+  IS_DEMO_MODE,
+  useDemoFinancialData,
+} from "@/context/DemoFinancialDataContext"
 
 type IntelligenceQueryResult = DashboardIntelligenceResponse | undefined
 
@@ -24,6 +27,7 @@ export const useDashboardIntelligence = () => {
 
   const { intelligence } = useDemoFinancialData()
   const hasLocalIntelligence = Boolean(intelligence)
+  const isDemoMode = IS_DEMO_MODE
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
@@ -38,7 +42,7 @@ export const useDashboardIntelligence = () => {
     queryKey: queryKeys.dashboard.intelligence(),
     queryFn: (_, context) => getDashboardIntelligence({ signal: context.signal }),
     staleTime: 60_000,
-    enabled: !hasLocalIntelligence,
+    enabled: !isDemoMode && !hasLocalIntelligence,
     initialData: intelligence ?? undefined,
   })
 
@@ -73,20 +77,32 @@ export const useDashboardIntelligence = () => {
 
   const intelligenceData = intelligence ?? intelligenceQuery.data
 
-  const errorMessage = hasLocalIntelligence
+  const errorMessage = isDemoMode
     ? null
-    : intelligenceQuery.error
-      ? intelligenceQuery.error.message || "No pudimos cargar los datos analíticos."
-      : null
+    : hasLocalIntelligence
+      ? null
+      : intelligenceQuery.error
+        ? intelligenceQuery.error.message || "No pudimos cargar los datos analíticos."
+        : null
 
-  const isLoading = hasLocalIntelligence
+  const isLoading = isDemoMode
     ? false
-    : intelligenceQuery.isPending || intelligenceQuery.isFetching
+    : hasLocalIntelligence
+      ? false
+      : intelligenceQuery.isPending || intelligenceQuery.isFetching
 
   const sendRecommendationFeedback = async (
     recommendationId: string,
     feedback: RecommendationFeedbackPayload["feedback"],
   ) => {
+    if (isDemoMode) {
+      setRecommendationFeedback((previous) => ({
+        ...previous,
+        [recommendationId]: "sent",
+      }))
+      return
+    }
+
     setRecommendationFeedback((previous) => ({
       ...previous,
       [recommendationId]: "sending",

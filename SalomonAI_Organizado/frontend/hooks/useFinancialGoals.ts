@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useDemoFinancialData } from '@/context/DemoFinancialDataContext';
+import {
+  IS_DEMO_MODE,
+  useDemoFinancialData,
+} from '@/context/DemoFinancialDataContext';
 import type { FinancialGoal, GoalsApiResponse } from '@/types/goals';
 
 const FALLBACK_RESPONSE: GoalsApiResponse = {
@@ -83,9 +86,12 @@ const FALLBACK_RESPONSE: GoalsApiResponse = {
 
 export function useFinancialGoals(token?: string) {
   const { goals: demoGoals } = useDemoFinancialData();
+  const isDemoMode = IS_DEMO_MODE;
 
-  const [data, setData] = useState<GoalsApiResponse>(demoGoals ?? FALLBACK_RESPONSE);
-  const [isLoading, setIsLoading] = useState(() => !demoGoals);
+  const [data, setData] = useState<GoalsApiResponse>(
+    demoGoals ?? FALLBACK_RESPONSE
+  );
+  const [isLoading, setIsLoading] = useState(() => !demoGoals && !isDemoMode);
   const [error, setError] = useState<string | null>(null);
 
   const baseUrl = useMemo(() => {
@@ -93,7 +99,10 @@ export function useFinancialGoals(token?: string) {
   }, []);
 
   const fetchGoals = useCallback(async () => {
-    if (demoGoals) {
+    if (isDemoMode) {
+      setData(demoGoals ?? FALLBACK_RESPONSE);
+      setIsLoading(false);
+      setError(null);
       return;
     }
 
@@ -120,10 +129,10 @@ export function useFinancialGoals(token?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [baseUrl, demoGoals, token]);
+  }, [baseUrl, demoGoals, isDemoMode, token]);
 
   useEffect(() => {
-    if (demoGoals) {
+    if (isDemoMode && demoGoals) {
       setData(demoGoals);
       setIsLoading(false);
       setError(null);
@@ -131,13 +140,13 @@ export function useFinancialGoals(token?: string) {
     }
 
     void fetchGoals();
-  }, [demoGoals, fetchGoals]);
+  }, [demoGoals, fetchGoals, isDemoMode]);
 
   return {
     goals: data.goals,
     summary: data.summary,
     isLoading,
     error,
-    refresh: fetchGoals,
+    refresh: isDemoMode ? async () => undefined : fetchGoals,
   };
 }

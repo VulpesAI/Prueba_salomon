@@ -1,11 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import {
+  IS_DEMO_MODE,
+  useDemoFinancialData,
+} from '@/context/DemoFinancialDataContext';
+
 import type { FinancialSummary } from './useConversationEngine';
 
 export function useFinancialSummary(sessionId: string) {
-  const [summary, setSummary] = useState<FinancialSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { financialSummary: demoSummary } = useDemoFinancialData();
+  const isDemoMode = IS_DEMO_MODE;
+
+  const [summary, setSummary] = useState<FinancialSummary | null>(
+    isDemoMode ? demoSummary ?? null : null
+  );
+  const [isLoading, setIsLoading] = useState(
+    () => (isDemoMode ? !demoSummary : true)
+  );
   const [error, setError] = useState<string | null>(null);
 
   const baseUrl = useMemo(() => {
@@ -13,6 +26,13 @@ export function useFinancialSummary(sessionId: string) {
   }, []);
 
   const fetchSummary = useCallback(async () => {
+    if (isDemoMode) {
+      setSummary(demoSummary ?? null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
     if (!sessionId) return;
     setIsLoading(true);
     try {
@@ -28,11 +48,21 @@ export function useFinancialSummary(sessionId: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [baseUrl, sessionId]);
+  }, [baseUrl, demoSummary, isDemoMode, sessionId]);
 
   useEffect(() => {
     void fetchSummary();
   }, [fetchSummary]);
+
+  useEffect(() => {
+    if (!isDemoMode) {
+      return;
+    }
+
+    setSummary(demoSummary ?? null);
+    setIsLoading(!demoSummary);
+    setError(null);
+  }, [demoSummary, isDemoMode]);
 
   return {
     summary,
