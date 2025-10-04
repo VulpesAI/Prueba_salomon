@@ -56,7 +56,6 @@ export function SidebarNav({
         <div className="flex-1 space-y-6 overflow-y-auto px-4 pb-8">
           <Accordion
             type="multiple"
-            collapsible
             defaultValue={activeGroups.length ? activeGroups : undefined}
             className="space-y-6 pt-4"
           >
