@@ -51,12 +51,15 @@ const rootEnvPath = path.resolve(__dirname, '..', '.env');
 loadEnvFile(rootEnvPath);
 loadEnvFile(path.resolve(__dirname, '.env'));
 
+const shouldExport = process.env.NEXT_SHOULD_EXPORT === 'true';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: shouldExport ? 'export' : 'standalone',
   reactStrictMode: true,
   images: {
-    domains: ['localhost']
+    domains: ['localhost'],
+    unoptimized: shouldExport
   }
 };
 

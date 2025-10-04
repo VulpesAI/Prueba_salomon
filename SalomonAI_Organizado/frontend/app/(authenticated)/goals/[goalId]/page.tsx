@@ -61,6 +61,12 @@ type GoalDetailPageProps = {
   params: Promise<{ goalId: string }>
 }
 
+export function generateStaticParams() {
+  return goalsMock.map((goal) => ({
+    goalId: encodeURIComponent(goal.id),
+  }))
+}
+
 export default async function GoalDetailPage({
   params,
 }: GoalDetailPageProps) {

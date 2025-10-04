@@ -21,12 +21,19 @@ import {
 } from "@/components/ui/table"
 import {
   getInstitutionById,
+  getLinkedInstitutions,
   getRulesForInstitution,
   getSyncHistoryForInstitution,
 } from "@/services/accounts"
 
 type AccountDetailPageProps = {
   params: Promise<{ linkId: string }>
+}
+
+export function generateStaticParams() {
+  return getLinkedInstitutions().map((institution) => ({
+    linkId: encodeURIComponent(institution.id),
+  }))
 }
 
 export default async function AccountDetailPage({
