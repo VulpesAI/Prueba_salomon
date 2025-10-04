@@ -19,74 +19,111 @@ type UseAnalyticsInsightsResult = {
 }
 
 export const useAnalyticsInsights = (): UseAnalyticsInsightsResult => {
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("es-CL", {
+        style: "currency",
+        currency: "CLP",
+        maximumFractionDigits: 0,
+      }),
+    []
+  )
+
   const narratives = useMemo<InsightNarrative[]>(
     () => [
       {
-        id: "cash-story",
-        title: "Narrativa de caja saludable",
-        summary:
-          "El flujo operativo financia 82% del plan de inversión y permite reducir líneas de crédito en Q3.",
-        highlight: "Margen operativo +2.4 pp vs. trimestre anterior",
+        id: "restaurant-trend",
+        title: "Tus gastos en restaurantes subieron 28%",
+        summary: `En el último mes destinaste ${currencyFormatter.format(
+          185000,
+        )} a restaurantes, ${currencyFormatter.format(
+          41000,
+        )} más que tu promedio de los últimos tres meses.`,
+        highlight: "+28% vs. promedio trimestral",
+        href: "/analytics/categories",
+      },
+      {
+        id: "savings-goal",
+        title: "Llevas 65% de tu meta de ahorro semestral",
+        summary: `A la fecha acumulaste ${currencyFormatter.format(
+          520000,
+        )} en tu meta "Viaje", por lo que necesitas ${currencyFormatter.format(
+          280000,
+        )} adicionales para cumplirla en junio.`,
+        highlight: "Meta en curso",
         href: "/analytics/forecasts",
       },
       {
-        id: "retail-cohort",
-        title: "Cohorte retail resiliente",
-        summary:
-          "Clientes adquiridos en campañas navideñas sostienen ticket promedio 15% superior al resto tras 5 meses.",
-        highlight: "Tasa de retención 74%",
-        href: "/analytics/recommendations",
-      },
-      {
-        id: "cost-optimization",
-        title: "Palancas de eficiencia",
-        summary:
-          "Dos iniciativas en logística inteligente y renegociación cloud liberan $6.6M mensuales.",
-        highlight: "Break-even adelantado 6 semanas",
+        id: "duplicate-subs",
+        title: "Suscripciones duplicadas detectadas",
+        summary: `Pagaste dos veces ${currencyFormatter.format(
+          10990,
+        )} por servicios de streaming este mes. Cancela una suscripción para liberar presupuesto.`,
+        highlight: `${currencyFormatter.format(10990)} potencial de ahorro`,
         href: "/alerts",
       },
     ],
-    []
+    [currencyFormatter]
   )
 
   const comparisons = useMemo<InsightComparison[]>(
     () => [
-      { cohort: "Cohorte Q1", retention: 0.68, growth: 0.11, clv: 540000 },
-      { cohort: "Cohorte Q2", retention: 0.74, growth: 0.15, clv: 610000 },
-      { cohort: "Cohorte Q3", retention: 0.63, growth: 0.09, clv: 498000 },
-      { cohort: "Cohorte Premium", retention: 0.81, growth: 0.18, clv: 720000 },
+      { cohort: "Restaurantes", retention: 0.28, growth: -0.05, clv: 185000 },
+      { cohort: "Supermercado", retention: -0.12, growth: 0.07, clv: 142000 },
+      { cohort: "Transporte", retention: 0.04, growth: 0.12, clv: 68000 },
+      { cohort: "Suscripciones", retention: 0.19, growth: -0.02, clv: 45980 },
     ],
     []
   )
 
   const executiveMetrics = useMemo<InsightExecutiveMetric[]>(
     () => [
-      { title: "Ingresos recurrentes", value: "$54.2M", delta: "+6.3% MoM", tone: "positive" },
-      { title: "Eficiencia operativa", value: "82%", delta: "+2.1 pp", tone: "positive" },
-      { title: "Runway", value: "14 meses", delta: "+1 mes", tone: "neutral" },
-      { title: "Alertas críticas", value: "2 abiertas", delta: "-1 vs. semana pasada", tone: "positive" },
+      {
+        title: "Disponible para ahorrar este mes",
+        value: currencyFormatter.format(320000),
+        delta: `${currencyFormatter.format(45000)} vs. mes anterior`,
+        tone: "positive",
+      },
+      {
+        title: "Gasto fijo comprometido",
+        value: currencyFormatter.format(410000),
+        delta: `${currencyFormatter.format(12000)} adicional`,
+        tone: "negative",
+      },
+      {
+        title: "Tasa de ahorro",
+        value: "18% de tus ingresos",
+        delta: "+3 pp vs. objetivo",
+        tone: "positive",
+      },
+      {
+        title: "Pagos próximos a vencer",
+        value: "2 por confirmar",
+        delta: "Revisa en los próximos 3 días",
+        tone: "neutral",
+      },
     ],
-    []
+    [currencyFormatter]
   )
 
   const actions = useMemo<InsightAction[]>(
     () => [
       {
-        id: "share-board",
-        label: "Preparar resumen para directorio",
-        description: "Genera PDF con narrativa y anexos de cohortes en un clic.",
+        id: "review-restaurants",
+        label: "Analizar gasto en restaurantes",
+        description: "Revisa transacciones recientes y define un límite semanal.",
+        href: "/analytics/categories",
+      },
+      {
+        id: "schedule-transfer",
+        label: "Automatizar transferencia a tu meta",
+        description: "Agenda un traspaso mensual para asegurar el ahorro pendiente.",
         href: "/assistant",
       },
       {
-        id: "sync-campaign",
-        label: "Sincronizar campaña derivada",
-        description: "Activa recomendaciones focalizadas en cohorte premium.",
-        href: "/analytics/recommendations",
-      },
-      {
-        id: "track-decisions",
-        label: "Registrar decisiones",
-        description: "Documenta acuerdos y responsables asociados a este insight.",
+        id: "cancel-duplicate",
+        label: "Cancelar suscripción duplicada",
+        description: "Verifica cargos repetidos y cierra el servicio innecesario.",
         href: "/notifications",
       },
     ],
@@ -96,22 +133,22 @@ export const useAnalyticsInsights = (): UseAnalyticsInsightsResult => {
   const quickActions = useMemo<AnalyticsQuickAction[]>(
     () => [
       {
-        id: "open-forecasts",
-        label: "Ver pronósticos",
-        href: "/analytics/forecasts",
-        description: "Contrasta narrativas con escenarios cuantitativos.",
-      },
-      {
-        id: "configure-alerts",
-        label: "Configurar alertas",
+        id: "set-budget",
+        label: "Ajustar presupuesto mensual",
         href: "/alerts",
-        description: "Sigue los KPI críticos mencionados en el resumen ejecutivo.",
+        description: "Define alertas cuando un gasto exceda lo planificado.",
       },
       {
-        id: "launch-experiment",
-        label: "Diseñar nuevo experimento",
+        id: "explore-savings",
+        label: "Simular meta de ahorro",
+        href: "/analytics/forecasts",
+        description: "Proyecta cuánto acumularás si mantienes tu ritmo actual.",
+      },
+      {
+        id: "review-subscriptions",
+        label: "Gestionar suscripciones",
         href: "/analytics/recommendations",
-        description: "Evalúa impacto de la narrativa en campañas automatizadas.",
+        description: "Identifica servicios que puedes pausar o renegociar.",
       },
     ],
     []
