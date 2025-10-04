@@ -50,17 +50,12 @@ export const Navigation = () => {
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <Link href="/login">
-              <Button 
-                variant="ghost" 
-                className="text-muted-foreground hover:text-foreground"
-              >
+              <Button variant="ghost">
                 Iniciar Sesión
               </Button>
             </Link>
             <Link href="/signup">
-              <Button 
-                className="bg-gradient-primary hover:opacity-90"
-              >
+              <Button>
                 Probar Gratis
               </Button>
             </Link>
@@ -90,8 +85,8 @@ export const Navigation = () => {
               </Link>
               <div className="pt-4 space-y-2">
                 <Link href="/login" className="block">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full justify-start"
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -99,8 +94,8 @@ export const Navigation = () => {
                   </Button>
                 </Link>
                 <Link href="/signup" className="block">
-                  <Button 
-                    className="w-full bg-gradient-primary hover:opacity-90"
+                  <Button
+                    className="w-full"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Probar Gratis

@@ -101,7 +101,7 @@ export default function ProductoPage() {
               SalomonAI combina inteligencia artificial avanzada con conocimiento profundo del sistema financiero chileno para revolucionar cómo manejas tu dinero.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-lg px-8 py-3">
+              <Button size="lg" className="text-lg px-8 py-3">
                 <Zap className="w-5 h-5 mr-2" />
                 Comenzar Gratis
               </Button>

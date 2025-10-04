@@ -165,7 +165,7 @@ const InteractiveDemo = () => {
                       <Mic className="w-4 h-4" />
                     </Button>
                   </div>
-                  <Button onClick={handleSendQuery} className="bg-primary hover:bg-primary/90">
+                  <Button onClick={handleSendQuery}>
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
