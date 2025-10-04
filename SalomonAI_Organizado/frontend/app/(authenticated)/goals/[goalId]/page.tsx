@@ -1,4 +1,8 @@
+'use client'
+
 import Link from "next/link"
+import { useMemo } from "react"
+import { useParams } from "next/navigation"
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -18,106 +22,344 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { useFinancialGoals } from "@/hooks/useFinancialGoals"
+import type { FinancialGoal, GoalPace } from "@/types/goals"
 
-import { goalDetailsMock, goalsMock } from "../mock-data"
-
-const currencyFormatter = new Intl.NumberFormat("es-MX", {
+const currencyFormatter = new Intl.NumberFormat("es-CL", {
   style: "currency",
-  currency: "MXN",
+  currency: "CLP",
   maximumFractionDigits: 0,
 })
 
-const dateFormatter = new Intl.DateTimeFormat("es-MX", {
+const dateFormatter = new Intl.DateTimeFormat("es-CL", {
   day: "2-digit",
   month: "short",
   year: "numeric",
 })
 
-const timelineBadgeStyles = {
+const formatDate = (value: Date | string | null | undefined) => {
+  if (!value) return "Sin definir"
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return "Sin definir"
+  return dateFormatter.format(date)
+}
+
+const monthsDifference = (from: Date, to: Date) => {
+  const years = to.getFullYear() - from.getFullYear()
+  const months = to.getMonth() - from.getMonth()
+  const adjustment = to.getDate() >= from.getDate() ? 0 : -1
+  return years * 12 + months + adjustment
+}
+
+const getProgressValue = (goal: FinancialGoal) => {
+  const percentage = goal.metrics.progressPercentage ?? 0
+  return Math.max(0, Math.min(100, Math.round(percentage)))
+}
+
+const getNextContributionDate = (goal: FinancialGoal) => {
+  const checkpoints = [
+    goal.metrics.lastRecordedAt,
+    ...goal.progressHistory.map((item) => item.recordedAt),
+    goal.startDate,
+  ].filter((value): value is string => Boolean(value))
+
+  const baseDate = checkpoints
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? new Date()
+
+  const targetDate = new Date(goal.targetDate)
+
+  let candidate = new Date(baseDate)
+  candidate.setMonth(candidate.getMonth() + 1)
+
+  const now = new Date()
+  if (candidate.getTime() <= now.getTime()) {
+    candidate = new Date(now)
+    candidate.setDate(candidate.getDate() + 7)
+  }
+
+  if (!Number.isNaN(targetDate.getTime()) && candidate.getTime() > targetDate.getTime()) {
+    return targetDate
+  }
+
+  return candidate
+}
+
+const buildRecommendations = (goal: FinancialGoal) => {
+  const recommendations: string[] = []
+
+  if (goal.expectedMonthlyContribution && goal.expectedMonthlyContribution > 0) {
+    recommendations.push(
+      `Mantén un aporte mensual cercano a ${currencyFormatter.format(goal.expectedMonthlyContribution)} para cumplir tu plan.`,
+    )
+  } else {
+    recommendations.push(
+      "Define un aporte mensual automático para asegurar un progreso constante.",
+    )
+  }
+
+  const deviation = goal.metrics.deviationAmount
+  if (deviation < 0) {
+    recommendations.push(
+      `Refuerza tus aportes con ${currencyFormatter.format(Math.abs(deviation))} adicionales para volver a la ruta proyectada.`,
+    )
+  } else if (deviation > 0) {
+    recommendations.push(
+      `Tienes ${currencyFormatter.format(deviation)} por encima del plan; evalúa adelantar pagos o crear un nuevo objetivo.`,
+    )
+  } else {
+    recommendations.push(
+      "Revisa tus contribuciones recientes para mantener la consistencia respecto al plan original.",
+    )
+  }
+
+  const now = new Date()
+  const targetDate = new Date(goal.targetDate)
+  const remainingMonths = Number.isNaN(targetDate.getTime())
+    ? 0
+    : Math.max(0, monthsDifference(now, targetDate))
+
+  recommendations.push(
+    remainingMonths > 1
+      ? `Quedan aproximadamente ${remainingMonths} meses para esta meta; ajusta tus aportes si tu situación cambia.`
+      : "Estás próximo a alcanzar esta meta; monitorea los últimos movimientos para consolidarla.",
+  )
+
+  return Array.from(new Set(recommendations))
+}
+
+type TimelineStatus = "completed" | "upcoming" | "delayed"
+
+type TimelineItem = {
+  id: string
+  status: TimelineStatus
+  date: string | Date
+  title: string
+  description: string
+}
+
+const timelineBadgeStyles: Record<TimelineStatus, string> = {
   completed: "bg-emerald-500 text-white",
   upcoming: "bg-primary text-primary-foreground",
   delayed: "bg-amber-500 text-white",
 }
 
-const timelineDotStyles = {
+const timelineDotStyles: Record<TimelineStatus, string> = {
   completed: "bg-emerald-500 border-emerald-500/60",
   upcoming: "bg-primary border-primary/40",
   delayed: "bg-amber-500 border-amber-500/60",
 }
 
-const timelineLabels = {
+const timelineLabels: Record<TimelineStatus, string> = {
   completed: "Completado",
   upcoming: "Próximo",
   delayed: "Requiere atención",
 }
 
-const paceCopy: Record<"adelantada" | "en ruta" | "requiere atención", string> = {
-  adelantada: "Vas por delante del objetivo planeado, considera adelantar hitos claves.",
-  "en ruta": "Mantienes un ritmo saludable para llegar a la fecha objetivo.",
-  "requiere atención": "Incrementa aportes o reprograma compromisos para retomar el ritmo.",
+const paceCopy: Record<GoalPace, string> = {
+  ahead: "Vas por delante del objetivo planeado; considera adelantar hitos clave.",
+  on_track: "Mantienes un ritmo saludable para llegar a la fecha objetivo.",
+  off_track: "Incrementa tus aportes o reprograma compromisos para retomar el ritmo.",
+  completed: "Completaste esta meta; evalúa reasignar recursos a nuevos objetivos.",
 }
 
-type GoalDetailPageProps = {
-  params: Promise<{ goalId: string }>
+const buildTimeline = (goal: FinancialGoal): TimelineItem[] => {
+  const now = new Date()
+  const history = goal.progressHistory
+    .slice()
+    .sort(
+      (a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime(),
+    )
+
+  const items: TimelineItem[] = history.map((entry, index) => {
+    const recordedAt = new Date(entry.recordedAt)
+    const isPast = recordedAt.getTime() <= now.getTime()
+    const status: TimelineStatus = isPast
+      ? entry.expectedAmount && entry.actualAmount < entry.expectedAmount
+        ? "delayed"
+        : "completed"
+      : "upcoming"
+
+    const title = entry.note?.trim().length
+      ? entry.note
+      : `Registro de aporte ${index + 1}`
+
+    return {
+      id: entry.id,
+      status,
+      date: entry.recordedAt,
+      title,
+      description: `Saldo acumulado: ${currencyFormatter.format(entry.actualAmount)}`,
+    }
+  })
+
+  const targetStatus: TimelineStatus =
+    goal.metrics.pace === "completed"
+      ? "completed"
+      : goal.metrics.pace === "off_track"
+        ? "delayed"
+        : "upcoming"
+
+  items.push({
+    id: `${goal.id}-target`,
+    status: targetStatus,
+    date: goal.targetDate,
+    title: "Fecha objetivo",
+    description: `Meta de ${currencyFormatter.format(goal.targetAmount)}`,
+  })
+
+  return items
 }
 
-export function generateStaticParams() {
-  return goalsMock.map((goal) => ({
-    goalId: encodeURIComponent(goal.id),
-  }))
+type DerivedMetric = {
+  label: string
+  value: string
+  helper?: string
 }
 
-export default async function GoalDetailPage({
-  params,
-}: GoalDetailPageProps) {
-  const { goalId: encodedGoalId } = await params
-  const goalId = decodeURIComponent(encodedGoalId)
+type DerivedGoalDetail = {
+  id: string
+  title: string
+  description: string
+  category: string
+  currentAmount: number
+  targetAmount: number
+  monthlyContribution: number | null
+  pace: GoalPace
+  dueDate: string
+  nextContributionDate: Date
+  metrics: DerivedMetric[]
+  timeline: TimelineItem[]
+  insights: string[]
+  progress: number
+}
 
-  const listGoal = goalsMock.find((goal) => goal.id === goalId)
-  const detail =
-    goalDetailsMock[goalId] ??
-    (listGoal
-      ? {
-          id: listGoal.id,
-          title: listGoal.title,
-          description: listGoal.description,
-          category: listGoal.category,
-          currentAmount: listGoal.currentAmount,
-          targetAmount: listGoal.targetAmount,
-          dueDate: listGoal.dueDate,
-          monthlyContribution: listGoal.monthlyContribution,
-          pace: "en ruta" as const,
-          nextContributionDate: listGoal.dueDate,
-          metrics: [
-            {
-              label: "Progreso acumulado",
-              value: `${Math.min(100, Math.round((listGoal.currentAmount / listGoal.targetAmount) * 100))}%`,
-              helper: `${currencyFormatter.format(listGoal.currentAmount)} de ${currencyFormatter.format(listGoal.targetAmount)}`,
-            },
-            {
-              label: "Aporte mensual",
-              value: currencyFormatter.format(listGoal.monthlyContribution),
-              helper: "Promedio últimos 3 meses",
-            },
-            {
-              label: "Fecha objetivo",
-              value: dateFormatter.format(new Date(listGoal.dueDate)),
-            },
-          ],
-          timeline: [],
-          insights: listGoal.recommendations,
-        }
-      : null)
+const buildGoalDetail = (goal: FinancialGoal): DerivedGoalDetail => {
+  const progress = getProgressValue(goal)
+  const nextContributionDate = getNextContributionDate(goal)
+  const metrics: DerivedMetric[] = [
+    {
+      label: "Progreso acumulado",
+      value: `${progress}%`,
+      helper: `${currencyFormatter.format(goal.metrics.totalActual)} de ${currencyFormatter.format(goal.targetAmount)}`,
+    },
+    {
+      label: "Aporte mensual",
+      value:
+        goal.expectedMonthlyContribution && goal.expectedMonthlyContribution > 0
+          ? currencyFormatter.format(goal.expectedMonthlyContribution)
+          : "Sin definir",
+      helper:
+        goal.expectedMonthlyContribution && goal.expectedMonthlyContribution > 0
+          ? "Promedio sugerido según tu planificación."
+          : "Configura un aporte recurrente para automatizar tu avance.",
+    },
+    {
+      label: "Fecha objetivo",
+      value: formatDate(goal.targetDate),
+      helper: goal.metrics.eta ? `ETA proyectada: ${formatDate(goal.metrics.eta)}` : undefined,
+    },
+  ]
+
+  const timeline = buildTimeline(goal)
+  const insights = buildRecommendations(goal)
+
+  return {
+    id: goal.id,
+    title: goal.name,
+    description:
+      goal.description?.trim().length
+        ? goal.description
+        : "No registraste una descripción para esta meta.",
+    category: goal.category ?? "Sin categoría",
+    currentAmount: goal.metrics.totalActual,
+    targetAmount: goal.targetAmount,
+    monthlyContribution: goal.expectedMonthlyContribution,
+    pace: goal.metrics.pace,
+    dueDate: goal.targetDate,
+    nextContributionDate,
+    metrics,
+    timeline,
+    insights,
+    progress,
+  }
+}
+
+export default function GoalDetailPage() {
+  const params = useParams<{ goalId: string }>()
+  const { goals, isLoading, error } = useFinancialGoals()
+
+  const decodedGoalId = useMemo(() => {
+    const raw = params?.goalId ?? ""
+    try {
+      return decodeURIComponent(raw)
+    } catch (err) {
+      console.warn("[GoalDetailPage] Could not decode goal id", err)
+      return raw
+    }
+  }, [params?.goalId])
+
+  const goal = useMemo(
+    () => goals.find((item) => item.id === decodedGoalId),
+    [decodedGoalId, goals],
+  )
+
+  const detail = useMemo(
+    () => (goal ? buildGoalDetail(goal) : null),
+    [goal],
+  )
+
+  const backLink = (
+    <Link
+      href="/goals"
+      className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary"
+    >
+      <ArrowLeft className="h-4 w-4" /> Regresar a metas
+    </Link>
+  )
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        {backLink}
+        <Card>
+          <CardHeader>
+            <CardTitle>No pudimos cargar la meta solicitada</CardTitle>
+            <CardDescription>
+              {error}. Intenta nuevamente más tarde o revisa tu conexión.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild>
+              <Link href="/goals">Volver al listado</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isLoading && !detail) {
+    return (
+      <div className="space-y-4">
+        {backLink}
+        <Card>
+          <CardHeader>
+            <CardTitle>Cargando meta financiera</CardTitle>
+            <CardDescription>
+              Estamos preparando la información más reciente de tu objetivo seleccionado.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (!detail) {
     return (
       <div className="space-y-4">
-        <Link
-          href="/goals"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" /> Regresar a metas
-        </Link>
+        {backLink}
         <Card>
           <CardHeader>
             <CardTitle>Meta no encontrada</CardTitle>
@@ -135,18 +377,9 @@ export default async function GoalDetailPage({
     )
   }
 
-  const progress = detail.targetAmount
-    ? Math.min(100, Math.round((detail.currentAmount / detail.targetAmount) * 100))
-    : 0
-
   return (
     <div className="space-y-8">
-      <Link
-        href="/goals"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" /> Regresar al listado
-      </Link>
+      {backLink}
 
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
@@ -160,7 +393,7 @@ export default async function GoalDetailPage({
           <div className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium text-foreground">
-              Fecha objetivo: {dateFormatter.format(new Date(detail.dueDate))}
+              Fecha objetivo: {formatDate(detail.dueDate)}
             </span>
           </div>
         </div>
@@ -179,9 +412,9 @@ export default async function GoalDetailPage({
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span>Avance general</span>
-                  <span>{progress}%</span>
+                  <span>{detail.progress}%</span>
                 </div>
-                <Progress value={progress} className="h-2" />
+                <Progress value={detail.progress} className="h-2" />
               </div>
               <dl className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1">
@@ -199,15 +432,15 @@ export default async function GoalDetailPage({
                 <div className="space-y-1">
                   <dt className="text-sm text-muted-foreground">Aporte mensual</dt>
                   <dd className="text-xl font-semibold text-foreground">
-                    {currencyFormatter.format(detail.monthlyContribution)}
+                    {detail.monthlyContribution && detail.monthlyContribution > 0
+                      ? currencyFormatter.format(detail.monthlyContribution)
+                      : "Sin definir"}
                   </dd>
                 </div>
               </dl>
               <div className="rounded-lg bg-muted/60 p-4 text-sm">
                 <p className="font-medium text-foreground">Próxima contribución</p>
-                <p className="mt-1 text-foreground">
-                  {dateFormatter.format(new Date(detail.nextContributionDate))}
-                </p>
+                <p className="mt-1 text-foreground">{formatDate(detail.nextContributionDate)}</p>
                 <p className="mt-2 text-muted-foreground">{paceCopy[detail.pace]}</p>
               </div>
             </CardContent>
@@ -242,7 +475,7 @@ export default async function GoalDetailPage({
                           {timelineLabels[item.status]}
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          {dateFormatter.format(new Date(item.date))}
+                          {formatDate(item.date)}
                         </span>
                       </div>
                       <p className="text-base font-semibold text-foreground">{item.title}</p>
