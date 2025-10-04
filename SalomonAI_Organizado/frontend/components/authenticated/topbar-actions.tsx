@@ -6,6 +6,11 @@ import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
+  IS_DEMO_MODE,
+  useDemoFinancialData,
+} from "@/context/DemoFinancialDataContext"
+import { CHILE_DEMO_STATEMENT } from "@/context/demo-statement.fixture"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -48,6 +53,14 @@ const getInitials = (user: AuthUser) => {
 
 export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
+  const { reset, updateFromStatement } = useDemoFinancialData()
+
+  const handleReloadDemoData = React.useCallback(() => {
+    if (!IS_DEMO_MODE) return
+
+    reset()
+    updateFromStatement(CHILE_DEMO_STATEMENT)
+  }, [reset, updateFromStatement])
 
   const handleLogout = React.useCallback(async () => {
     if (!onLogout) return
@@ -81,6 +94,11 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
           </Button>
         ))}
       </div>
+      {IS_DEMO_MODE ? (
+        <Button variant="outline" size="sm" onClick={handleReloadDemoData}>
+          Cargar datos de ejemplo
+        </Button>
+      ) : null}
       <Button variant="ghost" size="icon" asChild>
         <Link href="/notifications" aria-label="Notificaciones" className="flex items-center justify-center">
           <Bell className="h-5 w-5" />
