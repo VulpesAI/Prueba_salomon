@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Plug, 
-  CheckCircle, 
-  Shield, 
+import {
+  Plug,
+  CheckCircle,
+  Shield,
   Activity,
-  Lock
+  Lock,
+  Clock
 } from "lucide-react";
 
 export default function IntegracionesPage() {
@@ -19,89 +20,126 @@ export default function IntegracionesPage() {
     {
       name: "Banco de Chile",
       logo: "🏦",
-      status: "active",
-      description: "Integración completa con API Open Banking",
-      features: ["Cuentas Corrientes", "Tarjetas de Crédito", "Inversiones", "Histórico 2 años"],
-      uptime: 99.9,
-      responseTime: "120ms"
-    },
-    {
-      name: "Santander Chile",
-      logo: "🔴",
-      status: "active",
-      description: "Conexión directa con servicios Santander",
-      features: ["Cuentas Vista", "Créditos", "Seguros", "SuperCuenta"],
-      uptime: 99.7,
-      responseTime: "95ms"
-    },
-    {
-      name: "BCI",
-      logo: "🔵",
-      status: "active",
-      description: "API certificada BCI para máxima seguridad",
-      features: ["Cuentas Corrientes", "Tarjetas", "Créditos Hipotecarios", "Inversiones"],
-      uptime: 99.8,
-      responseTime: "110ms"
+      status: "comingSoon",
+      description: "Estamos diseñando una experiencia personal para conectar tus cuentas con calma y seguridad.",
+      features: [
+        "Consulta de saldos personales (en piloto)",
+        "Alertas de movimientos planificadas",
+        "Gestión de tarjetas en diseño",
+        "Reportes descargables en pruebas"
+      ],
+      progress: 55,
+      roadmapStage: "Piloto privado"
     },
     {
       name: "Banco Estado",
       logo: "🟢",
-      status: "active",
-      description: "Integración con el banco público más grande de Chile",
-      features: ["CuentaRUT", "Tarjetas de Débito", "Créditos", "Beneficios Estatales"],
-      uptime: 99.5,
-      responseTime: "140ms"
+      status: "comingSoon",
+      description: "Queremos sumar CuentaRUT y productos personales sin complicaciones. ¡Tu interés nos ayuda a priorizar!",
+      features: [
+        "Sincronización de CuentaRUT planificada",
+        "Seguimiento de beneficios en evaluación",
+        "Visualización de tarjetas de débito",
+        "Recordatorios de pagos en exploración"
+      ],
+      progress: 45,
+      roadmapStage: "Diseño de experiencia"
     },
     {
-      name: "Banco Security",
-      logo: "🟡",
-      status: "active",
-      description: "Conexión especializada para banca privada",
-      features: ["Cuentas Premium", "Inversiones", "Banca Privada", "Mesa de Dinero"],
-      uptime: 99.6,
-      responseTime: "105ms"
+      name: "Santander Chile",
+      logo: "🔴",
+      status: "comingSoon",
+      description: "Exploramos cómo ayudarte a ordenar tus productos Santander desde un solo panel personal.",
+      features: [
+        "Vista unificada de cuentas en investigación",
+        "Metas de ahorro personales",
+        "Control de tarjetas planificado",
+        "Alertas inteligentes en pruebas"
+      ],
+      progress: 60,
+      roadmapStage: "Investigación avanzada"
     },
     {
-      name: "Banco Falabella",
-      logo: "🟠",
-      status: "active",
-      description: "Integración retail banking y CMR",
-      features: ["Cuenta Fan", "CMR Puntos", "Créditos", "Seguros"],
-      uptime: 99.4,
-      responseTime: "130ms"
+      name: "BCI",
+      logo: "🔵",
+      status: "comingSoon",
+      description: "Estamos recopilando feedback para priorizar la integración personal con BCI.",
+      features: [
+        "Panel de inversiones en evaluación",
+        "Resumen de créditos en diseño",
+        "Notificaciones personalizadas",
+        "Sincronización segura (en investigación)"
+      ],
+      progress: 40,
+      roadmapStage: "Investigación"
     }
   ];
 
   const financeIntegrations = [
     {
-      name: "Belvo",
-      type: "Agregador Financiero",
-      description: "Conexión oficial certificada para Open Banking en Chile",
-      capabilities: ["15+ Bancos", "Datos en Tiempo Real", "Certificación PCI", "Cumplimiento PSD2"],
-      status: "primary"
-    },
-    {
       name: "Tenpo",
-      type: "Billetera Digital",
-      description: "Controla tus pagos cotidianos y automatiza tus recargas en segundos",
-      capabilities: ["Tarjeta prepago internacional", "Pagos automáticos", "Control de gastos", "Cashback personalizado"],
-      status: "active"
+      type: "Billetera digital",
+      description: "Queremos que puedas revisar y organizar tu Tenpo desde un solo lugar. Súmate para recibir novedades.",
+      capabilities: [
+        "Recargas rápidas planificadas",
+        "Alertas de gastos personales",
+        "Seguimiento de cashback",
+        "Sincronización segura (en desarrollo)"
+      ],
+      status: "comingSoon"
     },
     {
-      name: "Mach",
-      type: "Wallet Personal",
-      description: "Pagos instantáneos entre amigos y seguimiento de gastos compartidos",
-      capabilities: ["Transferencias inmediatas", "División de cuentas", "Tarjeta virtual", "Topes de gasto"],
-      status: "beta"
+      name: "Belvo",
+      type: "Agregador financiero",
+      description: "Estamos evaluando conectores personales con Belvo para importar tus cuentas favoritas de forma responsable.",
+      capabilities: [
+        "Integración con bancos chilenos",
+        "Control granular de permisos",
+        "Actualizaciones periódicas",
+        "Cumplimiento de estándares internacionales"
+      ],
+      status: "comingSoon"
     },
     {
-      name: "Fintual",
-      type: "Inversión Personal",
-      description: "Importa tus portafolios y proyecta metas de inversión a largo plazo",
-      capabilities: ["Portafolios automatizados", "Ahorro objetivo", "Reportes de rendimiento", "Metas temporizadas"],
-      status: "active"
+      name: "Fintoc",
+      type: "Open Banking chileno",
+      description: "Exploramos una conexión con Fintoc para traer tus datos financieros cuando esté listo.",
+      capabilities: [
+        "Importación de movimientos (en investigación)",
+        "Conciliación automática planificada",
+        "Insights de presupuesto",
+        "Exportaciones seguras"
+      ],
+      status: "comingSoon"
+    },
+    {
+      name: "Mercado Pago",
+      type: "Pagos y billetera",
+      description: "Planeamos ayudarte a monitorear tus cobros y pagos de Mercado Pago en una vista personal.",
+      capabilities: [
+        "Resumen de ventas (en diseño)",
+        "Alertas de saldo",
+        "Gestión de suscripciones",
+        "Reportes descargables"
+      ],
+      status: "comingSoon"
     }
   ];
+
+  const bankStatusConfig = {
+    comingSoon: {
+      label: "Próximamente",
+      variant: "secondary"
+    }
+  } as const;
+
+  const financeStatusConfig = {
+    comingSoon: {
+      label: "Próximamente",
+      variant: "secondary",
+      disabled: true
+    }
+  } as const;
 
   const securityFeatures = [
     {
@@ -139,16 +177,16 @@ export default function IntegracionesPage() {
               Integraciones
             </Badge>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Conecta con <span style={{
+              Imagina tu <span style={{
                 background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 color: 'transparent'
-              }}>Todo tu Ecosistema</span> Financiero
+              }}>panel financiero</span> personal
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              SalomonAI se integra con todos los principales bancos, servicios financieros y plataformas tecnológicas de Chile
+              Estamos construyendo prototipos para que personas como tú puedan centralizar su dinero cuando las conexiones estén listas.
             </p>
           </div>
         </div>
@@ -158,9 +196,9 @@ export default function IntegracionesPage() {
       <section className="py-20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">Proceso de Integración</h2>
+            <h2 className="text-4xl font-bold mb-6">Así imaginamos el proceso</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Conecta tus cuentas en minutos con nuestro proceso simplificado
+              Queremos que conectar tus cuentas personales sea simple. Estas son las etapas que estamos diseñando.
             </p>
           </div>
 
@@ -169,32 +207,32 @@ export default function IntegracionesPage() {
               <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                 1
               </div>
-              <h3 className="text-lg font-semibold mb-2">Selecciona tu Banco</h3>
-              <p className="text-sm text-muted-foreground">Elige de nuestra lista de bancos integrados</p>
+              <h3 className="text-lg font-semibold mb-2">Elige tus servicios prioritarios</h3>
+              <p className="text-sm text-muted-foreground">Cuéntanos qué bancos o billeteras te gustaría conectar primero.</p>
             </Card>
 
             <Card className="bg-gradient-card border-primary/20 text-center p-6">
               <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                 2
               </div>
-              <h3 className="text-lg font-semibold mb-2">Autoriza Conexión</h3>
-              <p className="text-sm text-muted-foreground">Autoriza de forma segura sin compartir credenciales</p>
+              <h3 className="text-lg font-semibold mb-2">Confirma tu interés</h3>
+              <p className="text-sm text-muted-foreground">Nos dejas tu correo para avisarte cuando abramos cada conexión.</p>
             </Card>
 
             <Card className="bg-gradient-card border-primary/20 text-center p-6">
               <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                 3
               </div>
-              <h3 className="text-lg font-semibold mb-2">Sincronización</h3>
-              <p className="text-sm text-muted-foreground">Importamos automáticamente tu historial financiero</p>
+              <h3 className="text-lg font-semibold mb-2">Recibe avances</h3>
+              <p className="text-sm text-muted-foreground">Compartimos hitos y prototipos para que veas cómo progresa la integración.</p>
             </Card>
 
             <Card className="bg-gradient-card border-primary/20 text-center p-6">
               <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                 4
               </div>
-              <h3 className="text-lg font-semibold mb-2">¡Listo!</h3>
-              <p className="text-sm text-muted-foreground">Comienza a usar SalomonAI inmediatamente</p>
+              <h3 className="text-lg font-semibold mb-2">Activa tu panel</h3>
+              <p className="text-sm text-muted-foreground">Te avisaremos cuando puedas sincronizar tu información personal con SalomonAI.</p>
             </Card>
           </div>
         </div>
@@ -204,51 +242,67 @@ export default function IntegracionesPage() {
       <section className="py-20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">Bancos Integrados</h2>
+            <h2 className="text-4xl font-bold mb-6">Bancos en nuestra hoja de ruta</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Conexión directa y segura con todos los principales bancos chilenos
+              Estamos priorizando estas entidades según el interés de personas que buscan controlar su dinero desde SalomonAI.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {bankIntegrations.map((bank, index) => (
-              <Card key={index} className="bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="text-4xl">{bank.logo}</div>
-                    <Badge variant={bank.status === "active" ? "default" : "secondary"} className="bg-primary text-primary-foreground">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Activo
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-lg">{bank.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{bank.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Uptime:</span>
-                        <div className="font-medium text-primary">{bank.uptime}%</div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Latencia:</span>
-                        <div className="font-medium">{bank.responseTime}</div>
-                      </div>
+            {bankIntegrations.map((bank, index) => {
+              const statusInfo = bankStatusConfig[bank.status as keyof typeof bankStatusConfig] ?? {
+                label: "En exploración",
+                variant: "outline"
+              };
+
+              return (
+                <Card
+                  key={index}
+                  className="bg-gradient-card border-primary/20 hover:border-primary/40 transition-all duration-300"
+                  aria-disabled={bank.status !== "available"}
+                  title={statusInfo.label}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="text-4xl">{bank.logo}</div>
+                      <Badge
+                        variant={statusInfo.variant}
+                        className="text-primary-foreground"
+                        title={statusInfo.label}
+                      >
+                        <Clock className="w-3 h-3 mr-1" />
+                        {statusInfo.label}
+                      </Badge>
                     </div>
-                    <Progress value={bank.uptime} className="h-1" />
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-semibold">Servicios Disponibles:</h4>
-                      {bank.features.map((feature, idx) => (
-                        <div key={idx} className="text-xs bg-secondary/30 px-2 py-1 rounded">
-                          {feature}
+                    <CardTitle className="text-lg">{bank.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{bank.description}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Avance:</span>
+                          <div className="font-medium text-primary">{bank.progress}%</div>
                         </div>
-                      ))}
+                        <div>
+                          <span className="text-muted-foreground">Etapa:</span>
+                          <div className="font-medium">{bank.roadmapStage}</div>
+                        </div>
+                      </div>
+                      <Progress value={bank.progress} className="h-1" />
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-semibold">Servicios planificados:</h4>
+                        {bank.features.map((feature, idx) => (
+                          <div key={idx} className="text-xs bg-secondary/30 px-2 py-1 rounded">
+                            {feature}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -257,42 +311,64 @@ export default function IntegracionesPage() {
       <section className="py-20 bg-secondary/20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">Servicios Financieros</h2>
+            <h2 className="text-4xl font-bold mb-6">Servicios en preparación</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Integración con instituciones clave del sistema financiero chileno
+              Estas son las billeteras y plataformas que priorizamos según el interés de nuestra comunidad.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            {financeIntegrations.map((service, index) => (
-              <Card key={index} className="bg-gradient-card border-primary/20">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="text-xs">
-                      {service.type}
-                    </Badge>
-                    <Badge variant={
-                      service.status === "primary" ? "default" : 
-                      service.status === "active" ? "secondary" : "outline"
-                    }>
-                      {service.status === "primary" ? "Principal" : 
-                       service.status === "active" ? "Activo" : "Beta"}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-xl">{service.name}</CardTitle>
-                  <p className="text-muted-foreground">{service.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-2">
-                    {service.capabilities.map((capability, idx) => (
-                      <div key={idx} className="text-sm bg-primary/10 text-primary px-2 py-1 rounded text-center">
-                        {capability}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {financeIntegrations.map((service, index) => {
+              const statusInfo = financeStatusConfig[service.status as keyof typeof financeStatusConfig] ?? {
+                label: "En exploración",
+                variant: "outline",
+                disabled: false
+              };
+
+              return (
+                <Card
+                  key={index}
+                  className="bg-gradient-card border-primary/20"
+                  aria-disabled={statusInfo.disabled}
+                  title={statusInfo.label}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-xs">
+                        {service.type}
+                      </Badge>
+                      <Badge
+                        variant={statusInfo.variant}
+                        className="text-primary-foreground"
+                        title={statusInfo.label}
+                      >
+                        <Clock className="w-3 h-3 mr-1" />
+                        {statusInfo.label}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-xl">{service.name}</CardTitle>
+                    <p className="text-muted-foreground">{service.description}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-2">
+                      {service.capabilities.map((capability, idx) => (
+                        <div key={idx} className="text-sm bg-primary/10 text-primary px-2 py-1 rounded text-center">
+                          {capability}
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      disabled={statusInfo.disabled}
+                      className="mt-4 w-full"
+                      title={statusInfo.disabled ? "Próximamente" : undefined}
+                    >
+                      {statusInfo.disabled ? "Próximamente" : "Unirme a la lista"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -303,7 +379,7 @@ export default function IntegracionesPage() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-6">Seguridad de Integraciones</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Todas nuestras integraciones cumplen con los más altos estándares de seguridad
+              Diseñamos nuestras integraciones proyectadas con los más altos estándares de seguridad desde el primer día
             </p>
           </div>
 
@@ -329,7 +405,7 @@ export default function IntegracionesPage() {
             ¿Tu Banco no Está en la Lista?
           </h2>
           <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-            Estamos agregando nuevas integraciones constantemente. Solicita la tuya.
+            Estamos explorando nuevas integraciones constantemente. Cuéntanos cuál te interesa.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" className="text-lg px-8 py-3">
