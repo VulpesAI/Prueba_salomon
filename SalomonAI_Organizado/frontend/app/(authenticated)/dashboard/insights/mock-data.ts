@@ -1,6 +1,6 @@
 export type InsightPriorityLevel = "alta" | "media" | "baja"
 
-type PriorityInsight = {
+export type PriorityInsight = {
   id: string
   title: string
   summary: string
@@ -11,7 +11,7 @@ type PriorityInsight = {
   actionHref: string
 }
 
-type HighlightInsight = {
+export type HighlightInsight = {
   id: string
   title: string
   description: string
@@ -20,7 +20,7 @@ type HighlightInsight = {
   badgeVariant: "secondary" | "outline"
 }
 
-type NarrativeInsight = {
+export type NarrativeInsight = {
   id: string
   title: string
   summary: string
@@ -30,7 +30,7 @@ type NarrativeInsight = {
   href: string
 }
 
-type VersionHistoryItem = {
+export type VersionHistoryItem = {
   id: string
   status: "published" | "scheduled" | "draft"
   date: string
@@ -38,15 +38,7 @@ type VersionHistoryItem = {
   description: string
 }
 
-type HeaderAction = {
-  id: string
-  label: string
-  href: string
-  icon: "radar" | "download" | "share"
-  variant: "default" | "secondary" | "outline"
-}
-
-type FollowUpAction = {
+export type FollowUpAction = {
   id: string
   title: string
   description: string
@@ -54,165 +46,139 @@ type FollowUpAction = {
   label: string
 }
 
-export const dashboardInsightsMock = {
-  headerActions: [
-    {
-      id: "advanced-analytics",
-      label: "Analítica avanzada",
-      href: "/analytics/advanced",
-      icon: "radar",
-      variant: "default",
-    },
-    {
-      id: "export-insights",
-      label: "Exportar insights",
-      href: "/dashboard/insights/export",
-      icon: "download",
-      variant: "outline",
-    },
-    {
-      id: "share-insights",
-      label: "Compartir con equipo",
-      href: "/share/insights",
-      icon: "share",
-      variant: "secondary",
-    },
-  ] satisfies HeaderAction[],
+export const personalBudgetFallback = {
   priorities: [
     {
-      id: "cashflow-pressure",
-      title: "Presión de flujo de caja en 21 días",
+      id: "cashflow-balance",
+      title: "Cuida tu flujo de caja para el próximo mes",
       summary:
-        "Los gastos operacionales crecieron 12% respecto al promedio trimestral y adelantarían el déficit a la tercera semana del mes.",
-      impact: "Déficit proyectado: -$18.5M",
-      helper: "Activa escenarios de liquidez para priorizar pagos críticos.",
+        "Tus gastos proyectados superan a los ingresos promedio. Ajusta tus pagos para proteger tu saldo disponible.",
+      impact: "Déficit estimado: $-180.000 CLP",
+      helper: "Reordena tus pagos variables y posterga lo prescindible.",
       priority: "alta",
-      actionLabel: "Abrir proyección de flujo",
-      actionHref: "/analytics/cashflow",
+      actionLabel: "Revisar flujo",
+      actionHref: "/dashboard/overview#flujo",
     },
     {
-      id: "revenue-opportunity",
-      title: "Upsell en clientes con alto margen",
+      id: "category-focus",
+      title: "Define un tope para tus gastos en ocio",
       summary:
-        "Los clientes premium muestran un 8.4% de menor churn tras activar campañas cross-sell en canales digitales.",
-      impact: "Ingreso potencial: +$24M trimestral",
-      helper: "Replica mensajes en cohortes con comportamiento similar.",
+        "La categoría Ocio concentra gran parte del presupuesto mensual. Establece un monto máximo para cada semana.",
+      impact: "Participación: 32% del gasto",
+      helper: "Agenda una alerta automática cuando alcances el tope.",
       priority: "media",
-      actionLabel: "Abrir segmento recomendado",
-      actionHref: "/analytics/clientes/premium",
+      actionLabel: "Configurar alerta",
+      actionHref: "/dashboard/notifications",
     },
     {
-      id: "expense-leakage",
-      title: "Fugas en gastos de proveedores logísticos",
+      id: "savings-surplus",
+      title: "Usa tu excedente a favor del ahorro",
       summary:
-        "Se detectaron cargos duplicados en 3 proveedores con contratos indexados por tipo de cambio.",
-      impact: "Recuperación estimada: $6.2M",
-      helper: "Validar conciliación automática antes del cierre semanal.",
-      priority: "alta",
-      actionLabel: "Revisar conciliaciones",
-      actionHref: "/analytics/proveedores",
+        "Registra un superávit este mes. Aprovecha el excedente para adelantar tu meta de fondo de emergencia.",
+      impact: "Superávit estimado: $95.000 CLP",
+      helper: "Traslada el excedente a tu cuenta de ahorro apenas recibas tus ingresos.",
+      priority: "baja",
+      actionLabel: "Planificar ahorro",
+      actionHref: "/dashboard/goals",
     },
   ] satisfies PriorityInsight[],
   highlights: [
     {
-      id: "ai-detection",
-      title: "Detección automática de anomalías",
-      description:
-        "Modelo identifica patrones fuera de rango en gastos variables con 94% de precisión.",
+      id: "savings-rate",
+      title: "Mejoraste tu tasa de ahorro",
+      description: "Tu tasa de ahorro mensual creció 3 puntos gracias a aportes automáticos.",
       icon: "sparkles",
-      badgeLabel: "IA en tiempo real",
+      badgeLabel: "Buen hábito",
       badgeVariant: "secondary",
     },
     {
-      id: "growth-signal",
-      title: "Señal de crecimiento en suscripciones",
-      description:
-        "La cohorte adquirida en abril mantiene 3x engagement frente a cohortes previas.",
+      id: "spending-alert",
+      title: "Alerta preventiva activa",
+      description: "Configura recordatorios antes de exceder tu presupuesto en compras personales.",
       icon: "trendingUp",
-      badgeLabel: "Oportunidad",
+      badgeLabel: "Control",
       badgeVariant: "outline",
     },
     {
-      id: "risk-coverage",
-      title: "Cobertura de riesgo actualizada",
-      description:
-        "El 87% de los vencimientos en dólares ya cuentan con cobertura cambiaria vigente.",
+      id: "safety-cushion",
+      title: "Tu colchón financiero crece",
+      description: "Los depósitos recurrentes aumentaron tu fondo de emergencia durante tres semanas consecutivas.",
       icon: "shield",
-      badgeLabel: "Estabilidad",
+      badgeLabel: "Seguridad",
       badgeVariant: "outline",
     },
   ] satisfies HighlightInsight[],
   narratives: [
     {
-      id: "executive-briefing",
-      title: "Resumen ejecutivo Q2",
+      id: "monthly-budget",
+      title: "Tu presupuesto personal del mes",
       summary:
-        "La rentabilidad operativa se mantiene sobre el plan gracias a eficiencias en logística y renegociación de contratos.",
-      focus: "Margen operacional",
-      audience: "Dirección",
-      updatedAt: "2024-05-04",
-      href: "/analytics/insights/resumen-ejecutivo",
+        "Ingresos y gastos mantienen una tendencia positiva. Conserva un margen de ahorro para acelerar tus metas.",
+      focus: "Presupuesto",
+      audience: "Tu plan personal",
+      updatedAt: "2024-05-10",
+      href: "/dashboard/recommendations",
     },
     {
-      id: "collections-story",
-      title: "Storytelling cartera de cobranzas",
+      id: "alerts-story",
+      title: "Lo que dicen tus alertas predictivas",
       summary:
-        "La cartera riesgosa se redujo 18% tras el piloto de recordatorios omnicanal y priorización por scoring.",
-      focus: "Liquidez",
-      audience: "Finanzas",
-      updatedAt: "2024-05-06",
-      href: "/analytics/insights/cobranzas",
+        "Las alertas te ayudan a anticipar desbalances. Ajusta tus gastos variables antes de que se conviertan en un problema.",
+      focus: "Alertas",
+      audience: "Tu plan personal",
+      updatedAt: "2024-05-09",
+      href: "/dashboard/notifications",
     },
     {
-      id: "commerce-update",
-      title: "Narrativa ecommerce",
+      id: "habit-tracker",
+      title: "Hábitos financieros en marcha",
       summary:
-        "Conversión móvil creció 2.4 puntos impulsada por mejoras UX y campañas regionales.",
-      focus: "Crecimiento",
-      audience: "Comercial",
-      updatedAt: "2024-05-02",
-      href: "/analytics/insights/ecommerce",
+        "Tu meta de emergencia avanza según lo previsto. Mantén los aportes para consolidar el hábito.",
+      focus: "Hábitos",
+      audience: "Tu plan personal",
+      updatedAt: "2024-05-08",
+      href: "/dashboard/goals",
     },
   ] satisfies NarrativeInsight[],
   versionHistory: [
     {
-      id: "release-mayo",
+      id: "budget-update",
       status: "published",
       date: "2024-05-07",
-      title: "Publicación Mayo · Directorio",
-      description: "Incluye nueva sección de liquidez y anexos comparativos vs. presupuesto.",
+      title: "Revisión mensual del presupuesto",
+      description: "Ajustaste tus categorías y registraste el nuevo saldo inicial en CLP.",
     },
     {
-      id: "draft-comercial",
-      status: "draft",
-      date: "2024-05-09",
-      title: "Borrador Comercial",
-      description: "Pendiente validar cifras de conversión regional antes de compartir.",
-    },
-    {
-      id: "release-junio",
+      id: "habit-check",
       status: "scheduled",
-      date: "2024-06-03",
-      title: "Entrega mensual stakeholders",
-      description: "Programado para envío automático con versión comparativa del último trimestre.",
+      date: "2024-05-12",
+      title: "Seguimiento de hábitos",
+      description: "Programaste un recordatorio semanal para registrar tus gastos manualmente.",
+    },
+    {
+      id: "alert-fine-tune",
+      status: "draft",
+      date: "2024-05-15",
+      title: "Ajuste de alertas predictivas",
+      description: "Pendiente definir nuevos umbrales para compras online en CLP.",
     },
   ] satisfies VersionHistoryItem[],
   followUpActions: [
     {
-      id: "liquidity-simulations",
-      title: "Simular escenarios de liquidez",
-      description: "Prioriza pagos críticos y automatiza alertas de caja para las próximas 6 semanas.",
-      href: "/analytics/cashflow/simulaciones",
-      label: "Abrir simulador",
+      id: "schedule-transfer",
+      title: "Agenda tu transferencia de ahorro",
+      description: "Programa una transferencia automática apenas recibas tu ingreso.",
+      href: "/dashboard/goals",
+      label: "Configurar hábito",
     },
     {
-      id: "share-playbook",
-      title: "Compartir playbook con stakeholders",
-      description: "Envía historias preformateadas con KPIs clave y recomendaciones.",
-      href: "/share/insights/playbook",
-      label: "Configurar envío",
+      id: "track-expenses",
+      title: "Registra gastos variables cada semana",
+      description: "Anota tus compras menores para mantener el control del presupuesto.",
+      href: "/dashboard/transactions",
+      label: "Abrir registro",
     },
   ] satisfies FollowUpAction[],
 } as const
 
-export type DashboardInsightsMock = typeof dashboardInsightsMock
+export type PersonalBudgetFallback = typeof personalBudgetFallback

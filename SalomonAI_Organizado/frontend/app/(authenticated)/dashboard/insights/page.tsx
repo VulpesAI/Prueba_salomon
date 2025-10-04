@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { useMemo } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,7 +13,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { dashboardInsightsMock } from "./mock-data"
+import { useDashboardIntelligence } from "@/hooks/dashboard/use-dashboard-intelligence"
+import { useDashboardOverview } from "@/hooks/dashboard/use-dashboard-overview"
+import { useDemoFinancialData } from "@/context/DemoFinancialDataContext"
+import { personalBudgetFallback } from "./mock-data"
 import {
   ArrowUpRight,
   Download,
@@ -27,17 +33,15 @@ const priorityBadgeVariants = {
   baja: "outline",
 } as const
 
-const headerIconMap = {
-  radar: Radar,
-  download: Download,
-  share: Share2,
-} as const
-
 const highlightIconMap = {
   sparkles: Sparkles,
   trendingUp: TrendingUp,
   shield: ShieldCheck,
 } as const
+
+type HighlightIconKey = keyof typeof highlightIconMap
+
+const highlightIconOrder: HighlightIconKey[] = ["sparkles", "trendingUp", "shield"]
 
 const versionStatusDotStyles = {
   published: "bg-emerald-500 border-emerald-500/60",
@@ -51,23 +55,248 @@ const versionStatusLabels = {
   draft: "Borrador",
 } as const
 
+type VersionStatus = keyof typeof versionStatusDotStyles
+
 const dateFormatter = new Intl.DateTimeFormat("es-CL", {
   day: "numeric",
   month: "short",
 })
 
+const formatCurrency = (value?: number | null) =>
+  new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(Math.abs(typeof value === "number" ? value : 0))
+
+const severityToPriority = {
+  high: "alta",
+  medium: "media",
+  low: "baja",
+} as const
+
+const headerIconMap = {
+  radar: Radar,
+  download: Download,
+  share: Share2,
+} as const
+
+type HeaderActionIcon = keyof typeof headerIconMap
+type HeaderActionVariant = "default" | "outline" | "secondary"
+
 export default function DashboardInsightsPage() {
+  const intelligence = useDashboardIntelligence()
+  const overview = useDashboardOverview()
+  const { goals } = useDemoFinancialData()
+
+  const headerActions = useMemo(() => {
+    const horizonDays = intelligence.forecastSummary?.horizonDays
+    const savings = overview.totals?.savings ?? null
+    const goalsCount = goals?.goals.length ?? 0
+
+    const actions: Array<{
+      id: string
+      label: string
+      href: string
+      icon: HeaderActionIcon
+      variant: HeaderActionVariant
+    }> = [
+      {
+        id: "forecast",
+        label:
+          horizonDays && horizonDays > 0
+            ? `Proyección ${horizonDays} días`
+            : "Ver proyección",
+        href: "/dashboard/overview",
+        icon: "radar",
+        variant: "default",
+      },
+      {
+        id: "download-budget",
+        label:
+          savings && savings > 0
+            ? `Descargar presupuesto (${formatCurrency(savings)})`
+            : "Descargar presupuesto",
+        href: "/dashboard/overview/exportar-presupuesto",
+        icon: "download",
+        variant: "outline",
+      },
+      {
+        id: "share-goals",
+        label:
+          goalsCount > 0
+            ? `${goalsCount} hábitos financieros`
+            : "Ver hábitos financieros",
+        href: "/dashboard/goals",
+        icon: "share",
+        variant: "secondary",
+      },
+    ]
+
+    return actions
+  }, [goals?.goals.length, intelligence.forecastSummary?.horizonDays, overview.totals?.savings])
+
+  const priorities = useMemo(() => {
+    const derived = intelligence.predictiveAlerts.map((alert) => {
+      const priority = severityToPriority[alert.severity]
+      const amount =
+        typeof alert.details?.deficit === "number"
+          ? alert.details.deficit
+          : typeof alert.details?.surplus === "number"
+            ? alert.details.surplus
+            : typeof alert.details?.amount === "number"
+              ? alert.details.amount
+              : null
+
+      const impactLabel = amount ? formatCurrency(amount) : "Seguimiento sugerido"
+
+      const helperByType: Record<string, string> = {
+        cashflow: "Revisa tu flujo de caja semanal y prioriza gastos esenciales.",
+        spending:
+          typeof alert.details?.category === "string"
+            ? `Define un tope para ${alert.details.category} y activa recordatorios.`
+            : "Define un tope para tus gastos variables y activa recordatorios.",
+        savings: "Agenda un aporte automático para reforzar tu ahorro.",
+      }
+
+      const helper = helperByType[alert.type] ?? "Organiza tus próximos pasos para mantener equilibrio."
+
+      const summaryParts = [alert.message]
+      if (amount) {
+        summaryParts.push(
+          alert.type === "cashflow"
+            ? `Déficit proyectado de ${formatCurrency(amount)}.`
+            : alert.type === "savings"
+              ? `Superávit estimado de ${formatCurrency(amount)}.`
+              : `Monto asociado: ${formatCurrency(amount)}.`,
+        )
+      }
+      if (typeof alert.details?.share === "number") {
+        summaryParts.push(`Representa el ${alert.details.share}% de tus gastos.`)
+      }
+
+      const actionHref =
+        alert.type === "cashflow"
+          ? "/dashboard/overview#flujo"
+          : alert.type === "savings"
+            ? "/dashboard/goals"
+            : "/dashboard/transactions"
+
+      const actionLabel =
+        alert.type === "cashflow"
+          ? "Abrir flujo de caja"
+          : alert.type === "savings"
+            ? "Planificar ahorro"
+            : "Revisar gastos"
+
+      return {
+        id: alert.id,
+        title: alert.message,
+        summary: summaryParts.join(" "),
+        impact: impactLabel,
+        helper,
+        priority,
+        actionLabel,
+        actionHref,
+      }
+    })
+
+    return derived.length > 0 ? derived : personalBudgetFallback.priorities
+  }, [intelligence.predictiveAlerts])
+
+  const highlights = useMemo(() => {
+    const derived = intelligence.insights.slice(0, 3).map((insight, index) => {
+      const icon = highlightIconOrder[index] ?? "shield"
+      const badgeVariant: "secondary" | "outline" = index === 0 ? "secondary" : "outline"
+
+      return {
+        id: insight.id,
+        title: insight.title,
+        description: insight.description,
+        icon,
+        badgeLabel:
+          insight.highlight ??
+          (insight.metrics && insight.metrics[0]
+            ? `${insight.metrics[0].label}: ${insight.metrics[0].value}`
+            : "Insight"),
+        badgeVariant,
+      }
+    })
+
+    return derived.length > 0 ? derived : personalBudgetFallback.highlights
+  }, [intelligence.insights])
+
+  const narratives = useMemo(() => {
+    const generatedAt = intelligence.forecastSummary?.generatedAt ?? new Date().toISOString()
+    const derived = intelligence.recommendations.slice(0, 3).map((recommendation) => ({
+      id: recommendation.id,
+      title: recommendation.title,
+      summary: recommendation.description,
+      focus: recommendation.category,
+      audience: "Tu plan personal",
+      updatedAt: generatedAt,
+      href: `/dashboard/recommendations?resaltar=${recommendation.id}`,
+    }))
+
+    return derived.length > 0 ? derived : personalBudgetFallback.narratives
+  }, [intelligence.forecastSummary?.generatedAt, intelligence.recommendations])
+
+  const versionHistory = useMemo(() => {
+    const items = goals?.goals ?? []
+
+    const derived = items.slice(0, 3).map((goal) => {
+      const status: VersionStatus = goal.status === "COMPLETED"
+        ? "published"
+        : goal.metrics.pace === "off_track"
+          ? "draft"
+          : "scheduled"
+
+      return {
+        id: goal.id,
+        status,
+        date: goal.metrics.lastRecordedAt ?? goal.targetDate ?? new Date().toISOString(),
+        title: goal.name,
+        description: goal.description,
+      }
+    })
+
+    return derived.length > 0 ? derived : personalBudgetFallback.versionHistory
+  }, [goals?.goals])
+
+  const followUpActions = useMemo(() => {
+    const actions = intelligence.recommendations.slice(0, 2).map((recommendation) => ({
+      id: recommendation.id,
+      title: recommendation.title,
+      description: recommendation.explanation,
+      href: `/dashboard/recommendations?categoria=${encodeURIComponent(recommendation.category)}`,
+      label: "Revisar sugerencia",
+    }))
+
+    if (actions.length < 2 && goals?.goals?.length) {
+      const firstGoal = goals.goals[0]
+      actions.push({
+        id: `${firstGoal.id}-habit`,
+        title: "Refuerza tu hábito de ahorro",
+        description: `Agrega un recordatorio semanal para avanzar en ${firstGoal.name}.`,
+        href: "/dashboard/goals",
+        label: "Ver metas",
+      })
+    }
+
+    return actions.length > 0 ? actions : personalBudgetFallback.followUpActions
+  }, [goals?.goals, intelligence.recommendations])
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Insights del dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Explora hallazgos priorizados, narrativas listas para compartir y el historial de versiones de tu panel financiero.
+            Explora tus hallazgos priorizados, narrativas listas para personalizar y el historial de ajustes de tu presupuesto personal.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {dashboardInsightsMock.headerActions.map((action) => {
+          {headerActions.map((action) => {
             const Icon = headerIconMap[action.icon]
             return (
               <Button
@@ -92,11 +321,11 @@ export default function DashboardInsightsPage() {
           <CardHeader>
             <CardTitle>Hallazgos priorizados</CardTitle>
             <CardDescription>
-              Priorización automática de oportunidades y riesgos detectados por la plataforma.
+              Priorizamos automáticamente tus oportunidades y alertas para cuidar tu presupuesto.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {dashboardInsightsMock.priorities.map((insight) => (
+            {priorities.map((insight) => (
               <div
                 key={insight.id}
                 className="flex flex-col gap-4 rounded-lg border border-dashed p-4 sm:flex-row sm:items-start sm:justify-between"
@@ -129,11 +358,11 @@ export default function DashboardInsightsPage() {
           <CardHeader>
             <CardTitle>Highlights rápidos</CardTitle>
             <CardDescription>
-              Señales clave para priorizar conversaciones con tus equipos.
+              Señales clave para priorizar tus decisiones diarias.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {dashboardInsightsMock.highlights.map((highlight) => {
+            {highlights.map((highlight) => {
               const Icon = highlightIconMap[highlight.icon]
 
               return (
@@ -162,11 +391,11 @@ export default function DashboardInsightsPage() {
           <CardHeader>
             <CardTitle>Narrativas generadas</CardTitle>
             <CardDescription>
-              Storytelling financiero listo para personalizar y compartir con stakeholders.
+              Storytelling financiero listo para que lo adaptes a tus metas personales.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {dashboardInsightsMock.narratives.map((narrative) => (
+            {narratives.map((narrative) => (
               <div key={narrative.id} className="rounded-lg border border-border/60 bg-background p-4 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="secondary" className="text-xs">
@@ -192,12 +421,12 @@ export default function DashboardInsightsPage() {
           <CardHeader>
             <CardTitle>Versionado inteligente</CardTitle>
             <CardDescription>
-              Sigue los hitos de publicación y los cambios clave entre versiones.
+              Sigue los hitos de tus ajustes y registra cómo evoluciona tu plan financiero.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ol className="relative space-y-6 border-s border-border ps-6">
-              {dashboardInsightsMock.versionHistory.map((item) => (
+              {versionHistory.map((item) => (
                 <li key={item.id} className="relative space-y-2">
                   <span
                     className={`absolute -start-[9px] mt-1.5 h-4 w-4 rounded-full border-2 ${versionStatusDotStyles[item.status]}`}
@@ -226,20 +455,20 @@ export default function DashboardInsightsPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Llamadas a la acción</CardTitle>
-          <CardDescription>
-            Prioriza próximos pasos para convertir insights en resultados tangibles.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-4">
-            {dashboardInsightsMock.followUpActions.map((action) => (
-              <li key={action.id} className="flex flex-col gap-2 rounded-lg border border-dashed p-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-base font-semibold text-foreground">{action.title}</p>
-                  <p className="text-sm text-muted-foreground">{action.description}</p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Llamadas a la acción</CardTitle>
+            <CardDescription>
+              Prioriza tus próximos pasos para convertir estos insights en hábitos sostenibles.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-4">
+              {followUpActions.map((action) => (
+                <li key={action.id} className="flex flex-col gap-2 rounded-lg border border-dashed p-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-base font-semibold text-foreground">{action.title}</p>
+                    <p className="text-sm text-muted-foreground">{action.description}</p>
                 </div>
                 <Button asChild size="sm" variant="outline" className="inline-flex items-center gap-1">
                   <Link href={action.href}>
