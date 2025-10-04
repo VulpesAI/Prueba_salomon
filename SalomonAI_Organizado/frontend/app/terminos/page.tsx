@@ -5,18 +5,15 @@ import Footer from '@/components/Footer'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  FileText, 
-  Calendar, 
+import {
+  FileText,
+  Calendar,
   AlertTriangle,
   CheckCircle,
   Mail,
-  Scale,
   Users,
-  CreditCard,
   Shield,
   Gavel,
-  Clock,
   Globe
 } from "lucide-react";
 
@@ -103,27 +100,6 @@ export default function TerminosPage() {
       type: "Pérdidas Indirectas",
       description: "No nos responsabilizamos por pérdidas indirectas o consecuenciales",
       coverage: "Responsabilidad limitada al valor de la suscripción anual"
-    }
-  ];
-
-  const billing = [
-    {
-      plan: "Plan Básico",
-      price: "Gratis",
-      billing: "Sin costo",
-      features: ["Funciones básicas", "Soporte por email", "1 cuenta bancaria"]
-    },
-    {
-      plan: "Plan Pro",
-      price: "$9.990/mes",
-      billing: "Facturación mensual",
-      features: ["Todas las funciones", "Soporte prioritario", "Cuentas ilimitadas", "Reportes avanzados"]
-    },
-    {
-      plan: "Plan Business",
-      price: "$29.990/mes",
-      billing: "Facturación mensual",
-      features: ["Funciones empresariales", "API completa", "Integraciones", "Soporte dedicado"]
     }
   ];
 
@@ -257,62 +233,6 @@ export default function TerminosPage() {
               </Card>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Billing Terms */}
-      <section className="py-20 bg-secondary/20">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">Términos de Facturación</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Información sobre precios, pagos y cancelaciones
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {billing.map((plan, index) => (
-              <Card key={index} className={`bg-gradient-card border-primary/20 text-center p-6 ${
-                plan.plan === "Plan Pro" ? "ring-2 ring-primary" : ""
-              }`}>
-                <CardHeader>
-                  <CardTitle className="text-xl">{plan.plan}</CardTitle>
-                  <div className="text-3xl font-bold text-primary">{plan.price}</div>
-                  <Badge variant="outline">{plan.billing}</Badge>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-2 text-sm text-left">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center">
-                        <CheckCircle className="w-4 h-4 text-primary mr-2" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <Card className="bg-gradient-card border-primary/20 p-6 mt-8 max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-3 gap-6 text-center">
-              <div>
-                <CreditCard className="w-8 h-8 text-primary mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Métodos de Pago</h3>
-                <p className="text-sm text-muted-foreground">Tarjetas de crédito, débito y transferencias</p>
-              </div>
-              <div>
-                <Clock className="w-8 h-8 text-primary mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Período de Gracia</h3>
-                <p className="text-sm text-muted-foreground">7 días para actualizar método de pago</p>
-              </div>
-              <div>
-                <Scale className="w-8 h-8 text-primary mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Reembolsos</h3>
-                <p className="text-sm text-muted-foreground">30 días de garantía de devolución</p>
-              </div>
-            </div>
-          </Card>
         </div>
       </section>
 
