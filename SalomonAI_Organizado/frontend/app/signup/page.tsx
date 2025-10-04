@@ -260,7 +260,7 @@ export default function SignupPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-primary hover:opacity-90"
+                className="w-full"
                 disabled={isSubmitting}
               >
                 <UserPlus className="mr-2 h-4 w-4" />

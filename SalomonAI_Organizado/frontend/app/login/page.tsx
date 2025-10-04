@@ -128,7 +128,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-primary hover:opacity-90"
+                className="w-full"
                 disabled={isSubmitting}
               >
                 <LogIn className="mr-2 h-4 w-4" />

@@ -213,7 +213,7 @@ const Contact = () => {
                   </div>
                 </div>
 
-                <Button className="w-full bg-accent hover:bg-accent/90">
+                <Button className="w-full">
                   <Calendar className="w-4 h-4 mr-2" />
                   Agendar Demo Gratuita
                 </Button>

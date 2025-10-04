@@ -59,15 +59,10 @@ export const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button
-              asChild
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground"
-            >
+            <Button asChild variant="ghost">
               <Link href="/login">Iniciar Sesión</Link>
             </Button>
             <Button
-              className="bg-gradient-primary hover:opacity-90"
               onClick={() => scrollToSection("contact")}
             >
               Probar Gratis
@@ -120,7 +115,7 @@ export const Navigation = () => {
                   Iniciar Sesión
                 </Button>
                 <Button
-                  className="w-full bg-gradient-primary hover:opacity-90"
+                  className="w-full"
                   onClick={() => {
                     setIsMenuOpen(false);
                     scrollToSection("contact");

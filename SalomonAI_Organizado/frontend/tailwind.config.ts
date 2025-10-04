@@ -8,6 +8,10 @@ const palette = {
     from: "#743DFF",
     to: "#007CF0",
   },
+  "primary-dark": {
+    from: "#5C2AD6",
+    to: "#0062D1",
+  },
   secondary: {
     DEFAULT: "#081134",
     foreground: "#F5F7FF",

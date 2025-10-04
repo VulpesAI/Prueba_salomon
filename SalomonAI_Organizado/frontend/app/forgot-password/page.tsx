@@ -81,9 +81,7 @@ export default function ForgotPasswordPage() {
                   Intentar con otro email
                 </Button>
                 <Link href="/login">
-                  <Button className="w-full bg-gradient-primary hover:opacity-90">
-                    Volver al login
-                  </Button>
+                  <Button className="w-full">Volver al login</Button>
                 </Link>
               </div>
             </Card>
@@ -159,7 +157,7 @@ export default function ForgotPasswordPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-primary hover:opacity-90"
+                className="w-full"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Enviando...' : 'Enviar instrucciones'}
