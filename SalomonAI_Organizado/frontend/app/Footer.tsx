@@ -1,4 +1,5 @@
 import { Brain, Mail, MapPin, Phone } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
 const Footer = () => {
@@ -31,10 +32,26 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-foreground mb-4">Producto</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Funciones</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Integraciones</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">API</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Seguridad</a></li>
+              <li>
+                <Link href="/producto" className="hover:text-primary transition-colors">
+                  Visión general
+                </Link>
+              </li>
+              <li>
+                <Link href="/funciones" className="hover:text-primary transition-colors">
+                  Funciones
+                </Link>
+              </li>
+              <li>
+                <Link href="/integraciones" className="hover:text-primary transition-colors">
+                  Integraciones
+                </Link>
+              </li>
+              <li>
+                <Link href="/seguridad" className="hover:text-primary transition-colors">
+                  Seguridad
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -42,10 +59,26 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-foreground mb-4">Empresa</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Sobre Nosotros</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Prensa</a></li>
+              <li>
+                <Link href="/demo" className="hover:text-primary transition-colors">
+                  Demo en vivo
+                </Link>
+              </li>
+              <li>
+                <Link href="/api" className="hover:text-primary transition-colors">
+                  API y documentación
+                </Link>
+              </li>
+              <li>
+                <Link href="/#features" className="hover:text-primary transition-colors">
+                  Roadmap de producto
+                </Link>
+              </li>
+              <li>
+                <Link href="/#contact" className="hover:text-primary transition-colors">
+                  Contáctanos
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -76,9 +109,15 @@ const Footer = () => {
               © 2024 SalomónAI. Todos los derechos reservados.
             </p>
             <div className="flex space-x-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-primary transition-colors">Privacidad</a>
-              <a href="#" className="hover:text-primary transition-colors">Términos</a>
-              <a href="#" className="hover:text-primary transition-colors">Cookies</a>
+              <Link href="/privacidad" className="hover:text-primary transition-colors">
+                Privacidad
+              </Link>
+              <Link href="/terminos" className="hover:text-primary transition-colors">
+                Términos
+              </Link>
+              <Link href="/cookies" className="hover:text-primary transition-colors">
+                Cookies
+              </Link>
             </div>
           </div>
         </div>
