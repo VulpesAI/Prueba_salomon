@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Brain, TrendingUp, Shield, Zap } from "lucide-react";
 
 const Hero = () => {
+  const demoModeEnabled = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
   return (
     <section className="relative min-h-screen flex items-center justify-center bg-gradient-hero overflow-hidden">
       {/* Background */}
@@ -53,7 +55,7 @@ const Hero = () => {
             <Zap className="w-5 h-5 mr-2" />
             Comenzar Ahora
           </Button>
-          <Link href="/demo">
+          <Link href={demoModeEnabled ? '/dashboard/overview' : '/login'}>
             <Button 
               variant="outline" 
               size="lg" 
