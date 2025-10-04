@@ -72,7 +72,7 @@ export default function AssistantPage() {
           </h1>
           <p className="text-muted-foreground">
             Coordina a Salomón AI para obtener respuestas accionables, ejecutar
-            playbooks y descubrir recursos recomendados para tu equipo.
+            playbooks y descubrir recursos recomendados para ti.
           </p>
         </div>
         <AutomationShortcuts automations={automations.slice(0, 2)} />
@@ -314,8 +314,7 @@ function ConversationHistory({
       <CardHeader>
         <CardTitle>Historial de chats</CardTitle>
         <CardDescription>
-          Revisa los hilos anteriores, retoma pendientes y comparte resúmenes
-          con tu equipo.
+          Revisa tus hilos anteriores y retoma pendientes cuando lo necesites.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -410,8 +409,8 @@ function PlaybookPanel({ playbooks }: { playbooks: AssistantPlaybook[] }) {
       <CardHeader>
         <CardTitle>Playbooks activos</CardTitle>
         <CardDescription>
-          Supervisa la ejecución de automatizaciones y desbloquea a tu equipo
-          con acciones sugeridas.
+          Supervisa la ejecución de automatizaciones y desbloquéate con
+          acciones sugeridas.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -526,8 +525,8 @@ function StrategyOverview({
       <CardHeader>
         <CardTitle>Resumen de {conversation.title.toLowerCase()}</CardTitle>
         <CardDescription>
-          Puntos clave y próximos pasos que el asistente recomienda compartir
-          con el comité financiero.
+          Puntos clave y próximos pasos que el asistente sugiere para tus
+          decisiones financieras.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 md:grid-cols-2">
