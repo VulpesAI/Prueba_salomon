@@ -3,12 +3,18 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { postLoginNavigation } from "@/src/config/post-login-navigation"
 
 import { NavigationGroup } from "./navigation-group"
-import { flattenNavigation } from "./navigation-utils"
+import { flattenNavigation, getMatchScore } from "./navigation-utils"
 
 const getQuickActions = () =>
   flattenNavigation(postLoginNavigation)
@@ -24,6 +30,17 @@ export function SidebarNav({
 }) {
   const pathname = usePathname() ?? ""
   const quickActions = getQuickActions()
+  const activeGroups = navigation
+    .filter((group) =>
+      group.items.some((item) => getMatchScore(pathname, item) > 0)
+    )
+    .map((group) => group.title)
+
+  const accordionComponents = {
+    AccordionItem,
+    AccordionTrigger,
+    AccordionContent,
+  }
 
   return (
     <aside className={cn("border-r bg-muted/10", className)}>
@@ -37,15 +54,20 @@ export function SidebarNav({
           </Link>
         </div>
         <div className="flex-1 space-y-6 overflow-y-auto px-4 pb-8">
-          <div className="space-y-6 pt-4">
+          <Accordion
+            type="multiple"
+            defaultValue={activeGroups.length ? activeGroups : undefined}
+            className="space-y-6 pt-4"
+          >
             {navigation.map((group) => (
               <NavigationGroup
                 key={group.title}
                 group={group}
                 pathname={pathname}
+                accordionComponents={accordionComponents}
               />
             ))}
-          </div>
+          </Accordion>
           {quickActions.length > 0 ? (
             <div className="space-y-3 rounded-lg border border-dashed border-muted-foreground/40 p-4">
               <p className="text-xs font-semibold uppercase text-muted-foreground">
