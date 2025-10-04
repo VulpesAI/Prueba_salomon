@@ -43,12 +43,17 @@ export function SidebarNav({
   }
 
   return (
-    <aside className={cn("border-r bg-muted/10", className)}>
+    <aside
+      className={cn(
+        "border-r border-neutral-dark-border bg-[#0B1943] text-secondary-foreground",
+        className
+      )}
+    >
       <div className="flex h-full w-72 flex-col">
         <div className="flex h-16 items-center px-6">
           <Link
             href="/dashboard/overview"
-            className="text-lg font-semibold tracking-tight"
+            className="text-lg font-semibold tracking-tight text-secondary-foreground"
           >
             SalomonAI
           </Link>
@@ -69,21 +74,21 @@ export function SidebarNav({
             ))}
           </Accordion>
           {quickActions.length > 0 ? (
-            <div className="space-y-3 rounded-lg border border-dashed border-muted-foreground/40 p-4">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">
+            <div className="space-y-3 rounded-lg border border-dashed border-neutral-dark-border/60 bg-white/5 p-4">
+              <p className="text-xs font-semibold uppercase text-secondary-foreground/70">
                 Accesos rápidos
               </p>
               <div className="grid gap-2">
                 {quickActions.map((action) => (
                   <Button
                     key={`quick-${action.href}`}
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="justify-start gap-2"
+                    className="group justify-start gap-2 text-secondary-foreground hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
                     asChild
                   >
                     <Link href={action.href}>
-                      <action.icon className="h-4 w-4" />
+                      <action.icon className="h-4 w-4 text-secondary-foreground transition-colors group-hover:text-white" />
                       {action.title}
                     </Link>
                   </Button>
