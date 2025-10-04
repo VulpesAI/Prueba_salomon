@@ -18,6 +18,7 @@ import { findBestMatch } from "./navigation-utils"
 
 type BreadcrumbProps = {
   navigation?: typeof postLoginNavigation
+  variant?: "default" | "inverted"
 }
 
 type Crumb = {
@@ -28,9 +29,15 @@ type Crumb = {
 
 export function Breadcrumbs({
   navigation = postLoginNavigation,
+  variant = "default",
 }: BreadcrumbProps) {
   const pathname = usePathname() ?? ""
   const match = findBestMatch(navigation, pathname)
+
+  const isInverted = variant === "inverted"
+  const listClassName = isInverted
+    ? "text-secondary-foreground [&>li>a]:text-secondary-foreground [&>li>a:hover]:text-secondary-foreground [&>li>span]:text-secondary-foreground"
+    : undefined
 
   const crumbs: Crumb[] = [
     {
@@ -55,21 +62,37 @@ export function Breadcrumbs({
 
   return (
     <Breadcrumb>
-      <BreadcrumbList>
+      <BreadcrumbList className={listClassName}>
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1
+          const linkClassName = isInverted
+            ? "text-secondary-foreground hover:text-secondary-foreground"
+            : undefined
+          const pageClassName = isInverted
+            ? "text-secondary-foreground"
+            : undefined
 
           return (
             <React.Fragment key={`${crumb.label}-${index}`}>
               <BreadcrumbItem>
                 {crumb.href && !isLast ? (
                   <BreadcrumbLink asChild>
-                    <Link href={crumb.href}>{crumb.label}</Link>
+                    <Link className={linkClassName} href={crumb.href}>
+                      {crumb.label}
+                    </Link>
                   </BreadcrumbLink>
                 ) : isLast || crumb.isCurrent ? (
-                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  <BreadcrumbPage className={pageClassName}>
+                    {crumb.label}
+                  </BreadcrumbPage>
                 ) : (
-                  <span className="text-muted-foreground">{crumb.label}</span>
+                  <span
+                    className={
+                      isInverted ? "text-secondary-foreground" : "text-muted-foreground"
+                    }
+                  >
+                    {crumb.label}
+                  </span>
                 )}
               </BreadcrumbItem>
               {!isLast ? <BreadcrumbSeparator /> : null}

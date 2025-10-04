@@ -16,7 +16,7 @@ import { TopbarActions } from "./topbar-actions"
 
 const LoadingShell = () => (
   <div className="flex min-h-screen flex-col bg-background">
-    <header className="border-b px-4 md:px-6">
+    <header className="border-b border-neutral-dark-border bg-secondary px-4 text-white md:px-6">
       <div className="flex h-16 items-center justify-between">
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded-full" />
@@ -55,7 +55,7 @@ export function AuthenticatedShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-neutral-dark-border bg-secondary text-white">
         <div className="flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
             <Sheet>
@@ -64,22 +64,29 @@ export function AuthenticatedShell({
                   variant="ghost"
                   size="icon"
                   aria-label="Abrir navegación"
+                  className="text-white hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
+              <SheetContent
+                side="left"
+                className="w-72 border-neutral-dark-border bg-[#0B1943] p-0 text-white"
+              >
                 <SidebarNav
                   navigation={postLoginNavigation}
                   className="h-full border-0"
                 />
               </SheetContent>
             </Sheet>
-            <div className="hidden flex-col md:flex">
-              <span className="text-sm font-semibold text-muted-foreground">
+            <div className="hidden flex-col text-secondary-foreground md:flex">
+              <span className="text-sm font-semibold text-secondary-foreground/90">
                 Espacio financiero
               </span>
-              <Breadcrumbs navigation={postLoginNavigation} />
+              <Breadcrumbs
+                navigation={postLoginNavigation}
+                variant="inverted"
+              />
             </div>
           </div>
           <TopbarActions user={user} onLogout={logout} />

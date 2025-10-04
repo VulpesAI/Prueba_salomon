@@ -75,48 +75,74 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
   }, [onLogout])
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 text-white">
       <div className="hidden items-center gap-2 md:flex">
-        <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
+        <Search className="h-4 w-4 text-white/70" aria-hidden />
         <Input
           placeholder="Buscar en tu espacio financiero"
-          className="w-64"
+          className="w-64 border-white/20 bg-white/10 text-white placeholder:text-white/70 focus-visible:ring-white/40"
           aria-label="Buscar"
         />
       </div>
       <div className="hidden items-center gap-2 lg:flex">
         {quickActions.map((action) => (
-          <Button key={action.href} variant="ghost" size="sm" asChild>
+          <Button
+            key={action.href}
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
+            asChild
+          >
             <Link href={action.href} className="flex items-center gap-2">
-              <action.icon className="h-4 w-4" />
+              <action.icon className="h-4 w-4 text-white" />
               <span>{action.title}</span>
             </Link>
           </Button>
         ))}
       </div>
       {IS_DEMO_MODE ? (
-        <Button variant="outline" size="sm" onClick={handleReloadDemoData}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
+          onClick={handleReloadDemoData}
+        >
           Cargar datos de ejemplo
         </Button>
       ) : null}
-      <Button variant="ghost" size="icon" asChild>
-        <Link href="/notifications" aria-label="Notificaciones" className="flex items-center justify-center">
-          <Bell className="h-5 w-5" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-white hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
+        asChild
+      >
+        <Link
+          href="/notifications"
+          aria-label="Notificaciones"
+          className="flex items-center justify-center"
+        >
+          <Bell className="h-5 w-5 text-white" />
         </Link>
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="gap-2">
-            <Avatar className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-white hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
+          >
+            <Avatar className="h-8 w-8 border border-white/20 bg-white/10 text-white">
               {user.avatarUrl ? (
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
               ) : null}
-              <AvatarFallback>{getInitials(user)}</AvatarFallback>
+              <AvatarFallback className="bg-white/20 text-white">
+                {getInitials(user)}
+              </AvatarFallback>
             </Avatar>
             <div className="hidden flex-col text-left leading-tight sm:flex">
-              <span className="text-sm font-medium">{user.name}</span>
+              <span className="text-sm font-medium text-white">{user.name}</span>
               {user.email ? (
-                <span className="text-xs text-muted-foreground">{user.email}</span>
+                <span className="text-xs text-white/70">{user.email}</span>
               ) : null}
             </div>
           </Button>
@@ -131,15 +157,20 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
             <Link href="/settings/security">Seguridad</Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault()
-              void handleLogout()
-            }}
-            disabled={isLoggingOut}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            {isLoggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+          <DropdownMenuItem asChild className="focus:bg-transparent">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="w-full justify-start text-white"
+              onClick={() => {
+                void handleLogout()
+              }}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              {isLoggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+            </Button>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
