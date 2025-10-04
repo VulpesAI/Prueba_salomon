@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 
+import { esCL } from "@/i18n/es-CL"
+
 const digestSchema = z.object({
   summaryName: z.string().min(3, "Escribe un nombre descriptivo"),
   frequency: z.string().min(1, "Define la frecuencia"),
@@ -50,23 +52,11 @@ const channelsSchema = z.object({
 type DigestFormValues = z.infer<typeof digestSchema>
 type ChannelsFormValues = z.infer<typeof channelsSchema>
 
-const templateCatalogue = [
-  {
-    id: "weekly-overview",
-    name: "Resumen semanal",
-    helper: "Enviado cada lunes con KPI principales.",
-  },
-  {
-    id: "cash-alert",
-    name: "Alerta de flujo de caja",
-    helper: "Dispara cuando el saldo cae por debajo del umbral.",
-  },
-  {
-    id: "closing-reminder",
-    name: "Recordatorio de cierre mensual",
-    helper: "Enviado tres días antes del corte contable.",
-  },
-]
+const notificationsCopy = esCL.settings.notifications
+const digestCopy = notificationsCopy.digests
+const channelsCopy = notificationsCopy.channels
+const templatesCopy = notificationsCopy.templates
+const templateCatalogue = templatesCopy.items
 
 export default function SettingsNotificationsPage() {
   const [digestStatus, setDigestStatus] = React.useState<
@@ -76,9 +66,9 @@ export default function SettingsNotificationsPage() {
     "idle" | "success" | "error"
   >("idle")
   const [templateSubjects, setTemplateSubjects] = React.useState<Record<string, string>>({
-    "weekly-overview": "Resumen semanal de SalomonAI",
-    "cash-alert": "Alerta de flujo de caja",
-    "closing-reminder": "Recordatorio de cierre mensual",
+    "weekly-overview": templatesCopy.items[0]?.defaultSubject ?? "",
+    "cash-alert": templatesCopy.items[1]?.defaultSubject ?? "",
+    "closing-reminder": templatesCopy.items[2]?.defaultSubject ?? "",
   })
   const [templateStatus, setTemplateStatus] = React.useState<
     "idle" | "success" | "error"
@@ -87,20 +77,20 @@ export default function SettingsNotificationsPage() {
   const digestForm = useForm<DigestFormValues>({
     resolver: zodResolver(digestSchema),
     defaultValues: {
-      summaryName: "Resumen ejecutivo",
-      frequency: "Semanal (lunes)",
-      sendTime: "09:00",
-      recipients: "finanzas@empresa.com",
+      summaryName: digestCopy.defaults.name,
+      frequency: digestCopy.defaults.frequency,
+      sendTime: digestCopy.defaults.time,
+      recipients: digestCopy.defaults.recipients,
     },
   })
 
   const channelsForm = useForm<ChannelsFormValues>({
     resolver: zodResolver(channelsSchema),
     defaultValues: {
-      email: true,
-      push: true,
-      sms: false,
-      inApp: true,
+      email: channelsCopy.defaults.email,
+      push: channelsCopy.defaults.push,
+      sms: channelsCopy.defaults.sms,
+      inApp: channelsCopy.defaults.inApp,
     },
   })
 
@@ -146,10 +136,8 @@ export default function SettingsNotificationsPage() {
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Resúmenes programados</CardTitle>
-          <CardDescription>
-            Define la cadencia y destinatarios de tus reportes automáticos.
-          </CardDescription>
+          <CardTitle>{digestCopy.title}</CardTitle>
+          <CardDescription>{digestCopy.description}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...digestForm}>
@@ -162,12 +150,16 @@ export default function SettingsNotificationsPage() {
                 name="summaryName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre del resumen</FormLabel>
+                    <FormLabel>{digestCopy.labels.name}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej. Directorio semanal" {...field} />
+                      <Input
+                        placeholder={digestCopy.placeholders.name}
+                        {...field}
+                        aria-label={digestCopy.labels.name}
+                      />
                     </FormControl>
                     <FormDescription>
-                      Aparecerá como título en los correos y notificaciones.
+                      {digestCopy.descriptions.name}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -178,12 +170,16 @@ export default function SettingsNotificationsPage() {
                 name="frequency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Frecuencia</FormLabel>
+                    <FormLabel>{digestCopy.labels.frequency}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej. Semanal, Diario" {...field} />
+                      <Input
+                        placeholder={digestCopy.placeholders.frequency}
+                        {...field}
+                        aria-label={digestCopy.labels.frequency}
+                      />
                     </FormControl>
                     <FormDescription>
-                      Puedes indicar días específicos o periodos personalizados.
+                      {digestCopy.descriptions.frequency}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -194,12 +190,12 @@ export default function SettingsNotificationsPage() {
                 name="sendTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Horario de envío</FormLabel>
+                    <FormLabel>{digestCopy.labels.time}</FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <Input type="time" {...field} aria-label={digestCopy.labels.time} />
                     </FormControl>
                     <FormDescription>
-                      Considera la zona horaria configurada en tu perfil.
+                      {digestCopy.descriptions.time}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -210,12 +206,16 @@ export default function SettingsNotificationsPage() {
                 name="recipients"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Destinatarios</FormLabel>
+                    <FormLabel>{digestCopy.labels.recipients}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Correos separados por coma" {...field} />
+                      <Input
+                        placeholder={digestCopy.placeholders.recipients}
+                        {...field}
+                        aria-label={digestCopy.labels.recipients}
+                      />
                     </FormControl>
                     <FormDescription>
-                      Puedes incluir listas de distribución o alias internos.
+                      {digestCopy.descriptions.recipients}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -223,20 +223,20 @@ export default function SettingsNotificationsPage() {
               />
               <CardFooter className="flex flex-col items-start gap-2 px-0">
                 <Button type="submit" disabled={digestForm.formState.isSubmitting}>
-                  {digestForm.formState.isSubmitting
-                    ? "Guardando..."
-                    : "Configurar resumen"}
+                  {digestForm.formState.isSubmitting ? digestCopy.saving : digestCopy.submit}
                 </Button>
-                {digestStatus === "success" && (
-                  <p className="text-sm text-green-600">
-                    Resumen programado actualizado correctamente.
-                  </p>
-                )}
-                {digestStatus === "error" && (
-                  <p className="text-sm text-destructive">
-                    Ocurrió un problema al guardar la programación.
-                  </p>
-                )}
+                <div aria-live="polite">
+                  {digestStatus === "success" && (
+                    <p className="text-sm text-green-600" role="status">
+                      {digestCopy.success}
+                    </p>
+                  )}
+                  {digestStatus === "error" && (
+                    <p className="text-sm text-destructive" role="status">
+                      {digestCopy.error}
+                    </p>
+                  )}
+                </div>
               </CardFooter>
             </form>
           </Form>
@@ -246,10 +246,8 @@ export default function SettingsNotificationsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Canales de entrega</CardTitle>
-            <CardDescription>
-              Activa los canales donde deseas recibir alertas y resúmenes.
-            </CardDescription>
+            <CardTitle>{channelsCopy.title}</CardTitle>
+            <CardDescription>{channelsCopy.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...channelsForm}>
@@ -263,9 +261,9 @@ export default function SettingsNotificationsPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border p-4">
                       <div className="space-y-1">
-                        <FormLabel className="text-base">Correo electrónico</FormLabel>
+                        <FormLabel className="text-base">{channelsCopy.options.email.label}</FormLabel>
                         <FormDescription>
-                          Ideal para reportes detallados y adjuntos.
+                          {channelsCopy.options.email.description}
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -280,9 +278,9 @@ export default function SettingsNotificationsPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border p-4">
                       <div className="space-y-1">
-                        <FormLabel className="text-base">Push móvil</FormLabel>
+                        <FormLabel className="text-base">{channelsCopy.options.push.label}</FormLabel>
                         <FormDescription>
-                          Recibe notificaciones inmediatas en tu app.
+                          {channelsCopy.options.push.description}
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -297,9 +295,9 @@ export default function SettingsNotificationsPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border p-4">
                       <div className="space-y-1">
-                        <FormLabel className="text-base">SMS</FormLabel>
+                        <FormLabel className="text-base">{channelsCopy.options.sms.label}</FormLabel>
                         <FormDescription>
-                          Útil para contingencias y notificaciones críticas.
+                          {channelsCopy.options.sms.description}
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -314,9 +312,9 @@ export default function SettingsNotificationsPage() {
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border p-4">
                       <div className="space-y-1">
-                        <FormLabel className="text-base">Centro de notificaciones</FormLabel>
+                        <FormLabel className="text-base">{channelsCopy.options.inApp.label}</FormLabel>
                         <FormDescription>
-                          Conserva un historial completo dentro de la plataforma.
+                          {channelsCopy.options.inApp.description}
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -327,18 +325,20 @@ export default function SettingsNotificationsPage() {
                 />
                 <CardFooter className="flex flex-col items-start gap-2 px-0">
                   <Button type="submit" disabled={channelsForm.formState.isSubmitting}>
-                    {channelsForm.formState.isSubmitting ? "Guardando..." : "Guardar canales"}
+                    {channelsForm.formState.isSubmitting ? channelsCopy.saving : channelsCopy.submit}
                   </Button>
-                  {channelsStatus === "success" && (
-                    <p className="text-sm text-green-600">
-                      Preferencias de canales actualizadas.
-                    </p>
-                  )}
-                  {channelsStatus === "error" && (
-                    <p className="text-sm text-destructive">
-                      No pudimos guardar tus canales. Intenta nuevamente.
-                    </p>
-                  )}
+                  <div aria-live="polite">
+                    {channelsStatus === "success" && (
+                      <p className="text-sm text-green-600" role="status">
+                        {channelsCopy.success}
+                      </p>
+                    )}
+                    {channelsStatus === "error" && (
+                      <p className="text-sm text-destructive" role="status">
+                        {channelsCopy.error}
+                      </p>
+                    )}
+                  </div>
                 </CardFooter>
               </form>
             </Form>
@@ -347,10 +347,8 @@ export default function SettingsNotificationsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Plantillas personalizadas</CardTitle>
-            <CardDescription>
-              Ajusta el asunto con el que llegan tus mensajes recurrentes.
-            </CardDescription>
+            <CardTitle>{templatesCopy.title}</CardTitle>
+            <CardDescription>{templatesCopy.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Accordion type="single" collapsible className="w-full">
@@ -375,23 +373,25 @@ export default function SettingsNotificationsPage() {
             </Accordion>
             <div className="flex flex-col items-start gap-2">
               <Button type="button" onClick={handleTemplateSave}>
-                Guardar plantillas
+                {templatesCopy.submit}
               </Button>
-              {templateStatus === "success" && (
-                <p className="text-sm text-green-600">
-                  Plantillas actualizadas correctamente.
-                </p>
-              )}
-              {templateStatus === "error" && (
-                <p className="text-sm text-destructive">
-                  No se pudo guardar tu personalización, intenta de nuevo.
-                </p>
-              )}
+              <div aria-live="polite">
+                {templateStatus === "success" && (
+                  <p className="text-sm text-green-600" role="status">
+                    {templatesCopy.success}
+                  </p>
+                )}
+                {templateStatus === "error" && (
+                  <p className="text-sm text-destructive" role="status">
+                    {templatesCopy.error}
+                  </p>
+                )}
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
               Revisa el historial completo en el{" "}
               <Link className="font-medium text-primary underline" href="/(authenticated)/notifications">
-                centro de notificaciones
+                {templatesCopy.linkText}
               </Link>
               .
             </p>

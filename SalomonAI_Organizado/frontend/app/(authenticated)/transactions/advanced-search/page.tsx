@@ -28,57 +28,58 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 
+import { esCL } from "@/i18n/es-CL"
+import { formatCurrency, formatDate } from "@/lib/intl"
+
+const t = esCL.transactions.advancedSearch
+
 const mockResults = [
   {
     id: "res-001",
-    description: "Factura proveedor logística",
-    date: "2024-03-10",
-    amount: -7890.22,
-    category: "Operaciones",
+    description: "Pago arriendo departamento",
+    date: "2024-03-12",
+    amount: -550_000,
+    category: "Arriendo",
   },
   {
     id: "res-002",
-    description: "Pago SaaS analítica",
-    date: "2024-03-08",
-    amount: -950.0,
-    category: "Tecnología",
+    description: "Compra supermercado Lider",
+    date: "2024-03-10",
+    amount: -86_500,
+    category: "Supermercado",
   },
   {
     id: "res-003",
-    description: "Retiro de caja chica",
-    date: "2024-03-07",
-    amount: -3000.0,
-    category: "Operaciones",
+    description: "Suscripción streaming familiar",
+    date: "2024-03-06",
+    amount: -12_990,
+    category: "Suscripciones",
   },
   {
     id: "res-004",
-    description: "Pago póliza seguros",
-    date: "2024-03-05",
-    amount: -2200.0,
-    category: "Administración",
+    description: "Recarga tarjeta Bip!",
+    date: "2024-03-04",
+    amount: -5_000,
+    category: "Transporte",
   },
   {
     id: "res-005",
-    description: "Pago servicios nube",
-    date: "2024-03-03",
-    amount: -1800.0,
-    category: "Tecnología",
+    description: "Depósito sueldo",
+    date: "2024-03-01",
+    amount: 1_650_000,
+    category: "Ingresos",
   },
 ]
 
-const savedSegments = [
-  { id: "seg-1", name: "Gastos mayores a 5k", owner: "Finanzas", updatedAt: "Hace 2 h" },
-  { id: "seg-2", name: "Ingresos enterprise", owner: "Ventas", updatedAt: "Ayer" },
-  { id: "seg-3", name: "Pagos recurrentes SaaS", owner: "Operaciones", updatedAt: "Hace 4 días" },
-]
+const savedSegments = t.segments.items
 
-const conditionFields = ["Monto", "Descripción", "Categoría", "Canal", "Etiqueta", "Fecha"]
-const operators = [">", "<", "=", "contiene", "no contiene", "entre"]
+const conditionFields = t.conditions.fields
+const operators = t.conditions.operators
 
 export default function TransactionsAdvancedSearchPage() {
   const [conditions, setConditions] = useState([
     { id: "cond-1", field: "Monto", operator: ">", value: "5000" },
-    { id: "cond-2", field: "Categoría", operator: "no contiene", value: "Ventas" },
+    { id: "cond-2", field: "Categoría", operator: "no contiene", value: "Ingresos" },
   ])
   const [logicOperator, setLogicOperator] = useState<"AND" | "OR">("AND")
   const [selectedRows, setSelectedRows] = useState<string[]>([])
@@ -213,24 +214,21 @@ export default function TransactionsAdvancedSearchPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Búsqueda avanzada</h1>
-          <p className="text-muted-foreground">
-            Construye consultas complejas para analizar patrones y aplicar acciones masivas en tus
-            movimientos.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground">{t.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link href="/transactions">Volver a transacciones</Link>
+            <Link href="/transactions">{t.navigation.backToTransactions}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/transactions/classification">Ir a clasificación</Link>
+            <Link href="/transactions/classification">{t.navigation.goToClassification}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/transactions/summaries">Ver resúmenes</Link>
+            <Link href="/transactions/summaries">{t.navigation.goToSummaries}</Link>
           </Button>
           <Button className="gap-2">
-            <Download className="h-4 w-4" /> Exportar resultados
+            <Download className="h-4 w-4" /> {t.navigation.export}
           </Button>
         </div>
       </div>
@@ -239,30 +237,27 @@ export default function TransactionsAdvancedSearchPage() {
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="space-y-1">
-              <CardTitle>Constructor visual</CardTitle>
-              <CardDescription>
-                Define condiciones con lógica combinada; guarda vistas reutilizables y compártelas con
-                tu equipo.
-              </CardDescription>
+              <CardTitle>{t.builder.title}</CardTitle>
+              <CardDescription>{t.builder.description}</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
               <Select
                 value={logicOperator}
                 onValueChange={(value: "AND" | "OR") => setLogicOperator(value)}
               >
-                <SelectTrigger className="w-32" aria-label="Operador lógico">
-                  <SelectValue placeholder="Operador" />
+                <SelectTrigger className="w-32" aria-label={t.builder.logicLabel}>
+                  <SelectValue placeholder={t.builder.logicLabel} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="AND">Cumplir todas</SelectItem>
-                  <SelectItem value="OR">Cumplir alguna</SelectItem>
+                  <SelectItem value="AND">{t.builder.logicOptions.and}</SelectItem>
+                  <SelectItem value="OR">{t.builder.logicOptions.or}</SelectItem>
                 </SelectContent>
               </Select>
               <Button size="sm" className="gap-2" onClick={addCondition}>
-                <Plus className="h-4 w-4" /> Agregar condición
+                <Plus className="h-4 w-4" /> {t.builder.addCondition}
               </Button>
               <Button variant="secondary" size="sm" className="gap-2">
-                <Save className="h-4 w-4" /> Guardar vista
+                <Save className="h-4 w-4" /> {t.builder.saveView}
               </Button>
             </div>
           </div>
@@ -278,8 +273,8 @@ export default function TransactionsAdvancedSearchPage() {
                   value={condition.field}
                   onValueChange={(value) => updateCondition(condition.id, "field", value)}
                 >
-                  <SelectTrigger aria-label="Campo" className="w-full">
-                    <SelectValue placeholder="Campo" />
+                  <SelectTrigger aria-label={t.builder.fieldPlaceholder} className="w-full">
+                    <SelectValue placeholder={t.builder.fieldPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {conditionFields.map((field) => (
@@ -293,8 +288,8 @@ export default function TransactionsAdvancedSearchPage() {
                   value={condition.operator}
                   onValueChange={(value) => updateCondition(condition.id, "operator", value)}
                 >
-                  <SelectTrigger aria-label="Operador" className="w-full">
-                    <SelectValue placeholder="Operador" />
+                  <SelectTrigger aria-label={t.builder.operatorPlaceholder} className="w-full">
+                    <SelectValue placeholder={t.builder.operatorPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {operators.map((operator) => (
@@ -307,9 +302,15 @@ export default function TransactionsAdvancedSearchPage() {
                 <Input
                   value={condition.value}
                   onChange={(event) => updateCondition(condition.id, "value", event.target.value)}
-                  placeholder="Valor"
+                  placeholder={t.builder.valuePlaceholder}
+                  aria-label={t.builder.valuePlaceholder}
                 />
-                <Button variant="ghost" size="icon" onClick={() => removeCondition(condition.id)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeCondition(condition.id)}
+                  aria-label={t.builder.removeConditionAria}
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -321,6 +322,7 @@ export default function TransactionsAdvancedSearchPage() {
             onChange={() => {
               /* TODO: Mapear actualizaciones desde el editor textual hacia el servicio de construcción */
             }}
+            aria-label={t.builder.textareaLabel}
           />
         </CardContent>
       </Card>
@@ -328,14 +330,12 @@ export default function TransactionsAdvancedSearchPage() {
       <Card className="border border-border/70 shadow-sm">
         <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1">
-            <CardTitle>Segmentos guardados</CardTitle>
-            <CardDescription>
-              Reactiva vistas frecuentes, comparte con áreas interesadas y controla sus permisos.
-            </CardDescription>
+            <CardTitle>{t.segments.title}</CardTitle>
+            <CardDescription>{t.segments.description}</CardDescription>
           </div>
           <Button variant="outline" className="gap-2" asChild>
             <Link href="/transactions/summaries">
-              Ver resumen asociado
+              {t.navigation.goToSummaries}
               <ArrowUpRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -346,18 +346,18 @@ export default function TransactionsAdvancedSearchPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold">{segment.name}</CardTitle>
                 <CardDescription>
-                  Propietario: {segment.owner} · {segment.updatedAt}
+                  {segment.note} · {segment.updatedAt}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex items-center justify-between gap-2">
                 <Button variant="ghost" className="gap-2 px-0" asChild>
                   <Link href="/transactions">
-                    Abrir
+                    {t.segments.open}
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button variant="secondary" size="sm">
-                  Compartir
+                  {t.segments.duplicate}
                 </Button>
               </CardContent>
             </Card>
@@ -369,20 +369,18 @@ export default function TransactionsAdvancedSearchPage() {
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-1">
-              <CardTitle>Resultados</CardTitle>
-              <CardDescription>
-                Aplica etiquetas, ejecuta reglas y exporta los hallazgos a tus herramientas analíticas.
-              </CardDescription>
+              <CardTitle>{t.results.title}</CardTitle>
+              <CardDescription>{t.results.description}</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" disabled={selectedRows.length === 0}>
-                Aplicar etiqueta
+                {t.results.bulkActions.tag}
               </Button>
               <Button variant="outline" size="sm" disabled={selectedRows.length === 0}>
-                Ejecutar regla
+                {t.results.bulkActions.markReviewed}
               </Button>
               <Button variant="default" size="sm" disabled={selectedRows.length === 0}>
-                Crear exportación
+                {t.results.bulkActions.export}
               </Button>
             </div>
           </div>
@@ -396,9 +394,11 @@ export default function TransactionsAdvancedSearchPage() {
               aria-label="Seleccionar resultados"
             />
             <label htmlFor="select-all-results" className="text-muted-foreground">
-              {selectedRows.length > 0
-                ? `${selectedRows.length} movimientos seleccionados`
-                : "Seleccionar página actual"}
+              <span aria-live="polite">
+                {selectedRows.length > 0
+                  ? t.results.selectionLabel.selected(selectedRows.length)
+                  : t.results.selectionLabel.default}
+              </span>
             </label>
           </div>
 
@@ -406,10 +406,10 @@ export default function TransactionsAdvancedSearchPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12" />
-                <TableHead>Descripción</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
+                <TableHead>{t.results.tableHeaders.description}</TableHead>
+                <TableHead>{t.results.tableHeaders.date}</TableHead>
+                <TableHead>{t.results.tableHeaders.category}</TableHead>
+                <TableHead className="text-right">{t.results.tableHeaders.amount}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -426,16 +426,13 @@ export default function TransactionsAdvancedSearchPage() {
                     </TableCell>
                     <TableCell className="font-medium">{result.description}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(result.date).toLocaleDateString("es-MX", {
-                        day: "2-digit",
-                        month: "short",
-                      })}
+                      {formatDate(result.date)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{result.category}</Badge>
                     </TableCell>
                     <TableCell className="text-right font-semibold">
-                      {result.amount.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}
+                      {formatCurrency(result.amount)}
                     </TableCell>
                   </TableRow>
                 )
@@ -443,7 +440,7 @@ export default function TransactionsAdvancedSearchPage() {
               {paginatedResults.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    Ajusta el constructor para obtener resultados.
+                    {t.results.empty}
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -491,7 +488,11 @@ export default function TransactionsAdvancedSearchPage() {
               </PaginationItem>
             </PaginationContent>
             <div className="text-sm text-muted-foreground">
-              Página {page} de {totalPages} · {filteredResults.length} coincidencias
+              {t.results.paginationLabel({
+                page,
+                total: totalPages,
+                count: filteredResults.length,
+              })}
             </div>
           </Pagination>
         </CardContent>
