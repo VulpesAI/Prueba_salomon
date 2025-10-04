@@ -1,6 +1,63 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
+const palette = {
+  primary: {
+    DEFAULT: "#743DFF",
+    foreground: "#F5F7FF",
+    from: "#743DFF",
+    to: "#007CF0",
+  },
+  secondary: {
+    DEFAULT: "#081134",
+    foreground: "#F5F7FF",
+  },
+  neutral: {
+    light: {
+      background: "#F5F7FF",
+      surface: "#FFFFFF",
+      subtle: "#F1F5F9",
+      muted: "#E2E8F0",
+      "muted-foreground": "#475569",
+      border: "#CBD5E1",
+      foreground: "#081134",
+    },
+    dark: {
+      background: "#0B1943",
+      surface: "#1F2937",
+      subtle: "#1F2937",
+      muted: "#374151",
+      "muted-foreground": "#E2E8F0",
+      border: "#374151",
+      foreground: "#F9FAFB",
+    },
+  },
+  success: {
+    DEFAULT: "#22C55E",
+    foreground: "#052E16",
+  },
+  warning: {
+    DEFAULT: "#F59E0B",
+    foreground: "#451A03",
+  },
+  error: {
+    DEFAULT: "#EF4444",
+    foreground: "#450A0A",
+  },
+  categories: {
+    vivienda: "#4F46E5",
+    alimentacion: "#F97316",
+    transporte: "#22D3EE",
+    servicios: "#0EA5E9",
+    suscripciones: "#8B5CF6",
+    salud: "#F43F5E",
+    ingresos: "#22C55E",
+    educacion: "#FBBF24",
+    entretenimiento: "#EC4899",
+    ahorro: "#14B8A6",
+  },
+} as const;
+
 const config: Config = {
   darkMode: "class",
   content: [
@@ -18,45 +75,38 @@ const config: Config = {
       },
     },
     extend: {
-      backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
-        'gradient-hero': 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 50%, rgba(6, 182, 212, 0.1) 100%)',
-        'gradient-card': 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
-      },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
+        ...palette,
+        border: palette.neutral.light.border,
+        input: palette.neutral.light.border,
+        ring: palette.primary.to,
+        background: palette.neutral.light.background,
+        foreground: palette.neutral.light.foreground,
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: palette.neutral.light.muted,
+          foreground: palette.neutral.light["muted-foreground"],
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: palette.primary.DEFAULT,
+          foreground: palette.primary.foreground,
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: palette.neutral.light.surface,
+          foreground: palette.neutral.light.foreground,
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: palette.neutral.light.surface,
+          foreground: palette.neutral.light.foreground,
         },
+        destructive: {
+          DEFAULT: palette.error.DEFAULT,
+          foreground: palette.error.foreground,
+        },
+      },
+      backgroundImage: {
+        "gradient-primary": "linear-gradient(135deg, #743DFF 0%, #007CF0 100%)",
+        "gradient-hero": "linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%)",
+        "gradient-card": "linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -81,7 +131,7 @@ const config: Config = {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       textColor: {
-        'gradient-primary': 'transparent',
+        "gradient-primary": "transparent",
       },
     },
   },
