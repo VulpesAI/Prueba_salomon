@@ -14,5 +14,11 @@ export const envValidationSchema = Joi.object({
   CORS_ORIGIN: Joi.string().allow('', null).optional(),
   SUPABASE_URL: Joi.string().uri().required(),
   SUPABASE_SERVICE_ROLE_KEY: Joi.string().min(20).required(),
-  SUPABASE_JWT_AUDIENCE: Joi.string().allow('', null).optional()
+  SUPABASE_JWT_AUDIENCE: Joi.string().allow('', null).optional(),
+  DEMO_MODE: Joi.boolean()
+    .truthy('true', '1', 'yes', 'y', 'on')
+    .falsy('false', '0', 'no', 'n', 'off')
+    .default(false),
+  DEFAULT_CURRENCY: Joi.string().default('CLP'),
+  DEFAULT_LOCALE: Joi.string().default('es-CL')
 });

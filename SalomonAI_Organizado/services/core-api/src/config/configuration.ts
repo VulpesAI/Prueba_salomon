@@ -18,10 +18,17 @@ export interface SupabaseConfig {
   jwtAudience?: string;
 }
 
+export interface DemoConfig {
+  enabled: boolean;
+  defaultCurrency: string;
+  defaultLocale: string;
+}
+
 export interface CoreConfiguration {
   app: AppConfig;
   auth: AuthConfig;
   supabase: SupabaseConfig;
+  demo: DemoConfig;
 }
 
 const parseAllowedOrigins = (value?: string): string[] => {
@@ -33,6 +40,15 @@ const parseAllowedOrigins = (value?: string): string[] => {
     .split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
+};
+
+const parseBoolean = (value?: string): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.toLowerCase();
+  return ['true', '1', 'yes', 'y', 'on'].includes(normalized);
 };
 
 export default (): CoreConfiguration => {
@@ -55,6 +71,11 @@ export default (): CoreConfiguration => {
       url: process.env.SUPABASE_URL,
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
       jwtAudience: process.env.SUPABASE_JWT_AUDIENCE
+    },
+    demo: {
+      enabled: parseBoolean(process.env.DEMO_MODE),
+      defaultCurrency: process.env.DEFAULT_CURRENCY ?? 'CLP',
+      defaultLocale: process.env.DEFAULT_LOCALE ?? 'es-CL'
     }
   };
 };
