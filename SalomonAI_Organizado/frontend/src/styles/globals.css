@@ -13,9 +13,50 @@
   }
 }
 
+/*
+ * Paleta principal SalomonAI
+ * - Primario morado-azul: #743DFF → #007CF0
+ * - Secundario midnight: #081134
+ * - Neutros oscuros: fondo #0B1943, superficie #1F2937, bordes #374151
+ */
 :root {
+  /* Tokens base del modo oscuro */
+  --background: #0B1943;
+  --foreground: #F9FAFB;
+  --surface: #1F2937;
+  --subtle: #1F2937;
+  --muted: #374151;
+  --muted-foreground: #E2E8F0;
+  --border: #374151;
+
+  /* Escala de marca */
+  --primary: #743DFF;
+  --primary-foreground: #F5F7FF;
+  --primary-gradient-from: #743DFF;
+  --primary-gradient-to: #007CF0;
+  --secondary: #081134;
+  --secondary-foreground: #F5F7FF;
+
   --radius: 0.75rem;
 }
+
+/* TODO: Definir tokens del modo claro
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #F5F7FF;
+    --foreground: #081134;
+    --surface: #FFFFFF;
+    --subtle: #F1F5F9;
+    --muted: #E2E8F0;
+    --muted-foreground: #475569;
+    --border: #CBD5E1;
+    --primary: #743DFF;
+    --primary-foreground: #F5F7FF;
+    --secondary: #081134;
+    --secondary-foreground: #F5F7FF;
+  }
+}
+*/
 
 /* Custom gradients */
 
@@ -29,12 +70,21 @@
 }
 
 .bg-gradient-primary {
-  background: linear-gradient(135deg, #743DFF 0%, #007CF0 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-gradient-from) 0%,
+    var(--primary-gradient-to) 100%
+  );
 }
 
 /* Text gradient utilities */
 .text-gradient-primary {
-  background: linear-gradient(135deg, #743DFF 0%, #007CF0 100%) !important;
+  background: linear-gradient(
+      135deg,
+      var(--primary-gradient-from) 0%,
+      var(--primary-gradient-to) 100%
+    )
+    !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
@@ -45,11 +95,19 @@
 /* Utility classes for gradients */
 @layer utilities {
   .bg-gradient-primary {
-    background: linear-gradient(135deg, #743DFF 0%, #007CF0 100%);
+    background: linear-gradient(
+      135deg,
+      var(--primary-gradient-from) 0%,
+      var(--primary-gradient-to) 100%
+    );
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #743DFF 0%, #007CF0 100%);
+    background: linear-gradient(
+      135deg,
+      var(--primary-gradient-from) 0%,
+      var(--primary-gradient-to) 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
