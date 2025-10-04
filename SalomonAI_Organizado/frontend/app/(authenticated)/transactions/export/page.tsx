@@ -30,18 +30,18 @@ type ExportState = "idle" | "loading" | "success" | "error"
 
 const actionLabels: Record<ExportFormat, { title: string; description: string; icon: typeof FileText }> = {
   csv: {
-    title: "Descargar CSV",
-    description: "Compatible con Excel, Google Sheets y Notion.",
+    title: "Descargar tus registros en CSV",
+    description: "Compatible con tus hojas de cálculo en Excel, Google Sheets o Notion.",
     icon: Table,
   },
   pdf: {
-    title: "Generar PDF",
-    description: "Resumen legible para compartir con tu equipo.",
+    title: "Generar tu resumen en PDF",
+    description: "Resumen legible para guardar entre tus registros personales.",
     icon: FileText,
   },
   json: {
-    title: "Exportar JSON",
-    description: "Ideal para integraciones o análisis personalizados.",
+    title: "Exportar tus datos en JSON",
+    description: "Perfecto para respaldar tus registros o crear tus propios análisis.",
     icon: FileJson,
   },
 }
@@ -68,8 +68,8 @@ export default function TransactionsExportPage() {
   const handleExport = async (format: ExportFormat) => {
     if (!statement) {
       toast({
-        title: "Sin datos disponibles",
-        description: "Carga una cartola o inicia la demo para continuar.",
+        title: "Sin registros disponibles",
+        description: "Carga tu cartola o inicia la demo para continuar con tus registros.",
         variant: "destructive",
       })
       return
@@ -99,8 +99,8 @@ export default function TransactionsExportPage() {
     } catch (error) {
       console.error(error)
       toast({
-        title: "No se pudo exportar",
-        description: "Inténtalo de nuevo en unos segundos.",
+        title: "No se pudo exportar tus registros",
+        description: "Inténtalo de nuevo en unos segundos para completar la descarga.",
         variant: "destructive",
       })
       setStates((previous) => ({ ...previous, [format]: "error" }))
@@ -115,14 +115,14 @@ export default function TransactionsExportPage() {
           <Badge variant="secondary">Demo</Badge>
         </div>
         <p className="max-w-2xl text-muted-foreground">
-          Genera extractos personales con tu cartola demo de SalomónAI. Incluimos tus datos de contacto
-          ficticios y montos expresados en pesos chilenos (CLP) para que pruebes el flujo completo.
+          Genera tus extractos personales con la cartola demo de SalomónAI. Incluimos tus datos ficticios
+          y montos expresados en pesos chilenos (CLP) para que explores todo el flujo con tus registros.
         </p>
       </header>
 
       {!statement ? (
         <Alert variant="destructive">
-          <AlertTitle>No encontramos una cartola para exportar</AlertTitle>
+          <AlertTitle>No encontramos tus registros para exportar</AlertTitle>
           <AlertDescription>
             Activa el modo demo desde el menú principal o sube tus propios movimientos para habilitar las
             descargas.
@@ -133,25 +133,26 @@ export default function TransactionsExportPage() {
       {statement ? (
         <Card className="border-border/70">
           <CardHeader className="space-y-2">
-            <CardTitle>Resumen exportable</CardTitle>
+            <CardTitle>Tu resumen exportable</CardTitle>
             <CardDescription>
-              Utilizamos el estado demo chileno para recrear un flujo de descarga de información personal.
+              Preparamos este resumen demo chileno para mostrarte cómo lucen tus registros antes de
+              descargarlos.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Titular demo</p>
+                <p className="text-sm font-medium text-muted-foreground">Tus datos demo</p>
                 <p className="font-semibold">{DEMO_PERSONAL_DATA.fullName}</p>
                 <p className="text-sm text-muted-foreground">{DEMO_PERSONAL_DATA.documentId}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Datos de contacto</p>
+                <p className="text-sm font-medium text-muted-foreground">Tus datos de contacto</p>
                 <p className="font-semibold">{DEMO_PERSONAL_DATA.email}</p>
                 <p className="text-sm text-muted-foreground">{DEMO_PERSONAL_DATA.institution}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Rango disponible</p>
+                <p className="text-sm font-medium text-muted-foreground">Rango para tu resumen</p>
                 <p className="font-semibold">
                   {formatDate(range!.start)} — {formatDate(range!.end)}
                 </p>
@@ -163,15 +164,15 @@ export default function TransactionsExportPage() {
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="rounded-lg border bg-muted/30 p-4">
-                <p className="text-sm text-muted-foreground">Balance</p>
+                <p className="text-sm text-muted-foreground">Tu balance</p>
                 <p className="text-2xl font-semibold">{formatCurrency(totals!.balance)}</p>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <p className="text-sm text-muted-foreground">Ingresos</p>
+                <p className="text-sm text-muted-foreground">Tus ingresos</p>
                 <p className="text-2xl font-semibold">{formatCurrency(totals!.income)}</p>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <p className="text-sm text-muted-foreground">Gastos</p>
+                <p className="text-sm text-muted-foreground">Tus gastos</p>
                 <p className="text-2xl font-semibold">{formatCurrency(totals!.expenses)}</p>
               </div>
             </div>
