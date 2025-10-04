@@ -26,11 +26,11 @@ type UseAnalyticsCategoriesResult = {
 }
 
 const CATEGORY_LABELS = [
-  "Operación",
-  "Crecimiento",
-  "Tecnología",
-  "Personas",
-  "Finanzas",
+  "Arriendo",
+  "Supermercado",
+  "Transporte",
+  "Servicios del hogar",
+  "Entretenimiento",
 ]
 
 const MONTH_LABELS = [
@@ -45,11 +45,11 @@ const MONTH_LABELS = [
 export const useAnalyticsCategories = (): UseAnalyticsCategoriesResult => {
   const heatmap = useMemo<CategoryHeatmap>(() => {
     const baseValues: Record<string, number[]> = {
-      Operación: [42, 38, 45, 48, 52, 50],
-      Crecimiento: [28, 30, 26, 24, 29, 31],
-      Tecnología: [22, 25, 27, 26, 28, 30],
-      Personas: [18, 20, 19, 17, 18, 21],
-      Finanzas: [15, 17, 16, 18, 19, 20],
+      Arriendo: [80, 80, 80, 82, 82, 82],
+      Supermercado: [52, 48, 55, 58, 54, 56],
+      Transporte: [24, 26, 22, 25, 27, 23],
+      "Servicios del hogar": [30, 32, 29, 28, 31, 34],
+      Entretenimiento: [18, 22, 20, 24, 26, 21],
     }
 
     const points: CategoryHeatmapPoint[] = []
@@ -74,11 +74,17 @@ export const useAnalyticsCategories = (): UseAnalyticsCategoriesResult => {
 
   const aggregates = useMemo<CategoryAggregate[]>(
     () => [
-      { category: "Operación", total: 52000000, share: 0.38, change: 0.07, status: "up" },
-      { category: "Crecimiento", total: 31500000, share: 0.23, change: -0.04, status: "down" },
-      { category: "Tecnología", total: 28700000, share: 0.21, change: 0.05, status: "up" },
-      { category: "Personas", total: 19800000, share: 0.14, change: 0.02, status: "up" },
-      { category: "Finanzas", total: 16400000, share: 0.12, change: -0.03, status: "down" },
+      { category: "Arriendo", total: 420000, share: 0.36, change: 0.01, status: "up" },
+      { category: "Supermercado", total: 305000, share: 0.26, change: 0.08, status: "up" },
+      { category: "Transporte", total: 128000, share: 0.11, change: -0.05, status: "down" },
+      {
+        category: "Servicios del hogar",
+        total: 152000,
+        share: 0.13,
+        change: 0.04,
+        status: "up",
+      },
+      { category: "Entretenimiento", total: 165000, share: 0.14, change: 0.06, status: "up" },
     ],
     []
   )
@@ -86,39 +92,39 @@ export const useAnalyticsCategories = (): UseAnalyticsCategoriesResult => {
   const drilldowns = useMemo<CategoryDrilldownItem[]>(
     () => [
       {
-        subcategory: "Logística inteligente",
-        parent: "Operación",
-        transactions: 1420,
-        averageTicket: 125000,
-        change: 0.12,
+        subcategory: "Arriendo mensual",
+        parent: "Arriendo",
+        transactions: 6,
+        averageTicket: 420000,
+        change: 0,
       },
       {
-        subcategory: "Ads performance",
-        parent: "Crecimiento",
-        transactions: 980,
-        averageTicket: 182000,
-        change: -0.05,
+        subcategory: "Compras de la semana",
+        parent: "Supermercado",
+        transactions: 18,
+        averageTicket: 18500,
+        change: 0.14,
       },
       {
-        subcategory: "Cloud & SaaS",
-        parent: "Tecnología",
-        transactions: 640,
-        averageTicket: 215000,
-        change: 0.09,
+        subcategory: "Aplicaciones de transporte",
+        parent: "Transporte",
+        transactions: 22,
+        averageTicket: 5600,
+        change: -0.08,
       },
       {
-        subcategory: "Capacitación",
-        parent: "Personas",
-        transactions: 410,
-        averageTicket: 87000,
-        change: 0.04,
+        subcategory: "Luz y agua",
+        parent: "Servicios del hogar",
+        transactions: 8,
+        averageTicket: 21500,
+        change: 0.06,
       },
       {
-        subcategory: "Tesorería",
-        parent: "Finanzas",
-        transactions: 355,
-        averageTicket: 158000,
-        change: -0.02,
+        subcategory: "Salidas de fin de semana",
+        parent: "Entretenimiento",
+        transactions: 5,
+        averageTicket: 32000,
+        change: 0.11,
       },
     ],
     []
@@ -127,31 +133,31 @@ export const useAnalyticsCategories = (): UseAnalyticsCategoriesResult => {
   const adjustments = useMemo<CategoryAdjustment[]>(
     () => [
       {
-        id: "merge-growth",
-        title: "Fusionar campañas de adquisición",
+        id: "renegotiate-rent",
+        title: "Revisar condiciones de arriendo",
         description:
-          "Unifica los segmentos de adquisición digital para aprovechar audiencias lookalike y reducir costos por conversión.",
-        impact: "Impacto estimado: +$4.5M / mes",
+          "Pregunta por un descuento por pago anticipado o acuerdos de permanencia de más meses. Una rebaja del 5% libera espacio para tus metas.",
+        impact: "Ahorro potencial: $21.000 / mes",
         href: "/analytics/recommendations",
-        actionLabel: "Ver recomendaciones",
+        actionLabel: "Ver consejos",
       },
       {
-        id: "optimize-cloud",
-        title: "Optimizar licencias cloud",
+        id: "plan-supermarket",
+        title: "Planificar compras del supermercado",
         description:
-          "Ajusta los tiers de almacenamiento y libera instancias subutilizadas. Detectamos un 18% de capacidad ociosa.",
-        impact: "Ahorro estimado: $2.1M / mes",
+          "Haz una lista semanal y aprovecha ofertas en productos básicos. Reduciendo las compras impulsivas podrías bajar un 8% el gasto.",
+        impact: "Objetivo: -$24.000 / mes",
         href: "/alerts",
-        actionLabel: "Configurar alerta",
+        actionLabel: "Crear recordatorio",
       },
       {
-        id: "strengthen-upskilling",
-        title: "Refuerzo de upskilling",
+        id: "adjust-subscriptions",
+        title: "Ordenar suscripciones y servicios",
         description:
-          "Incrementa la inversión en cursos críticos para áreas de analítica y automatización, con ROI positivo al tercer mes.",
-        impact: "Retorno proyectado: 3.4x",
+          "Revisa qué apps de streaming o servicios hogareños no estás usando. Cancelar dos de ellos libera presupuesto para el ahorro de emergencia.",
+        impact: "Impacto estimado: +$15.500",
         href: "/goals",
-        actionLabel: "Asignar presupuesto",
+        actionLabel: "Asignar ahorro",
       },
     ],
     []
@@ -161,21 +167,21 @@ export const useAnalyticsCategories = (): UseAnalyticsCategoriesResult => {
     () => [
       {
         id: "link-recommendations",
-        label: "Ir a recomendaciones",
+        label: "Ver recomendaciones personalizadas",
         href: "/analytics/recommendations",
-        description: "Despliega ajustes automáticos con base en el mapa de calor.",
+        description: "Recibe sugerencias para equilibrar tu presupuesto del mes.",
       },
       {
         id: "configure-alerts",
         label: "Configurar alertas",
         href: "/alerts",
-        description: "Activa monitoreo en tiempo real para desvíos de categoría.",
+        description: "Activa avisos cuando una categoría se acerque a tu límite.",
       },
       {
         id: "design-budget",
-        label: "Diseñar escenario presupuestario",
+        label: "Ajustar tus metas y presupuesto",
         href: "/goals",
-        description: "Simula redistribuciones y compromételas con objetivos financieros.",
+        description: "Redistribuye montos y vincúlalos a tus metas personales.",
       },
     ],
     []

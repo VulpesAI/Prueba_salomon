@@ -78,23 +78,23 @@ export default function AnalyticsCategoriesPage() {
       <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Analítica por categorías
+            Tus gastos por categoría
           </h1>
           <p className="text-sm text-muted-foreground">
-            Explora cómo se comportan tus categorías financieras, identifica
-            focos de gasto y activa acciones inteligentes desde este panel.
+            Revisa cómo evoluciona tu presupuesto por categoría, detecta los
+            focos de gasto del mes y decide qué ajustes hacer desde aquí.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild size="sm" variant="secondary">
             <Link href="/analytics/insights">
-              Narrativas recientes
+              Historias de tus gastos
               <ArrowUpRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
           <Button asChild size="sm">
             <Link href="/analytics/recommendations">
-              Ir a recomendaciones
+              Ver recomendaciones personalizadas
               <ArrowUpRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
@@ -110,8 +110,8 @@ export default function AnalyticsCategoriesPage() {
                 Mapa de calor de impacto
               </CardTitle>
               <CardDescription>
-                Cruza categorías con periodos para visualizar concentraciones de
-                gasto y oportunidades de ajuste.
+                Compara tus categorías y meses para reconocer concentraciones de
+                gasto y oportunidades de ahorro.
               </CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">
@@ -151,9 +151,9 @@ export default function AnalyticsCategoriesPage() {
               </ScatterChart>
             </ChartContainer>
             <p className="mt-4 text-sm text-muted-foreground">
-              Intensidad calculada en base a variación mensual ponderada por
-              peso presupuestario. Valores altos indican focos prioritarios de
-              monitoreo.
+              La intensidad considera la variación mensual y el peso en tu
+              presupuesto. Los valores más altos marcan gastos a monitorear de
+              cerca.
             </p>
           </CardContent>
         </Card>
@@ -165,8 +165,8 @@ export default function AnalyticsCategoriesPage() {
               Participación por categoría
             </CardTitle>
             <CardDescription>
-              Comparativo mensual de presupuesto ejecutado y tendencia versus el
-              periodo anterior.
+              Compara cuánto llevas gastado y cómo cambia cada categoría versus
+              el mes anterior.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -216,11 +216,11 @@ export default function AnalyticsCategoriesPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Layers className="h-5 w-5 text-blue-500" />
-                Drill-down de subcategorías
+                Detalle de subcategorías
               </CardTitle>
               <CardDescription>
-                Analiza las transacciones con mayor contribución para priorizar
-                acciones tácticas.
+                Revisa las compras con mayor impacto para decidir ajustes
+                cotidianos.
               </CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">
@@ -277,7 +277,7 @@ export default function AnalyticsCategoriesPage() {
               Acciones sugeridas
             </CardTitle>
             <CardDescription>
-              Ajustes automáticos priorizados según impacto y esfuerzo estimado.
+              Ideas rápidas priorizadas según impacto y esfuerzo estimado.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
@@ -304,8 +304,8 @@ export default function AnalyticsCategoriesPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Coordina estas acciones con objetivos financieros para medir
-              resultados sostenibles.
+              Conecta estos ajustes con tus metas para ver el efecto en tus
+              finanzas personales.
             </p>
             <Button asChild size="sm" variant="secondary">
               <Link href="/goals">
@@ -321,8 +321,7 @@ export default function AnalyticsCategoriesPage() {
         <CardHeader>
           <CardTitle>Acciones inmediatas</CardTitle>
           <CardDescription>
-            Navega rápidamente hacia los módulos que potencian tu estrategia de
-            inteligencia financiera.
+            Ingresa rápido a las secciones que te ayudan a ordenar tu dinero.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
