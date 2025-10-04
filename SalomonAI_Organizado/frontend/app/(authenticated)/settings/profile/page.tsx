@@ -50,8 +50,8 @@ const preferencesSchema = z.object({
   language: z.string().min(2, "Selecciona un idioma"),
   currency: z.string().min(1, "Selecciona una moneda"),
   timezone: z.string().min(2, "Selecciona una zona horaria"),
-  weeklyDigest: z.boolean().default(true),
-  betaAccess: z.boolean().default(false),
+  weeklyDigest: z.boolean(),
+  betaAccess: z.boolean(),
 })
 
 type ProfileFormValues = z.infer<typeof profileSchema>
