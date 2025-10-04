@@ -43,12 +43,13 @@ describe("demo statement exporters", () => {
     expect(parsed.transactions[0].formattedAmount).toMatch(/CLP/)
   })
 
-  it("generates printable PDF text with CLP amounts", async () => {
+  it("generates printable PDF HTML with CLP amounts", async () => {
     const result = await exportStatementAsPdf(CHILE_DEMO_STATEMENT, DEMO_PERSONAL_DATA)
 
-    expect(result.mimeType).toBe("application/pdf")
-    const content = normalizeWhitespace(result.content)
+    expect(result.filename.endsWith(".pdf")).toBe(true)
+    const content = normalizeWhitespace(result.html)
     expect(content).toContain("SalomónAI — Extracto Demo")
+    expect(content).toContain("window.print()")
     expect(content).toMatch(/CLP ?1\.800\.000/)
   })
 })

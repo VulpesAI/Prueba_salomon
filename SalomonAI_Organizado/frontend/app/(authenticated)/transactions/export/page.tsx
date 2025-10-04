@@ -20,11 +20,12 @@ import {
 } from "@/lib/exporters"
 import { formatCurrency, formatDate } from "@/lib/intl"
 
-const exportActions: Record<ExportFormat, typeof exportStatementAsCsv> = {
+const downloadExporters: Record<Exclude<ExportFormat, "pdf">, typeof exportStatementAsCsv> = {
   csv: exportStatementAsCsv,
   json: exportStatementAsJson,
-  pdf: exportStatementAsPdf,
 }
+
+const exportFormats: ExportFormat[] = ["csv", "pdf", "json"]
 
 type ExportState = "idle" | "loading" | "success" | "error"
 
@@ -78,19 +79,31 @@ export default function TransactionsExportPage() {
     setStates((previous) => ({ ...previous, [format]: "loading" }))
 
     try {
-      const exporter = exportActions[format]
-      const result = await exporter(statement, DEMO_PERSONAL_DATA, range ?? undefined)
-      const blob = new Blob([result.content], { type: result.mimeType })
-      const url = URL.createObjectURL(blob)
+      if (format === "pdf") {
+        const result = await exportStatementAsPdf(statement, DEMO_PERSONAL_DATA, range ?? undefined)
+        const printWindow = window.open("", "_blank", "noopener,noreferrer")
 
-      const anchor = document.createElement("a")
-      anchor.href = url
-      anchor.download = result.filename
-      anchor.rel = "noopener"
-      anchor.click()
-      anchor.remove()
+        if (!printWindow) {
+          throw new Error("PDF_PRINT_WINDOW_BLOCKED")
+        }
 
-      URL.revokeObjectURL(url)
+        printWindow.document.write(result.html)
+        printWindow.document.close()
+      } else {
+        const exporter = downloadExporters[format]
+        const result = await exporter(statement, DEMO_PERSONAL_DATA, range ?? undefined)
+        const blob = new Blob([result.content], { type: result.mimeType })
+        const url = URL.createObjectURL(blob)
+
+        const anchor = document.createElement("a")
+        anchor.href = url
+        anchor.download = result.filename
+        anchor.rel = "noopener"
+        anchor.click()
+        anchor.remove()
+
+        URL.revokeObjectURL(url)
+      }
 
       setStates((previous) => ({ ...previous, [format]: "success" }))
       setTimeout(() => {
@@ -181,7 +194,7 @@ export default function TransactionsExportPage() {
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-3">
-        {(Object.keys(exportActions) as ExportFormat[]).map((format) => {
+        {exportFormats.map((format) => {
           const { label, variant } = statusBadge[states[format]]
           const { title, description, icon: Icon } = actionLabels[format]
 
