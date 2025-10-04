@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { useMemo } from "react"
 
@@ -37,6 +39,10 @@ const highlightIconMap = {
   shield: ShieldCheck,
 } as const
 
+type HighlightIconKey = keyof typeof highlightIconMap
+
+const highlightIconOrder: HighlightIconKey[] = ["sparkles", "trendingUp", "shield"]
+
 const versionStatusDotStyles = {
   published: "bg-emerald-500 border-emerald-500/60",
   scheduled: "bg-primary border-primary/40",
@@ -48,6 +54,8 @@ const versionStatusLabels = {
   scheduled: "Programado",
   draft: "Borrador",
 } as const
+
+type VersionStatus = keyof typeof versionStatusDotStyles
 
 const dateFormatter = new Intl.DateTimeFormat("es-CL", {
   day: "numeric",
@@ -73,6 +81,9 @@ const headerIconMap = {
   share: Share2,
 } as const
 
+type HeaderActionIcon = keyof typeof headerIconMap
+type HeaderActionVariant = "default" | "outline" | "secondary"
+
 export default function DashboardInsightsPage() {
   const intelligence = useDashboardIntelligence()
   const overview = useDashboardOverview()
@@ -83,7 +94,13 @@ export default function DashboardInsightsPage() {
     const savings = overview.totals?.savings ?? null
     const goalsCount = goals?.goals.length ?? 0
 
-    return [
+    const actions: Array<{
+      id: string
+      label: string
+      href: string
+      icon: HeaderActionIcon
+      variant: HeaderActionVariant
+    }> = [
       {
         id: "forecast",
         label:
@@ -92,7 +109,7 @@ export default function DashboardInsightsPage() {
             : "Ver proyección",
         href: "/dashboard/overview",
         icon: "radar",
-        variant: "default" as const,
+        variant: "default",
       },
       {
         id: "download-budget",
@@ -102,7 +119,7 @@ export default function DashboardInsightsPage() {
             : "Descargar presupuesto",
         href: "/dashboard/overview/exportar-presupuesto",
         icon: "download",
-        variant: "outline" as const,
+        variant: "outline",
       },
       {
         id: "share-goals",
@@ -112,9 +129,11 @@ export default function DashboardInsightsPage() {
             : "Ver hábitos financieros",
         href: "/dashboard/goals",
         icon: "share",
-        variant: "secondary" as const,
+        variant: "secondary",
       },
     ]
+
+    return actions
   }, [goals?.goals.length, intelligence.forecastSummary?.horizonDays, overview.totals?.savings])
 
   const priorities = useMemo(() => {
@@ -186,18 +205,23 @@ export default function DashboardInsightsPage() {
   }, [intelligence.predictiveAlerts])
 
   const highlights = useMemo(() => {
-    const derived = intelligence.insights.slice(0, 3).map((insight, index) => ({
-      id: insight.id,
-      title: insight.title,
-      description: insight.description,
-      icon: (index === 0 ? "sparkles" : index === 1 ? "trendingUp" : "shield") as const,
-      badgeLabel:
-        insight.highlight ??
-        (insight.metrics && insight.metrics[0]
-          ? `${insight.metrics[0].label}: ${insight.metrics[0].value}`
-          : "Insight"),
-      badgeVariant: index === 0 ? "secondary" : "outline" as const,
-    }))
+    const derived = intelligence.insights.slice(0, 3).map((insight, index) => {
+      const icon = highlightIconOrder[index] ?? "shield"
+      const badgeVariant: "secondary" | "outline" = index === 0 ? "secondary" : "outline"
+
+      return {
+        id: insight.id,
+        title: insight.title,
+        description: insight.description,
+        icon,
+        badgeLabel:
+          insight.highlight ??
+          (insight.metrics && insight.metrics[0]
+            ? `${insight.metrics[0].label}: ${insight.metrics[0].value}`
+            : "Insight"),
+        badgeVariant,
+      }
+    })
 
     return derived.length > 0 ? derived : personalBudgetFallback.highlights
   }, [intelligence.insights])
@@ -221,7 +245,7 @@ export default function DashboardInsightsPage() {
     const items = goals?.goals ?? []
 
     const derived = items.slice(0, 3).map((goal) => {
-      const status = goal.status === "COMPLETED"
+      const status: VersionStatus = goal.status === "COMPLETED"
         ? "published"
         : goal.metrics.pace === "off_track"
           ? "draft"
