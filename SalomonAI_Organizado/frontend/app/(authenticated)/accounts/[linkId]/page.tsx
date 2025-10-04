@@ -9,11 +9,28 @@ export default async function AccountDetailPage({
 }: AccountDetailPageProps) {
   const { linkId } = await params
   const accountId = decodeURIComponent(linkId)
+  const accountMetadata: Record<
+    string,
+    { title: string; description: string }
+  > = {
+    "demo-cuenta": {
+      title: "Cuenta corriente demo",
+      description:
+        "Explora un ejemplo de cuenta bancaria con datos de referencia, gráficas y recomendaciones simuladas.",
+    },
+  }
+
+  const { title, description } =
+    accountMetadata[accountId] ?? {
+      title: `Detalle de la cuenta ${accountId}`,
+      description:
+        "Consulta información granular, conexiones y métricas históricas del enlace seleccionado.",
+    }
 
   return (
     <PlaceholderPage
-      title={`Detalle de la cuenta ${accountId}`}
-      description="Consulta información granular, conexiones y métricas históricas del enlace seleccionado."
+      title={title}
+      description={description}
       sections={[
         {
           title: "Información principal",

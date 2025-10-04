@@ -78,7 +78,7 @@ export const postLoginNavigation: NavigationGroup[] = [
       },
       {
         title: "Detalle de cuenta",
-        href: "/accounts/[linkId]",
+        href: "/accounts/demo-cuenta",
         icon: CreditCard,
         description: "Información de una cuenta vinculada",
       },
@@ -167,7 +167,7 @@ export const postLoginNavigation: NavigationGroup[] = [
       },
       {
         title: "Detalle de meta",
-        href: "/goals/[goalId]",
+        href: "/goals/demo-meta",
         icon: PiggyBank,
         description: "Configuración y eventos de una meta",
       },
