@@ -9,11 +9,25 @@ export default async function GoalDetailPage({
 }: GoalDetailPageProps) {
   const { goalId: encodedGoalId } = await params
   const goalId = decodeURIComponent(encodedGoalId)
+  const goalMetadata: Record<string, { title: string; description: string }> = {
+    "demo-meta": {
+      title: "Meta vacaciones familiares",
+      description:
+        "Ejemplo de meta de ahorro con proyecciones de aportes mensuales, hitos y recomendaciones personalizadas.",
+    },
+  }
+
+  const { title, description } =
+    goalMetadata[goalId] ?? {
+      title: `Meta ${goalId}`,
+      description:
+        "Consulta el detalle de la meta, sus hitos y plan de aportaciones.",
+    }
 
   return (
     <PlaceholderPage
-      title={`Meta ${goalId}`}
-      description="Consulta el detalle de la meta, sus hitos y plan de aportaciones."
+      title={title}
+      description={description}
       sections={[
         {
           title: "Resumen de progreso",
