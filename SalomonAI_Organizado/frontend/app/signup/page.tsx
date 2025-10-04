@@ -247,7 +247,7 @@ export default function SignupPage() {
                   />
                   <span>Acepto los términos y condiciones</span>
                 </label>
-                <Link href="/terms" className="text-sm text-primary hover:underline">
+                <Link href="/terminos" className="text-sm text-primary hover:underline">
                   Ver términos
                 </Link>
               </div>
