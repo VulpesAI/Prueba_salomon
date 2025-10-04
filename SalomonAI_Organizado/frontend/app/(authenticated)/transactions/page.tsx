@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type MouseEventHandler } from "react"
 import Link from "next/link"
 import {
   ArrowUpRight,
@@ -36,6 +36,7 @@ import {
 
 import { esCL } from "@/i18n/es-CL"
 import { formatCurrency, formatCurrencyAbsolute, formatDate } from "@/lib/intl"
+import { IS_DEMO_MODE, useDemoFinancialData } from "@/context/DemoFinancialDataContext"
 
 const t = esCL.transactions.main
 
@@ -135,16 +136,55 @@ const mockTransactions = [
 const categories = t.filters.categories
 const statuses = t.filters.statuses
 
+type DemoExportState = "in_progress" | "ready" | "error"
+
+const demoStatusCopy: Record<DemoExportState, { label: string; variant: "secondary" | "outline" | "destructive" }> = {
+  in_progress: {
+    label: "Procesando demo",
+    variant: "outline",
+  },
+  ready: {
+    label: "Descarga demo lista",
+    variant: "secondary",
+  },
+  error: {
+    label: "Error en datos demo",
+    variant: "destructive",
+  },
+}
+
 export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("Todas")
   const [statusFilter, setStatusFilter] = useState<string>("Todos")
   const [page, setPage] = useState(1)
   const [selectedRows, setSelectedRows] = useState<string[]>([])
+  const { statement } = useDemoFinancialData()
+  const [demoExportStatus, setDemoExportStatus] = useState<DemoExportState>(() =>
+    IS_DEMO_MODE ? "in_progress" : "ready"
+  )
 
   useEffect(() => {
     setPage(1)
   }, [searchTerm, categoryFilter, statusFilter])
+
+  useEffect(() => {
+    if (!IS_DEMO_MODE) {
+      return
+    }
+
+    if (!statement) {
+      setDemoExportStatus("in_progress")
+      return
+    }
+
+    if (statement.transactions.length === 0) {
+      setDemoExportStatus("error")
+      return
+    }
+
+    setDemoExportStatus("ready")
+  }, [statement])
 
   const pageSize = 5
 
@@ -175,6 +215,16 @@ export default function TransactionsPage() {
     .reduce((acc, transaction) => acc + transaction.amount, 0)
   const pendingReview = mockTransactions.filter((transaction) => transaction.status !== "Confirmada")
     .length
+
+  const preventDemoNavigation: MouseEventHandler<HTMLAnchorElement> = (event) => {
+    if (!IS_DEMO_MODE) {
+      return
+    }
+
+    if (demoExportStatus !== "ready") {
+      event.preventDefault()
+    }
+  }
 
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -211,7 +261,7 @@ export default function TransactionsPage() {
           <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
           <p className="text-muted-foreground">{t.description}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline">
             <Link href="/transactions/classification">{t.navigation.classification}</Link>
           </Button>
@@ -221,11 +271,22 @@ export default function TransactionsPage() {
           <Button asChild variant="outline">
             <Link href="/transactions/advanced-search">{t.navigation.advancedSearch}</Link>
           </Button>
-          <Button asChild>
-            <Link href="/transactions/export">
-              <Download className="mr-2 h-4 w-4" /> {t.navigation.export}
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild disabled={IS_DEMO_MODE && demoExportStatus !== "ready"}>
+              <Link
+                href="/transactions/export"
+                aria-disabled={IS_DEMO_MODE && demoExportStatus !== "ready"}
+                onClick={preventDemoNavigation}
+              >
+                <Download className="mr-2 h-4 w-4" /> {t.navigation.export}
+              </Link>
+            </Button>
+            {IS_DEMO_MODE ? (
+              <Badge variant={demoStatusCopy[demoExportStatus].variant} aria-live="polite">
+                {demoStatusCopy[demoExportStatus].label}
+              </Badge>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -505,8 +566,12 @@ export default function TransactionsPage() {
           <div className="space-y-1 text-sm text-muted-foreground">
             <p>{t.tableCard.downloadCard.helper}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              className="gap-2"
+              disabled={IS_DEMO_MODE && demoExportStatus !== "ready"}
+            >
               <Download className="h-4 w-4" /> {t.tableCard.downloadCard.download}
             </Button>
             <Button variant="outline" className="gap-2" asChild>
@@ -514,6 +579,11 @@ export default function TransactionsPage() {
                 <ArrowUpRight className="h-4 w-4" /> {t.tableCard.downloadCard.summary}
               </Link>
             </Button>
+            {IS_DEMO_MODE ? (
+              <Badge variant={demoStatusCopy[demoExportStatus].variant} aria-live="polite">
+                {demoStatusCopy[demoExportStatus].label}
+              </Badge>
+            ) : null}
           </div>
         </CardContent>
       </Card>
