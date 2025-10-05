@@ -2,7 +2,15 @@
 
 /**
  * Script simplificado para probar el sistema de clasificación de transacciones
- * Solo prueba los servicios de NLP y clasificación sin base de datos
+ * Solo prueba los servicios de NLP y clasificación sin base de datos.
+ *
+ * Preparación recomendada antes de ejecutar el script:
+ * 1. Copia `services/core-api/secrets/secrets.template.json` a
+ *    `services/core-api/secrets/secrets.local.json` y completa los valores reales.
+ * 2. Exporta `SECRET_PASSPHRASE` en tu entorno (mínimo 12 caracteres).
+ * 3. Ejecuta `scripts/seal-secrets.ts` para generar `secrets.enc.json` con los
+ *    secretos cifrados que usará el script:
+ *       pnpm ts-node services/core-api/scripts/seal-secrets.ts
  */
 
 import { NlpService } from '../src/nlp/nlp.service';
@@ -10,15 +18,95 @@ import { QdrantService } from '../src/qdrant/qdrant.service';
 import { ClassificationService } from '../src/classification/classification.service';
 import { ConfigService } from '@nestjs/config';
 import { TransactionCategory } from '../src/transactions/enums/transaction-category.enum';
+import { SECRETS } from '../src/config/secrets';
+
+type CredentialSource = 'secrets' | 'env' | 'mixed';
+
+interface QdrantCredentials {
+  url: string;
+  apiKey: string;
+  source: CredentialSource;
+}
+
+const resolveQdrantCredentials = (): QdrantCredentials => {
+  let url: string | undefined;
+  let apiKey: string | undefined;
+  let secretsError: string | null = null;
+  let usedSecrets = false;
+  let usedEnv = false;
+
+  try {
+    const qdrantSecrets = SECRETS.qdrant?.();
+    if (qdrantSecrets?.url && qdrantSecrets?.apiKey) {
+      url = qdrantSecrets.url;
+      apiKey = qdrantSecrets.apiKey;
+      usedSecrets = true;
+    } else {
+      if (qdrantSecrets?.url && !url) {
+        url = qdrantSecrets.url;
+        usedSecrets = true;
+      }
+      if (qdrantSecrets?.apiKey && !apiKey) {
+        apiKey = qdrantSecrets.apiKey;
+        usedSecrets = true;
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    secretsError = `No se pudieron leer los secretos cifrados de Qdrant: ${message}`;
+  }
+
+  if (!url && process.env.QDRANT_URL) {
+    url = process.env.QDRANT_URL;
+    usedEnv = true;
+  }
+  if (!apiKey && process.env.QDRANT_API_KEY) {
+    apiKey = process.env.QDRANT_API_KEY;
+    usedEnv = true;
+  }
+
+  if (!url || !apiKey) {
+    const missing = [!url ? 'QDRANT_URL' : null, !apiKey ? 'QDRANT_API_KEY' : null]
+      .filter(Boolean)
+      .join(', ');
+
+    const hints = [
+      'Asegúrate de completar secrets.local.json y ejecutar scripts/seal-secrets.ts antes de la prueba.',
+      'También puedes exportar QDRANT_URL y QDRANT_API_KEY en tu entorno temporalmente.',
+    ];
+
+    const details = secretsError ? ` Detalles: ${secretsError}.` : '';
+
+    throw new Error(
+      `Faltan las credenciales de Qdrant (${missing}). ${hints.join(' ')}${details}`,
+    );
+  }
+
+  return {
+    url: url.trim(),
+    apiKey: apiKey.trim(),
+    source: usedSecrets && usedEnv ? 'mixed' : usedSecrets ? 'secrets' : 'env',
+  };
+};
 
 async function testClassificationServices() {
   console.log('🧪 Iniciando pruebas de servicios de clasificación...\n');
 
   try {
     // Configurar servicios manualmente
+    const qdrantCredentials = resolveQdrantCredentials();
+    const sourceMessage =
+      qdrantCredentials.source === 'secrets'
+        ? 'secrets.enc.json'
+        : qdrantCredentials.source === 'env'
+          ? 'variables de entorno'
+          : 'una combinación de secrets.enc.json y variables de entorno';
+
+    console.log(`🔐 Usando credenciales de Qdrant desde ${sourceMessage}.`);
+
     const configService = new ConfigService({
-      QDRANT_URL: 'https://4da8d705-d2a8-4aa2-a6e8-b04e35a551cb.us-east4-0.gcp.cloud.qdrant.io',
-      QDRANT_API_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.2z3mBk53Rvc0Fcy8GSdRI7ndSFJkPSsvixRMAkAfYOk'
+      QDRANT_URL: qdrantCredentials.url,
+      QDRANT_API_KEY: qdrantCredentials.apiKey,
     });
 
     const nlpService = new NlpService();
