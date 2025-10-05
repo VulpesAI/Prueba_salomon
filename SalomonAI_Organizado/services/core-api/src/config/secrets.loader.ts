@@ -39,6 +39,7 @@ const setEnvIfMissing = (key: string, value?: string | number): void => {
   }
 
   if (shouldOverrideExisting(process.env[key])) {
+  if (typeof process.env[key] === 'undefined' || process.env[key] === '') {
     process.env[key] = stringValue;
   }
 };
