@@ -9,6 +9,7 @@ import {
   ChartLine,
   Compass,
   CreditCard,
+  FileText,
   Goal,
   GraduationCap,
   LayoutDashboard,
@@ -105,6 +106,12 @@ export const postLoginNavigation: NavigationGroup[] = [
         icon: Activity,
         description: "Historial y búsqueda básica",
         quickAction: true,
+      },
+      {
+        title: "Cartolas",
+        href: "/statements",
+        icon: FileText,
+        description: "Carga manual y estado de procesamiento",
       },
       {
         title: "Búsqueda avanzada",
