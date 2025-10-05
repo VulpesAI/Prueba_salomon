@@ -36,7 +36,7 @@ export function NavigationGroup({
 
   return (
     <AccordionItem value={group.title} className="border-none">
-      <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-secondary-foreground/70 hover:no-underline [&>svg]:text-secondary-foreground/70 [&[data-state=open]]:text-secondary-foreground">
+      <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary hover:no-underline [&>svg]:text-iconSecondary [&[data-state=open]]:text-textPrimary [&[data-state=open]>svg]:text-iconPrimary">
         {group.title}
       </AccordionTrigger>
       <AccordionContent className="px-0 pb-1 pt-2">
@@ -49,17 +49,17 @@ export function NavigationGroup({
                 <Link
                   href={item.href}
                   className={cn(
-                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition-colors",
-                    "hover:bg-white/10 hover:text-white",
-                    isActive && "bg-white/10 text-primary"
+                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-textSecondary transition-colors",
+                    "hover:bg-gradient-primary hover:text-primary-foreground hover:shadow-sm",
+                    isActive && "bg-gradient-primary text-primary-foreground"
                   )}
                 >
                   <item.icon
                     className={cn(
                       "h-4 w-4 transition-colors",
                       isActive
-                        ? "text-primary"
-                        : "text-white/70 group-hover:text-white"
+                        ? "text-primary-foreground"
+                        : "text-iconSecondary group-hover:text-primary-foreground"
                     )}
                   />
                   <span className="flex-1 truncate">{item.title}</span>
@@ -73,7 +73,7 @@ export function NavigationGroup({
                   ) : null}
                 </Link>
                 {item.description ? (
-                  <p className="px-3 text-xs text-secondary-foreground/70">
+                  <p className="px-3 text-xs text-textSecondary">
                     {item.description}
                   </p>
                 ) : null}

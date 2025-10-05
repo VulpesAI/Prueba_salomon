@@ -7,6 +7,10 @@ const palette = {
     from: "#743DFF",
     to: "#007CF0",
   },
+  "primary-dark": {
+    from: "#5C2AD6",
+    to: "#0062D1",
+  },
   secondary: {
     DEFAULT: "#081134",
     foreground: "#F5F7FF",
@@ -67,28 +71,61 @@ module.exports = {
     extend: {
       colors: {
         ...palette,
-        border: palette.neutral.light.border,
-        input: palette.neutral.light.border,
-        ring: palette.primary.to,
-        background: palette.neutral.light.background,
-        foreground: palette.neutral.light.foreground,
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          from: "hsl(var(--primary-gradient-from))",
+          to: "hsl(var(--primary-gradient-to))",
+        },
+        "primary-dark": {
+          from: "hsl(var(--primary-dark-from))",
+          to: "hsl(var(--primary-dark-to))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--border))",
+        ring: "hsl(var(--primary-gradient-to))",
+        background: "hsl(var(--background))",
+        panel: "hsl(var(--panel))",
+        "panel-subtle": "hsl(var(--panel-subtle))",
+        foreground: "hsl(var(--text-primary))",
+        textPrimary: "hsl(var(--text-primary))",
+        textSecondary: "hsl(var(--text-secondary))",
+        textMuted: "hsl(var(--text-muted))",
+        iconPrimary: "hsl(var(--icon-primary))",
+        iconSecondary: "hsl(var(--icon-secondary))",
         muted: {
-          DEFAULT: palette.neutral.light.muted,
-          foreground: palette.neutral.light["muted-foreground"],
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: palette.primary.DEFAULT,
-          foreground: palette.primary.foreground,
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         popover: {
-          DEFAULT: palette.neutral.light.surface,
-          foreground: palette.neutral.light.foreground,
+          DEFAULT: "hsl(var(--panel))",
+          foreground: "hsl(var(--text-primary))",
         },
         card: {
-          DEFAULT: palette.neutral.light.surface,
-          foreground: palette.neutral.light.foreground,
+          DEFAULT: "hsl(var(--panel))",
+          foreground: "hsl(var(--text-primary))",
         },
         destructive: {
+          DEFAULT: palette.error.DEFAULT,
+          foreground: palette.error.foreground,
+        },
+        success: {
+          DEFAULT: palette.success.DEFAULT,
+          foreground: palette.success.foreground,
+        },
+        warning: {
+          DEFAULT: palette.warning.DEFAULT,
+          foreground: palette.warning.foreground,
+        },
+        error: {
           DEFAULT: palette.error.DEFAULT,
           foreground: palette.error.foreground,
         },

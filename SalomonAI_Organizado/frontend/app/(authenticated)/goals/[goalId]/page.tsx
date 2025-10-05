@@ -140,15 +140,15 @@ type TimelineItem = {
 }
 
 const timelineBadgeStyles: Record<TimelineStatus, string> = {
-  completed: "bg-emerald-500 text-white",
+  completed: "bg-success text-success-foreground",
   upcoming: "bg-primary text-primary-foreground",
-  delayed: "bg-amber-500 text-white",
+  delayed: "bg-warning text-warning-foreground",
 }
 
 const timelineDotStyles: Record<TimelineStatus, string> = {
-  completed: "bg-emerald-500 border-emerald-500/60",
+  completed: "bg-success border-success/60",
   upcoming: "bg-primary border-primary/40",
-  delayed: "bg-amber-500 border-amber-500/60",
+  delayed: "bg-warning border-warning/60",
 }
 
 const timelineLabels: Record<TimelineStatus, string> = {

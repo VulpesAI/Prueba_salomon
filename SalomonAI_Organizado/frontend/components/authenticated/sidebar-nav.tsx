@@ -45,7 +45,7 @@ export function SidebarNav({
   return (
     <aside
       className={cn(
-        "border-r border-neutral-dark-border bg-[#0B1943] text-secondary-foreground",
+        "border-r border-border bg-background text-textPrimary",
         className
       )}
     >
@@ -53,7 +53,7 @@ export function SidebarNav({
         <div className="flex h-16 items-center px-6">
           <Link
             href="/dashboard/overview"
-            className="text-lg font-semibold tracking-tight text-secondary-foreground"
+            className="text-lg font-semibold tracking-tight text-textPrimary"
           >
             SalomonAI
           </Link>
@@ -74,8 +74,8 @@ export function SidebarNav({
             ))}
           </Accordion>
           {quickActions.length > 0 ? (
-            <div className="space-y-3 rounded-lg border border-dashed border-neutral-dark-border/60 bg-white/5 p-4">
-              <p className="text-xs font-semibold uppercase text-secondary-foreground/70">
+            <div className="space-y-3 rounded-lg border border-dashed border-border/60 bg-panel-subtle p-4">
+              <p className="text-xs font-semibold uppercase text-textSecondary">
                 Accesos rápidos
               </p>
               <div className="grid gap-2">
@@ -84,11 +84,11 @@ export function SidebarNav({
                     key={`quick-${action.href}`}
                     variant="ghost"
                     size="sm"
-                    className="group justify-start gap-2 text-secondary-foreground hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
+                    className="group justify-start gap-2 text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
                     asChild
                   >
                     <Link href={action.href}>
-                      <action.icon className="h-4 w-4 text-secondary-foreground transition-colors group-hover:text-white" />
+                      <action.icon className="h-4 w-4 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
                       {action.title}
                     </Link>
                   </Button>
