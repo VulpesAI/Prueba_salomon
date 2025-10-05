@@ -40,33 +40,48 @@ Reemplaza los marcadores `<usuario>`, `<contraseña>`, `<host>`, `<puerto>` y `<
 con los valores obtenidos del panel o de la CLI.
 
 =======================================================
-3. Ejecutar migraciones de TypeORM contra tu instancia remota
+3. Aplicar el esquema base y migraciones SQL
 =======================================================
-Dentro del servicio `core-api` se incluye la configuración de TypeORM.
-Desde la raíz del repositorio:
+Con la cadena de conexión exportada puedes ejecutar directamente el
+script `setup-database.sql`, el cual crea las tablas `accounts`,
+`statements`, `transactions` y las estructuras de clasificación utilizadas
+por el pipeline de entrenamiento:
 
-   cd services/core-api
-   npm install
-   npm run migration:run
+   psql "$SUPABASE_DB_URL" -f setup-database.sql
 
-El comando utilizará la variable `DATABASE_URL` (o `POSTGRES_URL`) que
-configuraste en el paso anterior y aplicará las migraciones sobre tu
-instancia de Supabase.
+Si prefieres utilizar la CLI oficial de Supabase, asegúrate de iniciar
+sesión (`supabase login`) y exportar el token de acceso:
+
+   export SUPABASE_ACCESS_TOKEN="<token de servicio o personal>"
+   supabase db push --project-ref <ref_del_proyecto> \
+     --file supabase/migrations/20240527120000_financial_schema.sql
+
+El comando anterior aplica el mismo esquema en tu instancia gestionada.
+Supabase solicitará la contraseña maestra de la base; puedes inyectarla
+temporalmente mediante `SUPABASE_DB_PASSWORD` si automatizas el proceso.
 
 =======================================================
-4. Verificaciones adicionales
+4. Semillas para pruebas automatizadas
+=======================================================
+Se incluyen datasets mínimos para las pruebas E2E del Core API y para el
+pipeline de entrenamiento. Cárgalos cuando necesites datos consistentes:
+
+   psql "$SUPABASE_DB_URL" -f database/seeds/core_api_seed.sql
+   psql "$SUPABASE_DB_URL" -f database/seeds/training_seed.sql
+
+Las semillas respetan las claves únicas (`statement_id`, `external_id`)
+y pueden ejecutarse múltiples veces gracias a `ON CONFLICT`.
+
+=======================================================
+5. Verificaciones adicionales
 =======================================================
 - Para validar la conexión manualmente ejecuta:
 
      psql "$SUPABASE_DB_URL"
 
-- Si necesitas rehacer las migraciones, utiliza:
-
-     npm run migration:revert
-
 - Mantén tus credenciales seguras. Nunca compartas la contraseña del
   proyecto y evita guardarla en archivos versionados.
 
-✅  Con estos pasos tendrás tu base de datos de Supabase lista y las
-    migraciones ejecutadas para SalomónAI.
+✅  Con estos pasos tendrás tu base de datos de Supabase lista, el esquema
+    sincronizado y datos semilla disponibles para SalomónAI.
 INSTRUCTIONS

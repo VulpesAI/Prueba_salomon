@@ -206,6 +206,7 @@ describe('StatementsController (e2e)', () => {
     supabaseMock.addTransaction(statementId, {
       id: 'txn-001',
       statement_id: statementId,
+      external_id: 'txn-ext-001',
       posted_at: '2024-05-01',
       description: 'Compra supermercado',
       amount: -15290,

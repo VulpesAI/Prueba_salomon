@@ -184,6 +184,7 @@ export class StatementsService {
     storageObjectPath: string;
   }): SupabaseStatementInsert {
     const uploadedAt = new Date().toISOString();
+    const statementDate = params.dto.periodEnd ?? params.dto.periodStart ?? null;
 
     return {
       id: params.statementId,
@@ -198,8 +199,10 @@ export class StatementsService {
       error_message: null,
       period_start: params.dto.periodStart ?? null,
       period_end: params.dto.periodEnd ?? null,
+      statement_date: statementDate,
       uploaded_at: uploadedAt,
       checksum: params.dto.checksum ?? null,
+      dedupe_hash: params.dto.checksum ?? null,
     };
   }
 
