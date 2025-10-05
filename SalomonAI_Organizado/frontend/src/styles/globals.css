@@ -5,11 +5,11 @@
 /* Base styles */
 @layer base {
   * {
-    @apply border-neutral-light-border dark:border-neutral-dark-border;
+    @apply border-border;
   }
 
   body {
-    @apply bg-neutral-light-background text-neutral-light-foreground dark:bg-neutral-dark-background dark:text-neutral-dark-foreground;
+    @apply bg-background text-textPrimary;
   }
 }
 
@@ -20,43 +20,57 @@
  * - Neutros oscuros: fondo #0B1943, superficie #1F2937, bordes #374151
  */
 :root {
-  /* Tokens base del modo oscuro */
-  --background: #0B1943;
-  --foreground: #F9FAFB;
-  --surface: #1F2937;
-  --subtle: #1F2937;
-  --muted: #374151;
-  --muted-foreground: #E2E8F0;
-  --border: #374151;
+  /* Tokens base - modo claro */
+  --background: 228 100% 98.04%;
+  --foreground: 227.73 73.33% 11.76%;
+  --panel: 0 0% 100%;
+  --panel-subtle: 210 40% 96.08%;
+  --muted: 214.29 31.82% 91.37%;
+  --muted-foreground: 215.29 19.32% 34.51%;
+  --border: 212.73 26.83% 83.92%;
+  --text-primary: 227.73 73.33% 11.76%;
+  --text-secondary: 215.29 19.32% 34.51%;
+  --text-muted: 215.38 16.32% 46.86%;
+  --icon-primary: 227.73 73.33% 11.76%;
+  --icon-secondary: 215.29 19.32% 34.51%;
 
   /* Escala de marca */
-  --primary: #743DFF;
-  --primary-foreground: #F5F7FF;
-  --primary-gradient-from: #743DFF;
-  --primary-gradient-to: #007CF0;
-  --secondary: #081134;
-  --secondary-foreground: #F5F7FF;
+  --primary: 257.01 100% 61.96%;
+  --primary-foreground: 228 100% 98.04%;
+  --primary-gradient-from: 257.01 100% 61.96%;
+  --primary-gradient-to: 209 100% 47.06%;
+  --primary-dark-from: 257.44 67.72% 50.2%;
+  --primary-dark-to: 211.87 100% 40.98%;
+  --secondary: 227.73 73.33% 11.76%;
+  --secondary-foreground: 228 100% 98.04%;
 
   --radius: 0.75rem;
 }
 
-/* TODO: Definir tokens del modo claro
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #F5F7FF;
-    --foreground: #081134;
-    --surface: #FFFFFF;
-    --subtle: #F1F5F9;
-    --muted: #E2E8F0;
-    --muted-foreground: #475569;
-    --border: #CBD5E1;
-    --primary: #743DFF;
-    --primary-foreground: #F5F7FF;
-    --secondary: #081134;
-    --secondary-foreground: #F5F7FF;
-  }
+.dark {
+  /* Tokens base - modo oscuro */
+  --background: 225 71.79% 15.29%;
+  --foreground: 210 20% 98.04%;
+  --panel: 215 27.91% 16.86%;
+  --panel-subtle: 220.91 39.29% 10.98%;
+  --muted: 216.92 19.12% 26.67%;
+  --muted-foreground: 225.71 67.74% 87.84%;
+  --border: 216.92 19.12% 26.67%;
+  --text-primary: 210 20% 98.04%;
+  --text-secondary: 214.29 31.82% 91.37%;
+  --text-muted: 215 20.22% 65.1%;
+  --icon-primary: 210 20% 98.04%;
+  --icon-secondary: 214.29 31.82% 91.37%;
+
+  --primary: 257.01 100% 61.96%;
+  --primary-foreground: 228 100% 98.04%;
+  --primary-gradient-from: 257.01 100% 61.96%;
+  --primary-gradient-to: 209 100% 47.06%;
+  --primary-dark-from: 257.44 67.72% 50.2%;
+  --primary-dark-to: 211.87 100% 40.98%;
+  --secondary: 227.73 73.33% 11.76%;
+  --secondary-foreground: 228 100% 98.04%;
 }
-*/
 
 /* Custom gradients */
 
@@ -72,8 +86,8 @@
 .bg-gradient-primary {
   background: linear-gradient(
     135deg,
-    var(--primary-gradient-from) 0%,
-    var(--primary-gradient-to) 100%
+    hsl(var(--primary-gradient-from)) 0%,
+    hsl(var(--primary-gradient-to)) 100%
   );
 }
 
@@ -81,8 +95,8 @@
 .text-gradient-primary {
   background: linear-gradient(
       135deg,
-      var(--primary-gradient-from) 0%,
-      var(--primary-gradient-to) 100%
+      hsl(var(--primary-gradient-from)) 0%,
+      hsl(var(--primary-gradient-to)) 100%
     )
     !important;
   -webkit-background-clip: text !important;
@@ -97,16 +111,16 @@
   .bg-gradient-primary {
     background: linear-gradient(
       135deg,
-      var(--primary-gradient-from) 0%,
-      var(--primary-gradient-to) 100%
+      hsl(var(--primary-gradient-from)) 0%,
+      hsl(var(--primary-gradient-to)) 100%
     );
   }
 
   .text-gradient {
     background: linear-gradient(
       135deg,
-      var(--primary-gradient-from) 0%,
-      var(--primary-gradient-to) 100%
+      hsl(var(--primary-gradient-from)) 0%,
+      hsl(var(--primary-gradient-to)) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;

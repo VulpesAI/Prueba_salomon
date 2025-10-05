@@ -16,7 +16,7 @@ import { TopbarActions } from "./topbar-actions"
 
 const LoadingShell = () => (
   <div className="flex min-h-screen flex-col bg-background">
-    <header className="border-b border-neutral-dark-border bg-secondary px-4 text-white md:px-6">
+    <header className="border-b border-border bg-panel px-4 text-textPrimary md:px-6">
       <div className="flex h-16 items-center justify-between">
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded-full" />
@@ -55,7 +55,7 @@ export function AuthenticatedShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-30 border-b border-neutral-dark-border bg-secondary text-white">
+      <header className="sticky top-0 z-30 border-b border-border bg-panel text-textPrimary">
         <div className="flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
             <Sheet>
@@ -64,14 +64,14 @@ export function AuthenticatedShell({
                   variant="ghost"
                   size="icon"
                   aria-label="Abrir navegación"
-                  className="text-white hover:bg-white/10 hover:text-white focus-visible:ring-white/60"
+                  className="group text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
                 >
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-5 w-5 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
                 </Button>
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-72 border-neutral-dark-border bg-[#0B1943] p-0 text-white"
+                className="w-72 border-border bg-background p-0 text-textPrimary"
               >
                 <SidebarNav
                   navigation={postLoginNavigation}
@@ -79,8 +79,8 @@ export function AuthenticatedShell({
                 />
               </SheetContent>
             </Sheet>
-            <div className="hidden flex-col text-secondary-foreground md:flex">
-              <span className="text-sm font-semibold text-secondary-foreground/90">
+            <div className="hidden flex-col text-textSecondary md:flex">
+              <span className="text-sm font-semibold text-textSecondary">
                 Espacio financiero
               </span>
               <Breadcrumbs
