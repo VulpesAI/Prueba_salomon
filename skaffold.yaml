@@ -1,0 +1,17 @@
+apiVersion: skaffold/v4beta10
+kind: Config
+metadata:
+  name: salomon-frontend
+build:
+  artifacts:
+    - image: gcr.io/gen-lang-client-0516565338/salomon-frontend
+      context: SalomonAI_Organizado/frontend
+      docker:
+        dockerfile: Dockerfile
+deploy:
+  cloudrun:
+    projectID: gen-lang-client-0516565338
+    region: us-central1
+    default:
+      service: salomon-frontend
+      image: gcr.io/gen-lang-client-0516565338/salomon-frontend
