@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SupabaseClient, User } from '@supabase/supabase-js';
-import { createClient } from '@supabase/supabase-js';
+import { SupabaseClient, createClient } from '@supabase/supabase-js';
+import type { AuthUser } from '@supabase/supabase-js';
 
 interface SupabaseAuthResponse {
-  user: User | null;
+  user: AuthUser | null;
 }
 
 @Injectable()
@@ -26,8 +26,8 @@ export class SupabaseService {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
-        detectSessionInUrl: false
-      }
+        detectSessionInUrl: false,
+      },
     });
   }
 
@@ -35,7 +35,7 @@ export class SupabaseService {
     return this.client !== null;
   }
 
-  async getUser(accessToken: string): Promise<User | null> {
+  async getUser(accessToken: string): Promise<AuthUser | null> {
     if (!this.client) {
       this.logger.warn('Supabase client is not configured.');
       return null;

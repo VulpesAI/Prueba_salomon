@@ -12,10 +12,10 @@ import { AuthModule } from './auth/auth.module';
       isGlobal: true,
       load: [configuration],
       envFilePath: ['.env.local', '.env'],
-      validationSchema: envValidationSchema
+      validationSchema: envValidationSchema,
     }),
     HealthModule,
-    AuthModule
-  ]
+    AuthModule,
+  ],
 })
 export class AppModule {}

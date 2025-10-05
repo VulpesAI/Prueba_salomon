@@ -14,6 +14,24 @@ PORT=8080 node dist/main.js
 
 Configure your process manager or container entrypoint to use this pattern so the service respects the dynamic port assignment when running in production.
 
+## Gestión de secretos cifrados
+
+El servicio consume secretos sensibles (Supabase, Postgres, Firebase, Qdrant, etc.) a través del archivo cifrado `secrets/secrets.enc.json`. Sigue estos pasos para generarlo y mantener los valores fuera del control de versiones:
+
+1. Copia la plantilla `services/core-api/secrets/secrets.template.json` como `services/core-api/secrets/secrets.local.json`.
+2. Reemplaza `REEMPLAZAR` por los valores reales. El archivo cifrado únicamente admite JSON válido.
+3. Exporta una frase de paso robusta (mínimo 12 caracteres):
+   ```bash
+   export SECRET_PASSPHRASE="frase-super-secreta"
+   ```
+4. Ejecuta el sellado: 
+   ```bash
+   npx ts-node scripts/seal-secrets.ts
+   ```
+5. Sube `secrets/secrets.enc.json` al repositorio y distribuye `secrets.local.json` mediante un gestor seguro (no lo incluyas en git).
+
+En tiempo de ejecución, `SECRET_PASSPHRASE` debe estar disponible para que `src/config/secrets.ts` descifre el archivo y exponga los getters tipados `SECRETS.*()`.
+
 ## Environment strictness modes
 
 The API can operate in two strictness modes controlled by the `STRICT_ENV` environment flag:

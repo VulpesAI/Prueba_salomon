@@ -36,6 +36,9 @@ venv/
 # Secrets directory contents (examples allowed via explicit tracking)
 secrets/*.env
 !secrets/*.env.example
+**/secrets/*.json
+!**/secrets/*.template.json
+!**/secrets/secrets.enc.json
 
 # Docker artifacts
 *.pid

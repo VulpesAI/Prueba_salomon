@@ -18,28 +18,30 @@ async function bootstrap(): Promise<void> {
   const httpAdapter = app.getHttpAdapter();
   const httpServer = httpAdapter.getInstance();
 
+  type HealthResponse = { json: (body: unknown) => void };
+
   if (typeof httpServer.get === 'function') {
-    httpServer.get('/health', (_req: unknown, res: any) => {
+    httpServer.get('/health', (_req: unknown, res: HealthResponse) => {
       const healthStatus = healthService.getHealthStatus();
 
       res.json({
         ok: true,
-        ...healthStatus
+        ...healthStatus,
       });
     });
   }
 
   app.enableCors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : true,
-    credentials: true
+    credentials: true,
   });
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      transformOptions: { enableImplicitConversion: true }
-    })
+      transformOptions: { enableImplicitConversion: true },
+    }),
   );
 
   const port = configService.get<number>('app.port', { infer: true }) ?? 8080;

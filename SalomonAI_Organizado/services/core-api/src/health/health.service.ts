@@ -16,7 +16,7 @@ export class HealthService {
       profile,
       version,
       uptime: process.uptime(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
