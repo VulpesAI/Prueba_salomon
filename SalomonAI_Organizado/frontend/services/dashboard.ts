@@ -1,3 +1,4 @@
+import { CATEGORY_COLOR_MAP } from "@/config/category-colors"
 import { api } from "@/lib/api-client"
 import type {
   DashboardIntelligenceResponse,
@@ -85,10 +86,34 @@ export const getDashboardOverview = async ({ signal }: RequestOptions = {}) => {
         },
       ],
       categoryBreakdown: [
-        { name: "Vivienda", amount: 1_800, percentage: 34, color: "#38bdf8" },
-        { name: "Transporte", amount: 620, percentage: 12, color: "#34d399" },
-        { name: "Estilo de vida", amount: 420, percentage: 8, color: "#facc15" },
-        { name: "Ahorro", amount: 1_200, percentage: 23, color: "#a855f7" },
+        {
+          name: "Vivienda",
+          amount: 1_800,
+          percentage: 34,
+          themeKey: "vivienda",
+          color: CATEGORY_COLOR_MAP.vivienda,
+        },
+        {
+          name: "Transporte",
+          amount: 620,
+          percentage: 12,
+          themeKey: "transporte",
+          color: CATEGORY_COLOR_MAP.transporte,
+        },
+        {
+          name: "Estilo de vida",
+          amount: 420,
+          percentage: 8,
+          themeKey: "entretenimiento",
+          color: CATEGORY_COLOR_MAP.entretenimiento,
+        },
+        {
+          name: "Ahorro",
+          amount: 1_200,
+          percentage: 23,
+          themeKey: "ahorro",
+          color: CATEGORY_COLOR_MAP.ahorro,
+        },
       ],
     }
   }
