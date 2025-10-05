@@ -18,6 +18,21 @@ export interface SupabaseConfig {
   jwtAudience?: string;
 }
 
+export interface StatementsConfig {
+  bucket: string;
+  statusTopic: string;
+}
+
+export interface ParsingEngineMessagingConfig {
+  enabled: boolean;
+  topic: string;
+  brokers: string[];
+}
+
+export interface MessagingConfig {
+  parsingEngine: ParsingEngineMessagingConfig;
+}
+
 export interface DemoConfig {
   enabled: boolean;
   defaultCurrency: string;
@@ -28,6 +43,8 @@ export interface CoreConfiguration {
   app: AppConfig;
   auth: AuthConfig;
   supabase: SupabaseConfig;
+  statements: StatementsConfig;
+  messaging: MessagingConfig;
   demo: DemoConfig;
 }
 
@@ -51,8 +68,21 @@ const parseBoolean = (value?: string): boolean => {
   return ['true', '1', 'yes', 'y', 'on'].includes(normalized);
 };
 
+const parseList = (value?: string): string[] => {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+};
+
 export default (): CoreConfiguration => {
   const port = Number(process.env.PORT ?? 8080);
+  const parsingEngineTopic = process.env.PARSING_ENGINE_TOPIC ?? 'parsing-engine.statements';
+  const parsingEngineBrokers = parseList(process.env.PARSING_ENGINE_KAFKA_BROKERS);
 
   return {
     app: {
@@ -71,6 +101,17 @@ export default (): CoreConfiguration => {
       url: process.env.SUPABASE_URL,
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
       jwtAudience: process.env.SUPABASE_JWT_AUDIENCE,
+    },
+    statements: {
+      bucket: process.env.STATEMENTS_BUCKET ?? 'statements',
+      statusTopic: process.env.STATEMENTS_STATUS_TOPIC ?? 'parsing-engine.statements',
+    },
+    messaging: {
+      parsingEngine: {
+        enabled: parsingEngineBrokers.length > 0,
+        topic: parsingEngineTopic,
+        brokers: parsingEngineBrokers,
+      },
     },
     demo: {
       enabled: parseBoolean(process.env.DEMO_MODE),
