@@ -29,7 +29,7 @@ export const getDashboardOverview = async ({ signal }: RequestOptions = {}) => {
   } catch (error) {
     logFallbackWarning("Falling back to mock dashboard overview data", error)
 
-    return {
+    const fallbackOverview: DashboardOverviewResponse = {
       totals: {
         balance: 12_850,
         income: 8_650,
@@ -116,6 +116,8 @@ export const getDashboardOverview = async ({ signal }: RequestOptions = {}) => {
         },
       ],
     }
+
+    return fallbackOverview
   }
 }
 
