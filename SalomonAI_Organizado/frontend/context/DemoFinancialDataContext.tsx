@@ -13,6 +13,11 @@ import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/config/query-keys'
+import {
+  CATEGORY_COLOR_VALUES,
+  getCategoryColor,
+  resolveCategoryColorKey,
+} from '@/config/category-colors'
 import type {
   DashboardIntelligenceResponse,
   DashboardNotificationsResponse,
@@ -34,17 +39,6 @@ export const IS_DEMO_MODE =
   demoModeFlag === '1' ||
   demoModeFlag === 'yes' ||
   demoModeFlag === 'y'
-
-const CATEGORY_COLORS = [
-  '#1d4ed8',
-  '#22c55e',
-  '#f97316',
-  '#8b5cf6',
-  '#0ea5e9',
-  '#facc15',
-  '#ef4444',
-  '#14b8a6',
-]
 
 const MINIMUM_CURRENCY_VALUE = 0
 
@@ -137,13 +131,20 @@ const buildOverviewFromStatement = (
 
   const categoryBreakdown = Object.entries(statement.expenseByCategory)
     .sort(([, amountA], [, amountB]) => amountB - amountA)
-    .map(([name, amount], index) => ({
-      name,
-      amount: clampNumber(amount),
-      percentage:
-        totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
-      color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
-    }))
+    .map(([name, amount], index) => {
+      const themeKey = resolveCategoryColorKey(name)
+      const fallbackColor = CATEGORY_COLOR_VALUES[index % CATEGORY_COLOR_VALUES.length]
+      const color = getCategoryColor(name) ?? fallbackColor ?? CATEGORY_COLOR_VALUES[0]
+
+      return {
+        name,
+        amount: clampNumber(amount),
+        percentage:
+          totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
+        color,
+        themeKey: themeKey ?? null,
+      }
+    })
 
   return {
     totals,

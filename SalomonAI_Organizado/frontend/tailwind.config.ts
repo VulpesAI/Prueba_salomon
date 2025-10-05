@@ -1,6 +1,8 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
+import { CATEGORY_COLOR_MAP } from "./config/category-colors";
+
 const palette = {
   primary: {
     DEFAULT: "#743DFF",
@@ -48,18 +50,7 @@ const palette = {
     DEFAULT: "#EF4444",
     foreground: "#450A0A",
   },
-  categories: {
-    vivienda: "#4F46E5",
-    alimentacion: "#F97316",
-    transporte: "#22D3EE",
-    servicios: "#0EA5E9",
-    suscripciones: "#8B5CF6",
-    salud: "#F43F5E",
-    ingresos: "#22C55E",
-    educacion: "#FBBF24",
-    entretenimiento: "#EC4899",
-    ahorro: "#14B8A6",
-  },
+  categories: CATEGORY_COLOR_MAP,
 } as const;
 
 const config: Config = {
