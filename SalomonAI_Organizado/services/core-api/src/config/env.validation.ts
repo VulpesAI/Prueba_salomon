@@ -42,4 +42,11 @@ export const envValidationSchema = Joi.object({
     .valid('day', 'week', 'month')
     .optional(),
   DASHBOARD_MAX_RANGE_IN_DAYS: Joi.number().integer().min(1).optional(),
+  RECOMMENDATION_ENGINE_URL: Joi.string().uri().allow('', null).optional(),
+  RECOMMENDATION_ENGINE_TIMEOUT_MS: Joi.number().integer().min(100).optional(),
+  RECOMMENDATION_INGEST_INTERVAL_MS: Joi.number().integer().min(1000).optional(),
+  FORECASTING_ENGINE_URL: Joi.string().uri().allow('', null).optional(),
+  FORECASTING_ENGINE_TIMEOUT_MS: Joi.number().integer().min(100).optional(),
+  FORECASTING_DEFAULT_MODEL: Joi.string().valid('auto', 'arima', 'prophet').optional(),
+  FORECASTING_DEFAULT_HORIZON_DAYS: Joi.number().integer().min(1).optional(),
 });

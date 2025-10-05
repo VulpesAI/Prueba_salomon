@@ -69,6 +69,21 @@ export interface MovementsConfig {
   maxPageSize: number;
 }
 
+export interface RecommendationsConfig {
+  enabled: boolean;
+  baseUrl: string | null;
+  timeoutMs: number;
+  ingestionIntervalMs: number;
+}
+
+export interface ForecastingConfig {
+  enabled: boolean;
+  baseUrl: string | null;
+  timeoutMs: number;
+  defaultModel: 'auto' | 'arima' | 'prophet';
+  defaultHorizonDays: number;
+}
+
 export interface CoreConfiguration {
   app: AppConfig;
   auth: AuthConfig;
@@ -79,6 +94,8 @@ export interface CoreConfiguration {
   belvo: BelvoConfig;
   dashboard: DashboardConfig;
   movements: MovementsConfig;
+  recommendations: RecommendationsConfig;
+  forecasting: ForecastingConfig;
 }
 
 const parseAllowedOrigins = (value?: string): string[] => {
@@ -133,6 +150,16 @@ export default (): CoreConfiguration => {
     (process.env.DASHBOARD_DEFAULT_GRANULARITY as DashboardConfig['defaultGranularity']) ??
     'month';
   const dashboardMaxRange = Number(process.env.DASHBOARD_MAX_RANGE_IN_DAYS ?? 365);
+  const recommendationUrl = process.env.RECOMMENDATION_ENGINE_URL ?? null;
+  const recommendationTimeout = Number(process.env.RECOMMENDATION_ENGINE_TIMEOUT_MS ?? 5000);
+  const recommendationIngestionInterval = Number(
+    process.env.RECOMMENDATION_INGEST_INTERVAL_MS ?? 5 * 60 * 1000,
+  );
+  const forecastingUrl = process.env.FORECASTING_ENGINE_URL ?? null;
+  const forecastingTimeout = Number(process.env.FORECASTING_ENGINE_TIMEOUT_MS ?? 10000);
+  const forecastingModel =
+    (process.env.FORECASTING_DEFAULT_MODEL as ForecastingConfig['defaultModel']) ?? 'auto';
+  const forecastingHorizon = Number(process.env.FORECASTING_DEFAULT_HORIZON_DAYS ?? 30);
 
   return {
     app: {
@@ -195,6 +222,23 @@ export default (): CoreConfiguration => {
     movements: {
       defaultPageSize: Number.isNaN(defaultPageSize) ? 25 : defaultPageSize,
       maxPageSize: Number.isNaN(maxPageSize) ? 200 : maxPageSize,
+    },
+    recommendations: {
+      enabled: Boolean(recommendationUrl),
+      baseUrl: recommendationUrl,
+      timeoutMs: Number.isNaN(recommendationTimeout) ? 5000 : recommendationTimeout,
+      ingestionIntervalMs: Number.isNaN(recommendationIngestionInterval)
+        ? 5 * 60 * 1000
+        : recommendationIngestionInterval,
+    },
+    forecasting: {
+      enabled: Boolean(forecastingUrl),
+      baseUrl: forecastingUrl,
+      timeoutMs: Number.isNaN(forecastingTimeout) ? 10000 : forecastingTimeout,
+      defaultModel: ['auto', 'arima', 'prophet'].includes(forecastingModel)
+        ? forecastingModel
+        : 'auto',
+      defaultHorizonDays: Number.isNaN(forecastingHorizon) ? 30 : forecastingHorizon,
     },
   };
 };

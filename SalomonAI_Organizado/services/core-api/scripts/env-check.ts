@@ -84,6 +84,16 @@ const run = (): number => {
         : 'Configura RECOMMENDATION_ENGINE_URL para habilitar las recomendaciones.',
   });
 
+  const forecastingEnabled = hasValue(process.env.FORECASTING_ENGINE_URL) || isStrictMode;
+  dependencyStatuses.push({
+    name: 'Motor de proyecciones financieras',
+    enabled: forecastingEnabled,
+    reason:
+      forecastingEnabled || isStrictMode
+        ? undefined
+        : 'Configura FORECASTING_ENGINE_URL para habilitar las proyecciones.',
+  });
+
   console.log('🔍  Revisión de entorno para core-api');
   console.log(`• Modo estricto detectado: ${strictMode}`);
   console.log(`• Perfil configurado: ${appConfig.app.profile}`);
