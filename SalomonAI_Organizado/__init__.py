@@ -1,0 +1,1 @@
+"""SalomónAI monorepo Python namespace."""
