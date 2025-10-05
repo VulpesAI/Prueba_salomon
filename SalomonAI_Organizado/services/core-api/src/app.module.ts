@@ -6,6 +6,10 @@ import { envValidationSchema } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { StatementsModule } from './statements/statements.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { MovementsModule } from './movements/movements.module';
+import { BelvoModule } from './belvo/belvo.module';
+import { ResultsConnectorModule } from './connectors/results/results-connector.module';
 
 @Module({
   imports: [
@@ -18,6 +22,10 @@ import { StatementsModule } from './statements/statements.module';
     HealthModule,
     AuthModule,
     StatementsModule,
+    DashboardModule,
+    MovementsModule,
+    BelvoModule,
+    ResultsConnectorModule,
   ],
 })
 export class AppModule {}
