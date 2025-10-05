@@ -136,22 +136,22 @@ const Dashboard = () => {
               <CardTitle>Insights de IA</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="p-4 rounded-lg bg-secondary/50 border border-secondary">
                 <Badge variant="secondary" className="mb-2 bg-primary/20 text-primary">
                   💡 Oportunidad de Ahorro
                 </Badge>
                 <p className="text-sm text-foreground">
-                  Podrías ahorrar <span className="font-bold text-primary">$45,000</span> mensuales 
+                  Podrías ahorrar <span className="font-bold text-primary">$45,000</span> mensuales
                   reduciendo pedidos de delivery de 12 a 8 veces al mes.
                 </p>
               </div>
 
-              <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
+              <div className="p-4 rounded-lg bg-secondary/50 border border-secondary">
                 <Badge variant="secondary" className="mb-2 bg-accent/20 text-accent">
                   📈 Patrón Detectado
                 </Badge>
                 <p className="text-sm text-foreground">
-                  Tus gastos en transporte aumentan un 23% los viernes. 
+                  Tus gastos en transporte aumentan un 23% los viernes.
                   Considera usar transporte público.
                 </p>
               </div>
