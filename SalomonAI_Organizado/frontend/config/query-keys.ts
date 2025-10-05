@@ -20,6 +20,17 @@ export const queryKeys = {
   user: {
     profile: (() => ["user", "profile"]) satisfies QueryKeyFactory<[]>,
   },
+  statements: {
+    list: (() => ["statements", "list"]) satisfies QueryKeyFactory<[]>,
+    detail: ((id: string) => ["statements", "detail", { id }]) satisfies QueryKeyFactory<[
+      string
+    ]>,
+    transactions: ((id: string) => [
+      "statements",
+      "transactions",
+      { id },
+    ]) satisfies QueryKeyFactory<[string]>,
+  },
 } as const
 
 type ExtractQueryKey<T> = T extends (...args: infer TArgs) => infer TResult

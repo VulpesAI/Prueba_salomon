@@ -1,6 +1,14 @@
 "use client"
 
-import { type ChangeEvent, useMemo, useState } from "react"
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import { useRouter } from "next/navigation"
 import { Loader2, UploadCloud } from "lucide-react"
 
 import {
@@ -16,6 +24,18 @@ import { Input } from "@/components/ui/input"
 
 import { type NormalizedStatement } from "@/lib/statements/parser"
 import { cn } from "@/lib/utils"
+import {
+  IS_DEMO_MODE,
+  useDemoFinancialData,
+} from "@/context/DemoFinancialDataContext"
+import { useToast } from "@/hooks/use-toast"
+import { buildNormalizedStatementFromApi } from "@/lib/statements/from-api"
+import {
+  getStatementTransactions,
+  getStatements,
+  type StatementSummary,
+} from "@/services/statements"
+import { api } from "@/lib/api-client"
 
 interface ManualStatementUploadCardProps {
   className?: string
@@ -28,6 +48,9 @@ interface UploadState {
   statement: NormalizedStatement | null
 }
 
+const doneStatuses = new Set(["processed", "completed", "ready"])
+const errorStatuses = new Set(["failed", "error"])
+
 export function ManualStatementUploadCard({
   className,
   onStatementParsed,
@@ -38,11 +61,20 @@ export function ManualStatementUploadCard({
     error: null,
     statement: null,
   })
+  const [progress, setProgress] = useState<{
+    status: string
+    progress: number | null
+  } | null>(null)
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
+  const router = useRouter()
+  const { toast } = useToast()
+  const { updateFromStatement } = useDemoFinancialData()
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? [])
     setSelectedFiles(files)
     setState((prev) => ({ ...prev, error: null, statement: null }))
+    setProgress(null)
   }
 
   const fileSummary = useMemo(() => {
@@ -62,35 +94,162 @@ export function ManualStatementUploadCard({
       minimumFractionDigits: 0,
     }).format(value)
 
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }, [])
+
+  useEffect(() => () => stopPolling(), [stopPolling])
+
+  const handlePollingCompletion = useCallback(
+    async (statement: StatementSummary) => {
+      try {
+        const detail = await getStatementTransactions(statement.id)
+        const normalized = buildNormalizedStatementFromApi(detail.transactions)
+        setState({ isLoading: false, error: null, statement: normalized })
+        setSelectedFiles([])
+        setProgress(null)
+        onStatementParsed?.(normalized)
+        if (IS_DEMO_MODE) {
+          updateFromStatement(normalized)
+        }
+        toast({
+          title: "Cartola procesada",
+          description: "Tus movimientos están listos para revisión.",
+        })
+        router.push(`/statements/${statement.id}`)
+      } catch (error) {
+        console.error(error)
+        setState({
+          isLoading: false,
+          error: "No pudimos obtener el detalle de la cartola.",
+          statement: null,
+        })
+        setProgress(null)
+        toast({
+          title: "No pudimos cargar el detalle",
+          description:
+            error instanceof Error ? error.message : "Intenta nuevamente en unos minutos.",
+          variant: "destructive",
+        })
+      }
+    },
+    [onStatementParsed, router, toast, updateFromStatement]
+  )
+
+  const startPolling = useCallback(
+    (statementId: string) => {
+      stopPolling()
+
+      pollingRef.current = setInterval(async () => {
+        try {
+          const statements = await getStatements()
+          const target = statements.find((item) => item.id === statementId)
+          if (!target) {
+            return
+          }
+
+          setProgress({
+            status: target.status,
+            progress: target.progress ?? null,
+          })
+
+          const normalizedStatus = target.status.toLowerCase()
+
+          if (doneStatuses.has(normalizedStatus) || (target.progress ?? 0) >= 100) {
+            stopPolling()
+            await handlePollingCompletion(target)
+          } else if (errorStatuses.has(normalizedStatus)) {
+            stopPolling()
+            setState({
+              isLoading: false,
+              error: target.error ?? "Ocurrió un error al procesar la cartola.",
+              statement: null,
+            })
+            setProgress(null)
+            toast({
+              title: "Error al procesar la cartola",
+              description: target.error ?? "Revisa el archivo e inténtalo nuevamente.",
+              variant: "destructive",
+            })
+          }
+        } catch (error) {
+          console.error(error)
+        }
+      }, 3500) as unknown as NodeJS.Timeout
+    },
+    [handlePollingCompletion, stopPolling, toast]
+  )
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return
 
+    stopPolling()
+    setProgress(null)
     setState({ isLoading: true, error: null, statement: null })
 
     try {
-      const formData = new FormData()
-      selectedFiles.forEach((file) => {
-        formData.append("files", file)
-      })
+      if (IS_DEMO_MODE) {
+        const formData = new FormData()
+        selectedFiles.forEach((file) => {
+          formData.append("files", file)
+        })
 
-      const response = await fetch("/api/demo/statements", {
-        method: "POST",
-        body: formData,
-      })
+        const response = await fetch("/api/demo/statements", {
+          method: "POST",
+          body: formData,
+        })
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error ?? "No se pudo procesar la cartola")
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          throw new Error(data.error ?? "No se pudo procesar la cartola")
+        }
+
+        const data = (await response.json()) as { statement: NormalizedStatement }
+        setState({ isLoading: false, error: null, statement: data.statement })
+        setSelectedFiles([])
+        onStatementParsed?.(data.statement)
+        updateFromStatement(data.statement)
+        toast({
+          title: "Cartola lista",
+          description: "La cartola demo fue procesada correctamente.",
+        })
+        return
       }
 
-      const data = (await response.json()) as { statement: NormalizedStatement }
-      setState({ isLoading: false, error: null, statement: data.statement })
-      onStatementParsed?.(data.statement)
+      const formData = new FormData()
+      selectedFiles.forEach((file) => {
+        formData.append("file", file)
+      })
+
+      const response = await api.post<{ statement: StatementSummary }>(
+        "/api/v1/statements",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      )
+
+      const { statement } = response.data
+      setProgress({ status: statement.status, progress: statement.progress ?? 0 })
+      toast({
+        title: "Archivo recibido",
+        description: "Estamos procesando los movimientos. Esto puede tomar unos segundos.",
+      })
+      startPolling(statement.id)
     } catch (error) {
       setState({
         isLoading: false,
         error: error instanceof Error ? error.message : "Ocurrió un error inesperado",
         statement: null,
+      })
+      setProgress(null)
+      toast({
+        title: "No pudimos cargar la cartola",
+        description: error instanceof Error ? error.message : "Revisa el archivo e inténtalo nuevamente.",
+        variant: "destructive",
       })
     }
   }
@@ -146,6 +305,12 @@ export function ManualStatementUploadCard({
           )}
         </Button>
         {error && <p className="text-sm text-destructive">{error}</p>}
+        {progress && (
+          <p className="text-sm text-muted-foreground">
+            Estado: <span className="font-medium capitalize">{progress.status}</span>
+            {typeof progress.progress === "number" ? ` — ${progress.progress}%` : null}
+          </p>
+        )}
         {statement && (
           <div className="w-full rounded-md bg-muted p-3 text-sm">
             <p className="font-semibold">Resumen generado</p>
