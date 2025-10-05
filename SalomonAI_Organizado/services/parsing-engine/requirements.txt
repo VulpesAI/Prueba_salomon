@@ -1,7 +1,16 @@
 kafka-python==2.0.2
 pandas==2.2.2
+numpy==1.26.4
+openpyxl==3.1.5
+xlrd==2.0.1
+python-dateutil==2.9.0.post0
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 python-multipart==0.0.9
 pydantic==2.10.4
 pydantic-settings==2.6.1
+httpx==0.27.2
+pdfminer.six==20231228
+Pillow==10.4.0
+pytesseract==0.3.13
+statement-parser==0.0.15

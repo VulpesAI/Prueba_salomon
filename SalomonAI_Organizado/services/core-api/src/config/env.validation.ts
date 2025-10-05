@@ -22,6 +22,9 @@ export const envValidationSchema = Joi.object({
   PARSED_STATEMENTS_TOPIC: Joi.string().default('parsing-engine.parsed_statement'),
   PARSED_STATEMENTS_KAFKA_BROKERS: Joi.string().allow('', null).optional(),
   PARSED_STATEMENTS_CONSUMER_GROUP: Joi.string().default('core-api.parsed-statements'),
+  PARSED_STATEMENTS_MAX_RETRIES: Joi.number().integer().min(0).default(3),
+  PARSED_STATEMENTS_RETRY_DELAY_MS: Joi.number().integer().min(0).default(1000),
+  PARSED_STATEMENTS_DLQ_TOPIC: Joi.string().allow('', null).optional(),
   DEMO_MODE: Joi.boolean()
     .truthy('true', '1', 'yes', 'y', 'on')
     .falsy('false', '0', 'no', 'n', 'off')
