@@ -1,5 +1,7 @@
 # Guía de plataforma SalomonAI
 
+> Consulta también la [guía rápida de estilo y contraste](./style-guide.md) para aplicar la paleta y gradientes oficiales en nuevos componentes.
+
 ## 1. Autenticación con Supabase
 - `frontend/lib/supabase.ts` crea un cliente de Supabase en el navegador y exige que las variables públicas `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` estén definidas para evitar inicializaciones silenciosas.【F:frontend/lib/supabase.ts†L1-L14】
 - `AuthProvider` obtiene la sesión actual al montar el contexto, normaliza los metadatos del usuario y escucha `onAuthStateChange` para mantener sincronizados `user`, `session` e `isLoading` en cada transición.【F:frontend/context/AuthContext.tsx†L66-L113】
