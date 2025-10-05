@@ -10,7 +10,12 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .core_client import CoreAPIClient
+from .core_client import (
+    CoreAPIClient,
+    ConversationDataService,
+    QdrantInsightRepository,
+    SupabaseFinancialRepository,
+)
 from .models import (
     ChatChunk,
     ChatRequest,
@@ -33,18 +38,38 @@ def json_event(chunk: ChatChunk) -> bytes:
 @asynccontextmanager
 def lifespan(app: FastAPI):
     nlu = SpanishNLU()
+    supabase_repo = SupabaseFinancialRepository(
+        base_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        timeout=settings.supabase_timeout_seconds,
+    )
+    qdrant_repo = QdrantInsightRepository(
+        url=settings.qdrant_url,
+        api_key=settings.qdrant_api_key,
+        collection=settings.qdrant_collection,
+        limit=settings.qdrant_result_limit,
+        score_threshold=settings.qdrant_score_threshold,
+        timeout=settings.request_timeout_seconds,
+    )
+    data_service = ConversationDataService(supabase_repo, qdrant_repo)
     core_client = CoreAPIClient(
         base_url=settings.core_api_base_url,
         timeout=settings.request_timeout_seconds,
+        data_service=data_service,
     )
     app.state.nlu = nlu
     app.state.core_client = core_client
+    app.state.data_service = data_service
     app.state.settings = settings
     yield
 
 
 def get_services(app: FastAPI = Depends()) -> Dict[str, object]:
-    return {"nlu": app.state.nlu, "core_client": app.state.core_client}
+    return {
+        "nlu": app.state.nlu,
+        "core_client": app.state.core_client,
+        "data_service": getattr(app.state, "data_service", None),
+    }
 
 
 app = FastAPI(title="SalomonAI Conversation Engine", version="0.1.0", lifespan=lifespan)
@@ -87,7 +112,12 @@ async def chat_event_stream(
 
     yield json_event(ChatChunk(type="intent", data={"intent": best_intent.dict()}))
 
-    resolution = await core_client.resolve_intent(best_intent, session_id=request.session_id, metadata=request.metadata)
+    resolution = await core_client.resolve_intent(
+        best_intent,
+        session_id=request.session_id,
+        query_text=request.message,
+        metadata=request.metadata,
+    )
 
     for insight in resolution.insights:
         yield json_event(ChatChunk(type="insight", data={"insight": insight.dict()}))
