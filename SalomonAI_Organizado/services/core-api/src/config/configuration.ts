@@ -45,6 +45,9 @@ export interface ResultsMessagingConfig {
   topic: string;
   groupId: string;
   brokers: string[];
+  maxRetries: number;
+  retryDelayMs: number;
+  dlqTopic?: string | null;
 }
 
 export interface BelvoConfig {
@@ -120,6 +123,9 @@ export default (): CoreConfiguration => {
   );
   const resultsGroupId =
     process.env.PARSED_STATEMENTS_CONSUMER_GROUP ?? 'core-api.parsed-statements';
+  const resultsMaxRetries = Number(process.env.PARSED_STATEMENTS_MAX_RETRIES ?? 3);
+  const resultsRetryDelay = Number(process.env.PARSED_STATEMENTS_RETRY_DELAY_MS ?? 1000);
+  const resultsDlqTopic = process.env.PARSED_STATEMENTS_DLQ_TOPIC;
   const belvoTimeout = Number(process.env.BELVO_TIMEOUT ?? 15000);
   const defaultPageSize = Number(process.env.MOVEMENTS_DEFAULT_PAGE_SIZE ?? 25);
   const maxPageSize = Number(process.env.MOVEMENTS_MAX_PAGE_SIZE ?? 200);
@@ -161,6 +167,9 @@ export default (): CoreConfiguration => {
         topic: resultsTopic,
         groupId: resultsGroupId,
         brokers: resultsBrokers,
+        maxRetries: Number.isNaN(resultsMaxRetries) ? 3 : resultsMaxRetries,
+        retryDelayMs: Number.isNaN(resultsRetryDelay) ? 1000 : resultsRetryDelay,
+        dlqTopic: resultsDlqTopic ?? null,
       },
     },
     demo: {

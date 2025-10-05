@@ -1,73 +1,214 @@
+"""Kafka consumer for the parsing engine service."""
+
+from __future__ import annotations
+
 import json
+import logging
 import time
-from kafka import KafkaConsumer
-from kafka.errors import NoBrokersAvailable
-import pandas as pd
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
+from kafka import KafkaConsumer, KafkaProducer
+from kafka.errors import KafkaError, NoBrokersAvailable
+
+from .parser import StatementParser, StatementParsingError, build_result_payload
 from .settings import get_settings
+from .storage import StorageError, create_storage_client
 
-settings = get_settings()
 
-# --- Kafka Configuration ---
-KAFKA_BROKER_URL = settings.kafka_broker_url
-KAFKA_TOPIC = settings.kafka_topic
-GROUP_ID = settings.consumer_group_id
+LOGGER = logging.getLogger("parsing-engine.consumer")
 
-def create_consumer():
-    """Creates and returns a Kafka consumer, retrying on connection failure."""
-    retries = settings.connection_retries
-    while retries > 0:
+
+@dataclass
+class StatementMessage:
+    """Representation of the incoming message produced by the Core API."""
+
+    statement_id: str
+    user_id: str
+    storage_path: str
+
+    @classmethod
+    def from_dict(cls, payload: Dict[str, Any]) -> "StatementMessage":
         try:
-            print(f"Attempting to connect to Kafka at {KAFKA_BROKER_URL}...")
-            consumer = KafkaConsumer(
-                KAFKA_TOPIC,
-                bootstrap_servers=[KAFKA_BROKER_URL],
-                auto_offset_reset='earliest', # Start reading at the earliest message
-                group_id=GROUP_ID,
-                value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+            statement_id = str(payload["statementId"])
+            user_id = str(payload["userId"])
+            storage_path = str(payload["storagePath"])
+        except KeyError as exc:  # pragma: no cover - defensive programming
+            raise ValueError(f"Missing required field in payload: {exc.args[0]}") from exc
+
+        if not statement_id or not user_id or not storage_path:
+            raise ValueError("Invalid parsing payload: statementId, userId and storagePath are required")
+
+        return cls(statement_id=statement_id, user_id=user_id, storage_path=storage_path)
+
+
+class ParsingEngine:
+    """Main orchestrator that consumes, parses and emits statement events."""
+
+    def __init__(self) -> None:
+        self.settings = get_settings()
+        self.parser = StatementParser(
+            default_currency=self.settings.default_currency,
+            ocr_languages=self.settings.ocr_languages,
+        )
+        self.storage_client = create_storage_client(
+            supabase_url=self.settings.supabase_url,
+            supabase_service_role_key=self.settings.supabase_service_role_key,
+        )
+
+        self.consumer: KafkaConsumer | None = None
+        self.producer: KafkaProducer | None = None
+
+    def create_consumer(self) -> KafkaConsumer | None:
+        retries = self.settings.connection_retries
+        brokers = self.settings.kafka_brokers
+
+        while retries > 0:
+            try:
+                LOGGER.info("Connecting to Kafka brokers %s", brokers)
+                consumer = KafkaConsumer(
+                    self.settings.statements_in_topic,
+                    bootstrap_servers=brokers,
+                    auto_offset_reset="earliest",
+                    group_id=self.settings.consumer_group_id,
+                    value_deserializer=lambda x: json.loads(x.decode("utf-8")),
+                )
+                LOGGER.info("Kafka consumer connected.")
+                return consumer
+            except NoBrokersAvailable:
+                retries -= 1
+                LOGGER.warning(
+                    "Kafka brokers not available. Retrying in %s seconds (%s retries left)",
+                    self.settings.retry_delay_seconds,
+                    retries,
+                )
+                time.sleep(self.settings.retry_delay_seconds)
+
+        LOGGER.error("Failed to connect to Kafka after several retries. Exiting.")
+        return None
+
+    def create_producer(self) -> KafkaProducer | None:
+        brokers = self.settings.kafka_brokers
+        try:
+            producer = KafkaProducer(
+                bootstrap_servers=brokers,
+                value_serializer=lambda value: json.dumps(value).encode("utf-8"),
             )
-            print("Successfully connected to Kafka.")
-            return consumer
+            return producer
         except NoBrokersAvailable:
-            print(
-                f"Could not connect to Kafka. Retrying in {settings.retry_delay_seconds} seconds... ({retries-1} retries left)"
+            LOGGER.error("Unable to connect to Kafka brokers for producer: %s", brokers)
+            return None
+
+    def run(self) -> None:
+        self.consumer = self.create_consumer()
+        if not self.consumer:
+            return
+
+        self.producer = self.create_producer()
+        if not self.producer:
+            LOGGER.error("Producer not available. Stopping consumer loop.")
+            return
+
+        LOGGER.info("Listening for messages on topic '%s'", self.settings.statements_in_topic)
+
+        for message in self.consumer:
+            payload = message.value
+            try:
+                statement_message = StatementMessage.from_dict(payload)
+            except ValueError as exc:
+                LOGGER.error("Invalid message received: %s", exc)
+                continue
+
+            LOGGER.info(
+                "Processing statement %s for user %s from %s",
+                statement_message.statement_id,
+                statement_message.user_id,
+                statement_message.storage_path,
             )
-            retries -= 1
-            time.sleep(settings.retry_delay_seconds)
-    print("Failed to connect to Kafka after several retries. Exiting.")
-    return None
 
-def process_document(payload):
-    """Processes a single document message from Kafka."""
-    file_path = payload.get("filePath")
-    user_id = payload.get("userId")
+            result_payload = self._process_message(statement_message)
 
-    if not file_path or not user_id:
-        print(f"Skipping message due to missing 'filePath' or 'userId': {payload}")
-        return
+            try:
+                self.producer.send(self.settings.statements_out_topic, result_payload).get(timeout=30)
+                LOGGER.info(
+                    "Published parsed statement %s to topic %s",
+                    statement_message.statement_id,
+                    self.settings.statements_out_topic,
+                )
+            except KafkaError as error:
+                LOGGER.error("Failed to publish parsed statement %s: %s", statement_message.statement_id, error)
 
-    print(f"Processing document for user {user_id} at path: {file_path}")
+    def _process_message(self, message: StatementMessage) -> Dict[str, Any]:
+        error: Optional[str] = None
+        parsed = None
 
-    # Aquí es donde la magia ocurre: leer el archivo
-    df = pd.read_csv(file_path) # Asumimos que es un CSV por ahora
-    print("--- Document Content ---")
-    print(df.head()) # Imprime las primeras 5 filas
-    print("------------------------")
-
-def main():
-    """Main function to run the Kafka consumer."""
-    print("--- Parsing Engine Service ---")
-    consumer = create_consumer()
-
-    if not consumer:
-        return
-
-    print(f"Listening for messages on topic: '{KAFKA_TOPIC}'")
-    for message in consumer:
         try:
-            process_document(message.value)
-        except Exception as e:
-            print(f"An error occurred while processing message: {e}")
+            storage_path = self._resolve_storage_path(message.storage_path)
+            document = self.storage_client.fetch(storage_path)
+            checksum = self._calculate_checksum(document.content)
+            parsed = self.parser.parse(
+                document.filename,
+                document.content,
+                content_type=document.content_type,
+            )
+            status = "completed"
+        except (StorageError, StatementParsingError) as exc:
+            checksum = ""
+            status = "failed"
+            error = str(exc)
+            LOGGER.error(
+                "Failed to process statement %s from %s: %s",
+                message.statement_id,
+                storage_path,
+                error,
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging
+            checksum = ""
+            status = "failed"
+            error = f"Unexpected error: {exc}"
+            LOGGER.exception(
+                "Unexpected error while processing statement %s",
+                message.statement_id,
+            )
+
+        if not checksum:
+            checksum = self._fallback_checksum(message)
+
+        return build_result_payload(
+            statement_id=message.statement_id,
+            user_id=message.user_id,
+            parsed=parsed,
+            status=status,
+            error=error,
+            checksum=checksum,
+        )
+
+    @staticmethod
+    def _calculate_checksum(content: bytes) -> str:
+        import hashlib
+
+        return hashlib.sha256(content).hexdigest()
+
+    @staticmethod
+    def _fallback_checksum(message: StatementMessage) -> str:
+        import hashlib
+
+        seed = f"{message.statement_id}:{message.storage_path}".encode("utf-8")
+        return hashlib.sha256(seed).hexdigest()
+
+    def _resolve_storage_path(self, storage_path: str) -> str:
+        normalized = storage_path.lstrip("/")
+        if "/" not in normalized:
+            return f"{self.settings.statements_bucket}/{normalized}"
+        return normalized
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO)
+    engine = ParsingEngine()
+    engine.run()
+
 
 if __name__ == "__main__":
     main()
+

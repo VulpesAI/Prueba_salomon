@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Consumer, Kafka, KafkaMessage, logLevel } from 'kafkajs';
+import { Consumer, Kafka, KafkaMessage, Producer, logLevel } from 'kafkajs';
 
 import { SupabaseService, ParsedStatementResultPayload } from '../../auth/supabase.service';
 import type { ResultsMessagingConfig } from '../../config/configuration';
@@ -10,6 +10,10 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ResultsConnectorService.name);
   private consumer: Consumer | null = null;
   private topic: string | null = null;
+  private producer: Producer | null = null;
+  private dlqTopic: string | null = null;
+  private maxRetries = 3;
+  private retryDelayMs = 1000;
 
   constructor(
     private readonly configService: ConfigService,
@@ -34,13 +38,22 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
 
     this.consumer = kafka.consumer({ groupId: config.groupId });
     this.topic = config.topic;
+    this.maxRetries = Math.max(config.maxRetries ?? 3, 0);
+    this.retryDelayMs = Math.max(config.retryDelayMs ?? 1000, 0);
+    this.dlqTopic = config.dlqTopic ?? null;
+
+    if (this.dlqTopic) {
+      this.producer = kafka.producer();
+      await this.producer.connect();
+      this.logger.log(`Results connector DLQ enabled on topic ${this.dlqTopic}`);
+    }
 
     await this.consumer.connect();
     await this.consumer.subscribe({ topic: config.topic, fromBeginning: false });
 
     await this.consumer.run({
-      eachMessage: async ({ message }) => {
-        await this.handleMessage(message);
+      eachMessage: async ({ topic, message }) => {
+        await this.handleMessage(topic, message);
       },
     });
 
@@ -48,19 +61,35 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (!this.consumer) {
-      return;
-    }
+    await Promise.all([
+      (async () => {
+        if (!this.consumer) {
+          return;
+        }
 
-    try {
-      await this.consumer.disconnect();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown';
-      this.logger.error(`Failed to disconnect results connector: ${message}`);
-    }
+        try {
+          await this.consumer.disconnect();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown';
+          this.logger.error(`Failed to disconnect results connector: ${message}`);
+        }
+      })(),
+      (async () => {
+        if (!this.producer) {
+          return;
+        }
+
+        try {
+          await this.producer.disconnect();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown';
+          this.logger.error(`Failed to disconnect results DLQ producer: ${message}`);
+        }
+      })(),
+    ]);
   }
 
-  private async handleMessage(message: KafkaMessage): Promise<void> {
+  private async handleMessage(topic: string, message: KafkaMessage): Promise<void> {
     if (!message.value) {
       this.logger.warn('Received Kafka message without value for parsed statement connector.');
       return;
@@ -69,10 +98,46 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
     try {
       const payload = JSON.parse(message.value.toString());
       const normalized = this.normalizePayload(payload);
-      await this.supabaseService.applyParsedStatementResult(normalized);
+      await this.processMessageWithRetry(topic, message, normalized);
     } catch (error) {
       const messageText = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to process parsed statement message: ${messageText}`);
+      await this.sendToDlq(topic, message, messageText);
+    }
+  }
+
+  private async processMessageWithRetry(
+    topic: string,
+    message: KafkaMessage,
+    payload: ParsedStatementResultPayload,
+  ): Promise<void> {
+    let attempt = 0;
+    const attemptsLimit = this.maxRetries;
+
+    while (attempt <= attemptsLimit) {
+      try {
+        await this.supabaseService.applyParsedStatementResult(payload);
+        return;
+      } catch (error) {
+        attempt += 1;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        if (attempt > attemptsLimit) {
+          this.logger.error(
+            `Failed to persist parsed statement ${payload.statementId} after ${attemptsLimit} retries: ${errorMessage}`,
+          );
+          await this.sendToDlq(topic, message, errorMessage);
+          return;
+        }
+
+        this.logger.warn(
+          `Retry ${attempt} for parsed statement ${payload.statementId} due to error: ${errorMessage}`,
+        );
+
+        if (this.retryDelayMs > 0) {
+          await this.delay(this.retryDelayMs);
+        }
+      }
     }
   }
 
@@ -122,5 +187,40 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
       statementDate: raw.statementDate ?? raw.statement_date ?? null,
       checksum: raw.checksum ?? null,
     };
+  }
+
+  private async sendToDlq(topic: string, message: KafkaMessage, errorMessage: string): Promise<void> {
+    if (!this.producer || !this.dlqTopic) {
+      this.logger.warn(
+        `DLQ is not configured. Dropping message from topic ${topic} with error: ${errorMessage}`,
+      );
+      return;
+    }
+
+    try {
+      await this.producer.send({
+        topic: this.dlqTopic,
+        messages: [
+          {
+            value: message.value,
+            headers: {
+              'x-error': Buffer.from(errorMessage, 'utf-8'),
+              'x-source-topic': Buffer.from(topic, 'utf-8'),
+            },
+          },
+        ],
+      });
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to publish message to DLQ: ${messageText}`);
+    }
+  }
+
+  private async delay(ms: number): Promise<void> {
+    if (ms <= 0) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
