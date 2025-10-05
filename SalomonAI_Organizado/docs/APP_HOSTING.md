@@ -22,6 +22,7 @@ Store secrets with Google Secret Manager or Firebase App Hosting secrets and mou
 3. En el entorno de despliegue (Cloud Run o Firebase App Hosting) crea una variable de entorno **secreta** llamada `SECRET_PASSPHRASE` con la misma frase utilizada para sellar el archivo. Puedes almacenarla en Google Secret Manager o en la sección **Manage environment variables** de Firebase.
 4. (Opcional) Si necesitas sobreescribir algún valor puntual, define las variables `JWT_SECRET`, `FIREBASE_*` o `SUPABASE_*` directamente en el runtime. Las claves cargadas desde `secrets.enc.json` solo se aplican cuando el valor no existe ya en `process.env`.
 
+Los archivos versionados en `services/core-api/apphosting.yaml` incluyen marcadores como `<injected-via-secrets:JWT_SECRET>` para recordar que los valores deben inyectarse desde secretos de entorno. Durante el arranque, `injectSecretsIntoEnv` reemplaza automáticamente esos marcadores (y cualquier `REEMPLAZAR` heredado de las plantillas) cuando logra descifrar `secrets.enc.json`, por lo que no necesitas editar el manifiesto con valores reales.
 Los archivos versionados en `services/core-api/apphosting.yaml` incluyen marcadores como `<injected-via-secrets:JWT_SECRET>` para recordar que los valores deben inyectarse desde secretos de entorno. Mantén los valores reales fuera del repositorio.
 
 ### TLS Termination

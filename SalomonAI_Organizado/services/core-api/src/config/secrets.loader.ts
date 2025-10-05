@@ -5,6 +5,29 @@ const TRUTHY_VALUES = new Set(['true', '1', 'yes', 'y', 'on']);
 const isTruthy = (value: string | undefined): boolean =>
   typeof value === 'string' && TRUTHY_VALUES.has(value.trim().toLowerCase());
 
+const PLACEHOLDER_PREFIX = '<injected-via-secrets:';
+
+const shouldOverrideExisting = (currentValue: string | undefined): boolean => {
+  if (typeof currentValue === 'undefined') {
+    return true;
+  }
+
+  if (currentValue === '') {
+    return true;
+  }
+
+  const trimmed = currentValue.trim();
+  if (trimmed.startsWith(PLACEHOLDER_PREFIX) && trimmed.endsWith('>')) {
+    return true;
+  }
+
+  if (trimmed === 'REEMPLAZAR') {
+    return true;
+  }
+
+  return false;
+};
+
 const setEnvIfMissing = (key: string, value?: string | number): void => {
   if (typeof value === 'undefined' || value === null) {
     return;
@@ -15,6 +38,7 @@ const setEnvIfMissing = (key: string, value?: string | number): void => {
     return;
   }
 
+  if (shouldOverrideExisting(process.env[key])) {
   if (typeof process.env[key] === 'undefined' || process.env[key] === '') {
     process.env[key] = stringValue;
   }
