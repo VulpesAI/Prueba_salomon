@@ -32,7 +32,10 @@ export const useStatementTransactions = (
 ): StatementTransactionsResult => {
   const { statement: demoStatement } = useDemoFinancialData()
 
-  const transactionsQuery = useApiQuery({
+  const transactionsQuery = useApiQuery<
+    Awaited<ReturnType<typeof getStatementTransactions>> | null,
+    Error
+  >({
     queryKey: queryKeys.statements.transactions(statementId ?? ""),
     queryFn: async (_client, context) => {
       if (!statementId) {
@@ -60,7 +63,10 @@ export const useStatementTransactions = (
         description: transaction.description,
         amount: transaction.amount,
         currency: "CLP",
-        merchant: transaction.metadata?.merchant ?? null,
+        merchant:
+          typeof transaction.metadata?.merchant === "string"
+            ? transaction.metadata.merchant
+            : null,
         category: transaction.category ?? null,
       })) satisfies StatementTransaction[]
 
