@@ -1,17 +1,19 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  Mail,
+  Phone,
+  MapPin,
   MessageSquare,
   Send,
   Calendar,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Zap
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +58,18 @@ const Contact = () => {
           <h2 className="text-4xl font-bold mb-6 text-foreground">
             ¿Listo para Revolucionar tus Finanzas?
           </h2>
+          <div className="mt-14 flex justify-center w-full">
+            <Button
+              asChild
+              size="lg"
+              className="h-14 px-10 text-xl font-semibold tracking-tight w-full max-w-md"
+            >
+              <Link href="/signup" className="flex items-center justify-center gap-3">
+                <Zap className="h-5 w-5" aria-hidden="true" />
+                Crea TU cuenta ahora
+              </Link>
+            </Button>
+          </div>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Contáctanos para una demo personalizada o resolver cualquier duda sobre SalomónAI
           </p>
