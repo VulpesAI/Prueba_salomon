@@ -154,10 +154,17 @@ const decodeBase64 = (value: string, field: string): Buffer => {
 };
 
 const loadEncryptedPayload = (): EncryptedPayload => {
-  const encryptedPath = path.resolve(__dirname, '..', 'secrets', ENCRYPTED_FILE_NAME);
-  if (!existsSync(encryptedPath)) {
+  const candidatePaths = [
+    path.resolve(__dirname, '..', '..', 'secrets', ENCRYPTED_FILE_NAME),
+    path.resolve(__dirname, '..', 'secrets', ENCRYPTED_FILE_NAME),
+  ];
+
+  const encryptedPath = candidatePaths.find((candidate) => existsSync(candidate));
+
+  if (!encryptedPath) {
+    const locations = candidatePaths.join(', ');
     throw new Error(
-      `No se encontró ${ENCRYPTED_FILE_NAME} en ${encryptedPath}. Ejecuta scripts/seal-secrets.ts para generarlo a partir de secrets.local.json.`,
+      `No se encontró ${ENCRYPTED_FILE_NAME} en ninguna de las rutas esperadas (${locations}). Ejecuta scripts/seal-secrets.ts para generarlo a partir de secrets.local.json.`,
     );
   }
 
