@@ -4,7 +4,12 @@ import { ConfigService } from '@nestjs/config';
 
 import { AppModule } from './app.module';
 import { setupGlobalPrefix } from './config/app.config';
+import { loadRootEnv } from './config/env.loader';
+import { injectSecretsIntoEnv } from './config/secrets.loader';
 import { HealthService } from './health/health.service';
+
+loadRootEnv();
+injectSecretsIntoEnv();
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);

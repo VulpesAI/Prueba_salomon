@@ -10,19 +10,19 @@ Cloud Run expects the container to listen on the port provided by the `PORT` env
 
 | Scope | Variables | Notes |
 | --- | --- | --- |
-| Minimal | `PORT`, `CORE_API_PROFILE=minimal`, `JWT_SECRET`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` | Use this set when no external services are required. Keep the profile on `minimal` to avoid loading unused dependencies. |
-| Full | _Minimal set_ plus: `DATABASE_URL`, `REDIS_URL`, `GOOGLE_APPLICATION_CREDENTIALS`, `SENTRY_DSN`, `ALLOWED_ORIGINS`, `SERVICE_BASE_URL` | Include these when enabling persistence layers, telemetry, or stricter CORS. Adjust the list to match the service’s feature set. |
+| Minimal | `PORT`, `CORE_API_PROFILE=minimal`, `SECRET_PASSPHRASE` _(opcional si cargas los secretos cifrados)_, `JWT_SECRET`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` | Usa este conjunto cuando no se requieren servicios externos. Mantén el perfil en `minimal` para evitar dependencias innecesarias. Si defines `SECRET_PASSPHRASE`, los valores de Firebase y JWT se obtendrán automáticamente desde `secrets.enc.json`. |
+| Full | _Minimal set_ plus: `DATABASE_URL`, `REDIS_URL`, `GOOGLE_APPLICATION_CREDENTIALS`, `SENTRY_DSN`, `ALLOWED_ORIGINS`, `SERVICE_BASE_URL` | Incluye estas claves cuando habilites persistencia, telemetría o CORS estrictos. Ajusta la lista según la funcionalidad del servicio. |
 
 Store secrets with Google Secret Manager or Firebase App Hosting secrets and mount them as environment variables. Keep the private key formatted with escaped newlines (`\n`) so that it parses correctly in the container.
 
-### Cargar secretos en Firebase App Hosting
+### Cargar `secrets.enc.json` y la passphrase
 
-1. Abre la consola de Firebase y navega a **Hosting → App Hosting**.
-2. Selecciona la app correspondiente y elige **Manage environment variables**.
-3. Crea (o actualiza) las variables `JWT_SECRET`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PRIVATE_KEY` con los valores reales.
-4. Guarda los cambios y redepliega el servicio para que el runtime reciba los secretos.
+1. Genera `services/core-api/secrets/secrets.enc.json` a partir de `secrets.local.json` ejecutando `SECRET_PASSPHRASE="<frase-segura>" npm exec ts-node scripts/seal-secrets.ts`. El archivo cifrado puede versionarse porque no expone los valores en texto plano.
+2. Sube `secrets.enc.json` junto con el código al repositorio o empaqueta el archivo en la imagen de despliegue. La aplicación lo buscará en `services/core-api/secrets/` durante el arranque.
+3. En el entorno de despliegue (Cloud Run o Firebase App Hosting) crea una variable de entorno **secreta** llamada `SECRET_PASSPHRASE` con la misma frase utilizada para sellar el archivo. Puedes almacenarla en Google Secret Manager o en la sección **Manage environment variables** de Firebase.
+4. (Opcional) Si necesitas sobreescribir algún valor puntual, define las variables `JWT_SECRET`, `FIREBASE_*` o `SUPABASE_*` directamente en el runtime. Las claves cargadas desde `secrets.enc.json` solo se aplican cuando el valor no existe ya en `process.env`.
 
-Los archivos versionados en `services/core-api/apphosting.yaml` contienen únicamente el marcador `<SET-IN-FIREBASE-SECRETS>` para estas claves. Mantén los valores reales fuera del repositorio.
+Los archivos versionados en `services/core-api/apphosting.yaml` incluyen marcadores como `<injected-via-secrets:JWT_SECRET>` para recordar que los valores deben inyectarse desde secretos de entorno. Mantén los valores reales fuera del repositorio.
 
 ### TLS Termination
 
