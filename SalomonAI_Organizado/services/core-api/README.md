@@ -2,6 +2,20 @@
 
 This directory contains the backend Core API service for the SalomonAI platform. It is a Node.js application built with NestJS and intended to be deployed in containerized environments.
 
+## Local setup
+
+Install the dependencies before running any NestJS scripts so that the local CLI binary becomes available:
+
+```bash
+npm install
+```
+
+Afterwards you can compile the project with:
+
+```bash
+npm run build
+```
+
 ## Deployment
 
 When deploying this service to managed platforms (for example Supabase Edge Functions, Cloud Run or Firebase App Hosting), ensure the server listens on the port defined by the `PORT` environment variable provided by the hosting platform. These services inject `PORT=8080` into the runtime, so the application must not hard-code an alternative port.
