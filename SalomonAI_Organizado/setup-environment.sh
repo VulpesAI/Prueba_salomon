@@ -33,7 +33,8 @@ print_error() {
 }
 
 # Directorio del proyecto
-PROJECT_DIR="/Users/felipebarros/Desktop/Prueba Salomon/SalomonAI_Organizado"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$SCRIPT_DIR"
 BACKEND_DIR="$PROJECT_DIR/services/core-api"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
 
