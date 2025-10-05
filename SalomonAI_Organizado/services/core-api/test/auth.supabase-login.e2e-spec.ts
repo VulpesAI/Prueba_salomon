@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import type { AuthUser } from '@supabase/supabase-js';
 import request from 'supertest';
 
 import { AppModule } from '../src/app.module';
@@ -14,11 +15,11 @@ describe('AuthController - /auth/supabase-login (e2e)', () => {
   beforeAll(async () => {
     supabaseServiceMock = {
       isEnabled: jest.fn(),
-      getUser: jest.fn()
+      getUser: jest.fn(),
     } as unknown as jest.Mocked<SupabaseService>;
 
     const moduleRef = await Test.createTestingModule({
-      imports: [AppModule]
+      imports: [AppModule],
     })
       .overrideProvider(SupabaseService)
       .useValue(supabaseServiceMock)
@@ -41,30 +42,34 @@ describe('AuthController - /auth/supabase-login (e2e)', () => {
   });
 
   it('returns an access token and user information for a valid Supabase access token', async () => {
-    supabaseServiceMock.getUser.mockResolvedValue({
+    const supabaseUser: AuthUser = {
       id: 'supabase-user-123',
       email: 'user@example.com',
       aud: 'authenticated',
-      user_metadata: { full_name: 'Test User', avatar_url: 'https://example.com/avatar.png' },
-      app_metadata: { provider: 'email' }
-    } as any);
+      user_metadata: {
+        full_name: 'Test User',
+        avatar_url: 'https://example.com/avatar.png',
+      },
+      app_metadata: { provider: 'email' },
+      created_at: '2023-01-01T00:00:00.000Z',
+    };
+
+    supabaseServiceMock.getUser.mockResolvedValue(supabaseUser);
 
     const response = await request(app.getHttpServer())
       .post('/api/v1/auth/supabase-login')
       .send({ access_token: 'valid-supabase-token' })
       .expect(201);
 
-    expect(response.body).toEqual(
-      expect.objectContaining({
-        token: expect.any(String),
-        user: {
-          id: 'supabase-user-123',
-          email: 'user@example.com',
-          name: 'Test User',
-          picture: 'https://example.com/avatar.png'
-        }
-      })
-    );
+    expect(response.body).toMatchObject({
+      token: expect.any(String),
+      user: {
+        id: 'supabase-user-123',
+        email: 'user@example.com',
+        name: 'Test User',
+        picture: 'https://example.com/avatar.png',
+      },
+    });
 
     expect(supabaseServiceMock.getUser).toHaveBeenCalledWith('valid-supabase-token');
   });
@@ -79,7 +84,7 @@ describe('AuthController - /auth/supabase-login (e2e)', () => {
 
     expect(response.body).toMatchObject({
       statusCode: 503,
-      message: 'Supabase authentication is disabled'
+      message: 'Supabase authentication is disabled',
     });
     expect(supabaseServiceMock.getUser).not.toHaveBeenCalled();
   });
@@ -92,7 +97,7 @@ describe('AuthController - /auth/supabase-login (e2e)', () => {
 
     expect(response.body).toMatchObject({
       statusCode: 400,
-      message: 'A valid Supabase access token is required'
+      message: 'A valid Supabase access token is required',
     });
     expect(supabaseServiceMock.getUser).not.toHaveBeenCalled();
   });
@@ -107,7 +112,7 @@ describe('AuthController - /auth/supabase-login (e2e)', () => {
 
     expect(response.body).toMatchObject({
       statusCode: 401,
-      message: 'Invalid Supabase access token'
+      message: 'Invalid Supabase access token',
     });
   });
 });

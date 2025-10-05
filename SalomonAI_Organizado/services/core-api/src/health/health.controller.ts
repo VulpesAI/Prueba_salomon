@@ -10,7 +10,7 @@ export class HealthController {
   getHealth() {
     return {
       ok: true,
-      ...this.healthService.getHealthStatus()
+      ...this.healthService.getHealthStatus(),
     };
   }
 }

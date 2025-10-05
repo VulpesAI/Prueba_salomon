@@ -2,7 +2,7 @@ import {
   BadRequestException,
   Injectable,
   ServiceUnavailableException,
-  UnauthorizedException
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -15,7 +15,7 @@ export class AuthService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
 
   async supabaseLogin({ access_token }: SupabaseLoginDto) {
@@ -43,7 +43,7 @@ export class AuthService {
       email: user.email,
       name: (user.user_metadata?.full_name as string | undefined) ?? user.email ?? user.id,
       picture: user.user_metadata?.avatar_url as string | undefined,
-      provider: user.app_metadata?.provider
+      provider: user.app_metadata?.provider,
     };
 
     const jwtSecret = this.configService.get<string>('auth.jwtSecret');
@@ -54,7 +54,7 @@ export class AuthService {
     const expiresIn = this.configService.get<string>('auth.jwtExpiresIn') ?? '1h';
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: jwtSecret,
-      expiresIn
+      expiresIn,
     });
 
     return {
@@ -63,8 +63,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: payload.name,
-        picture: payload.picture
-      }
+        picture: payload.picture,
+      },
     };
   }
 }

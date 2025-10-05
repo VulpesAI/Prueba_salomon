@@ -61,21 +61,21 @@ export default (): CoreConfiguration => {
       port: Number.isNaN(port) ? 8080 : port,
       version: process.env.npm_package_version ?? '0.0.0',
       allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS ?? process.env.CORS_ORIGIN),
-      globalPrefix: process.env.GLOBAL_PREFIX ?? 'api/v1'
+      globalPrefix: process.env.GLOBAL_PREFIX ?? 'api/v1',
     },
     auth: {
       jwtSecret: process.env.JWT_SECRET ?? '',
-      jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1h'
+      jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1h',
     },
     supabase: {
       url: process.env.SUPABASE_URL,
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      jwtAudience: process.env.SUPABASE_JWT_AUDIENCE
+      jwtAudience: process.env.SUPABASE_JWT_AUDIENCE,
     },
     demo: {
       enabled: parseBoolean(process.env.DEMO_MODE),
       defaultCurrency: process.env.DEFAULT_CURRENCY ?? 'CLP',
-      defaultLocale: process.env.DEFAULT_LOCALE ?? 'es-CL'
-    }
+      defaultLocale: process.env.DEFAULT_LOCALE ?? 'es-CL',
+    },
   };
 };

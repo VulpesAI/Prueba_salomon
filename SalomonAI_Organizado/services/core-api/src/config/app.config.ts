@@ -7,6 +7,6 @@ export function setupGlobalPrefix(app: INestApplication, configService: ConfigSe
   const prefix = configService.get<string>('app.globalPrefix') ?? DEFAULT_GLOBAL_PREFIX;
 
   app.setGlobalPrefix(prefix, {
-    exclude: [{ path: 'health', method: RequestMethod.ALL }]
+    exclude: [{ path: 'health', method: RequestMethod.ALL }],
   });
 }

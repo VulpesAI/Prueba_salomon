@@ -20,5 +20,5 @@ export const envValidationSchema = Joi.object({
     .falsy('false', '0', 'no', 'n', 'off')
     .default(false),
   DEFAULT_CURRENCY: Joi.string().default('CLP'),
-  DEFAULT_LOCALE: Joi.string().default('es-CL')
+  DEFAULT_LOCALE: Joi.string().default('es-CL'),
 });
