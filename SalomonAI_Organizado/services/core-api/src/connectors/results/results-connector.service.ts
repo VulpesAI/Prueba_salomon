@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { Consumer, Kafka, KafkaMessage, Producer, logLevel } from 'kafkajs';
 
 import { SupabaseService, ParsedStatementResultPayload } from '../../auth/supabase.service';
+import { ForecastingOrchestratorService } from '../../recommendations/forecasting-orchestrator.service';
+import { RecommendationsIngestionService } from '../../recommendations/recommendations-ingestion.service';
 import type { ResultsMessagingConfig } from '../../config/configuration';
 
 @Injectable()
@@ -18,6 +20,8 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    private readonly ingestionService: RecommendationsIngestionService,
+    private readonly forecastingService: ForecastingOrchestratorService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -117,6 +121,7 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
     while (attempt <= attemptsLimit) {
       try {
         await this.supabaseService.applyParsedStatementResult(payload);
+        await this.afterStatementProcessed(payload);
         return;
       } catch (error) {
         attempt += 1;
@@ -139,6 +144,33 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
         }
       }
     }
+  }
+
+  private async afterStatementProcessed(payload: ParsedStatementResultPayload): Promise<void> {
+    const userId = payload.userId;
+    if (!userId) {
+      this.logger.warn('Received parsed statement result without userId; skipping ingestion hooks.');
+      return;
+    }
+
+    await Promise.all([
+      (async () => {
+        try {
+          await this.ingestionService.ingestUser(userId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(`Failed to refresh recommendation ingestion for user ${userId}: ${message}`);
+        }
+      })(),
+      (async () => {
+        try {
+          await this.forecastingService.generateForecast(userId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(`Failed to trigger forecasting for user ${userId}: ${message}`);
+        }
+      })(),
+    ]);
   }
 
   private normalizePayload(raw: Record<string, any>): ParsedStatementResultPayload {

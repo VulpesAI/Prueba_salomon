@@ -10,6 +10,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { MovementsModule } from './movements/movements.module';
 import { BelvoModule } from './belvo/belvo.module';
 import { ResultsConnectorModule } from './connectors/results/results-connector.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ResultsConnectorModule } from './connectors/results/results-connector.m
     MovementsModule,
     BelvoModule,
     ResultsConnectorModule,
+    RecommendationsModule,
   ],
 })
 export class AppModule {}

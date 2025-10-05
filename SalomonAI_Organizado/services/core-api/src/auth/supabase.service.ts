@@ -139,6 +139,22 @@ export interface ParsedStatementResultPayload {
   transactions?: ParsedStatementTransactionPayload[];
 }
 
+export interface SupabaseForecastPointRecord {
+  date: string;
+  amount: number;
+}
+
+export interface SupabaseForecastResultUpsert {
+  id: string;
+  userId: string;
+  generatedAt: string;
+  horizonDays: number;
+  historyDays: number;
+  modelType: string;
+  metadata: Record<string, unknown> | null;
+  points: SupabaseForecastPointRecord[];
+}
+
 @Injectable()
 export class SupabaseService {
   private readonly logger = new Logger(SupabaseService.name);
@@ -415,6 +431,30 @@ export class SupabaseService {
 
     if (transactions.length > 0) {
       await this.replaceStatementTransactions(payload.statementId, transactions);
+    }
+  }
+
+  async upsertForecastResult(payload: SupabaseForecastResultUpsert): Promise<void> {
+    const client = this.getClientOrThrow();
+
+    const record = {
+      id: payload.id,
+      user_id: payload.userId,
+      generated_at: payload.generatedAt,
+      horizon_days: payload.horizonDays,
+      history_days: payload.historyDays,
+      model_type: payload.modelType,
+      metadata: payload.metadata,
+      forecast_points: payload.points,
+    };
+
+    const { error } = await client
+      .from('forecast_results')
+      .upsert(record, { onConflict: 'id' });
+
+    if (error) {
+      this.logger.error(`Failed to upsert forecast result for user ${payload.userId}: ${error.message}`);
+      throw error;
     }
   }
 
