@@ -7,7 +7,7 @@
     "dev:demo": "NEXT_PUBLIC_DEMO_MODE=true next dev",
     "build": "next build",
     "build:demo": "NEXT_PUBLIC_DEMO_MODE=true NEXT_SHOULD_EXPORT=true next build",
-    "start": "next start",
+    "start": "next start --hostname 0.0.0.0 --port $PORT",
     "lint": "next lint",
     "lint:fix": "NEXT_PUBLIC_DEMO_MODE=true next lint --fix",
     "test": "vitest run"
@@ -82,5 +82,8 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
     "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.18 <23"
   }
 }
