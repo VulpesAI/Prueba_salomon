@@ -1,6 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient, createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import type { AuthUser } from '@supabase/supabase-js';
 
 interface SupabaseAuthResponse {
@@ -62,6 +63,14 @@ export interface SupabaseStatementRecord extends SupabaseStatementInsert {
   account?: SupabaseAccountRecord | null;
 }
 
+export interface SupabaseStatementUpdate
+  extends Partial<Omit<SupabaseStatementInsert, 'id' | 'user_id' | 'account_id'>> {
+  status?: string;
+  progress?: number | null;
+  processed_at?: string | null;
+  error_message?: string | null;
+}
+
 export interface SupabaseTransactionRecord {
   id: string;
   statement_id: string;
@@ -80,6 +89,54 @@ export interface SupabaseTransactionRecord {
   metadata?: Record<string, unknown> | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface SupabaseTransactionUpsert
+  extends Partial<Omit<SupabaseTransactionRecord, 'statement_id' | 'id'>> {
+  statement_id: string;
+  id?: string;
+}
+
+export interface SupabaseUserTransactionRecord extends SupabaseTransactionRecord {
+  statement: SupabaseStatementRecord | null;
+  account: SupabaseAccountRecord | null;
+}
+
+export interface ParsedStatementSummary {
+  openingBalance?: number | null;
+  closingBalance?: number | null;
+  totalCredit?: number | null;
+  totalDebit?: number | null;
+  transactionCount?: number | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  statementDate?: string | null;
+  checksum?: string | null;
+}
+
+export interface ParsedStatementTransactionPayload {
+  id?: string;
+  externalId?: string;
+  postedAt?: string | null;
+  description?: string | null;
+  rawDescription?: string | null;
+  normalizedDescription?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  merchant?: string | null;
+  category?: string | null;
+  status?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface ParsedStatementResultPayload {
+  statementId: string;
+  userId: string;
+  status: 'completed' | 'failed';
+  error?: string | null;
+  processedAt?: string | null;
+  summary?: ParsedStatementSummary;
+  transactions?: ParsedStatementTransactionPayload[];
 }
 
 @Injectable()
@@ -248,6 +305,117 @@ export class SupabaseService {
     }
 
     return (data as SupabaseTransactionRecord[]) ?? [];
+  }
+
+  async listUserTransactions(userId: string): Promise<SupabaseUserTransactionRecord[]> {
+    const statements = await this.listStatements(userId);
+
+    if (statements.length === 0) {
+      return [];
+    }
+
+    const transactionsByStatement = await Promise.all(
+      statements.map(async (statement) => {
+        const transactions = await this.listStatementTransactions(statement.id);
+        return transactions.map<SupabaseUserTransactionRecord>((transaction) => ({
+          ...transaction,
+          statement,
+          account: statement.account ?? null,
+        }));
+      }),
+    );
+
+    return transactionsByStatement.flat();
+  }
+
+  async updateStatementById(
+    statementId: string,
+    patch: SupabaseStatementUpdate,
+  ): Promise<SupabaseStatementRecord | null> {
+    const client = this.getClientOrThrow();
+
+    const { data, error } = await client
+      .from('statements')
+      .update(patch)
+      .eq('id', statementId)
+      .select('*, account:accounts(*)')
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to update statement ${statementId} in Supabase: ${error.message}`);
+      throw error;
+    }
+
+    return (data as SupabaseStatementRecord | null) ?? null;
+  }
+
+  async replaceStatementTransactions(
+    statementId: string,
+    transactions: SupabaseTransactionUpsert[],
+  ): Promise<void> {
+    const client = this.getClientOrThrow();
+
+    const deleteResult = await client.from('transactions').delete().eq('statement_id', statementId);
+    if (deleteResult.error) {
+      this.logger.error(
+        `Failed to purge transactions for statement ${statementId}: ${deleteResult.error.message}`,
+      );
+      throw deleteResult.error;
+    }
+
+    if (transactions.length === 0) {
+      return;
+    }
+
+    const insertResult = await client.from('transactions').insert(transactions);
+    if (insertResult.error) {
+      this.logger.error(
+        `Failed to insert parsed transactions for statement ${statementId}: ${insertResult.error.message}`,
+      );
+      throw insertResult.error;
+    }
+  }
+
+  async applyParsedStatementResult(payload: ParsedStatementResultPayload): Promise<void> {
+    const processedAt = payload.processedAt ?? new Date().toISOString();
+    const status = payload.status === 'failed' ? 'error' : 'parsed';
+    const summary = payload.summary ?? {};
+
+    await this.updateStatementById(payload.statementId, {
+      status,
+      progress: 100,
+      error_message: payload.error ?? null,
+      processed_at: processedAt,
+      total_credit: summary.totalCredit ?? null,
+      total_debit: summary.totalDebit ?? null,
+      opening_balance: summary.openingBalance ?? null,
+      closing_balance: summary.closingBalance ?? null,
+      transaction_count: summary.transactionCount ?? null,
+      period_start: summary.periodStart ?? null,
+      period_end: summary.periodEnd ?? null,
+      statement_date: summary.statementDate ?? null,
+      checksum: summary.checksum ?? null,
+    });
+
+    const transactions = (payload.transactions ?? []).map<SupabaseTransactionUpsert>((tx, index) => ({
+      statement_id: payload.statementId,
+      id: tx.id ?? tx.externalId ?? randomUUID(),
+      external_id: tx.externalId ?? tx.id ?? `${payload.statementId}-${index}`,
+      posted_at: tx.postedAt ?? null,
+      description: tx.description ?? null,
+      raw_description: tx.rawDescription ?? null,
+      normalized_description: tx.normalizedDescription ?? null,
+      amount: tx.amount ?? null,
+      currency: tx.currency ?? null,
+      merchant: tx.merchant ?? null,
+      category: tx.category ?? null,
+      status: tx.status ?? null,
+      metadata: tx.metadata ?? null,
+    }));
+
+    if (transactions.length > 0) {
+      await this.replaceStatementTransactions(payload.statementId, transactions);
+    }
   }
 
   private toBuffer(data: Buffer | Uint8Array | ArrayBuffer): Buffer {

@@ -19,10 +19,24 @@ export const envValidationSchema = Joi.object({
   STATEMENTS_STATUS_TOPIC: Joi.string().default('parsing-engine.statements'),
   PARSING_ENGINE_KAFKA_BROKERS: Joi.string().allow('', null).optional(),
   PARSING_ENGINE_TOPIC: Joi.string().default('parsing-engine.statements'),
+  PARSED_STATEMENTS_TOPIC: Joi.string().default('parsing-engine.parsed_statement'),
+  PARSED_STATEMENTS_KAFKA_BROKERS: Joi.string().allow('', null).optional(),
+  PARSED_STATEMENTS_CONSUMER_GROUP: Joi.string().default('core-api.parsed-statements'),
   DEMO_MODE: Joi.boolean()
     .truthy('true', '1', 'yes', 'y', 'on')
     .falsy('false', '0', 'no', 'n', 'off')
     .default(false),
   DEFAULT_CURRENCY: Joi.string().default('CLP'),
   DEFAULT_LOCALE: Joi.string().default('es-CL'),
+  BELVO_BASE_URL: Joi.string().uri().allow('', null).optional(),
+  BELVO_SECRET_ID: Joi.string().allow('', null).optional(),
+  BELVO_SECRET_PASSWORD: Joi.string().allow('', null).optional(),
+  BELVO_WEBHOOK_SECRET: Joi.string().allow('', null).optional(),
+  BELVO_TIMEOUT: Joi.number().integer().min(1000).optional(),
+  MOVEMENTS_DEFAULT_PAGE_SIZE: Joi.number().integer().min(1).optional(),
+  MOVEMENTS_MAX_PAGE_SIZE: Joi.number().integer().min(1).optional(),
+  DASHBOARD_DEFAULT_GRANULARITY: Joi.string()
+    .valid('day', 'week', 'month')
+    .optional(),
+  DASHBOARD_MAX_RANGE_IN_DAYS: Joi.number().integer().min(1).optional(),
 });
