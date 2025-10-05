@@ -1,3 +1,5 @@
+import type { CategoryColorKey } from "@/config/category-colors"
+
 export type OverviewTotals = {
   balance: number
   income: number
@@ -28,6 +30,7 @@ export type CategoryBreakdown = {
   amount: number
   percentage: number
   color: string
+  themeKey?: CategoryColorKey | null
 }
 
 export type DashboardOverviewResponse = {

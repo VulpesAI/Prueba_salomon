@@ -42,6 +42,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { CATEGORY_COLOR_MAP, CATEGORY_COLOR_VALUES } from "@/config/category-colors"
 import { useDashboardIntelligence } from "@/hooks/dashboard/use-dashboard-intelligence"
 import { useDashboardNotifications } from "@/hooks/dashboard/use-dashboard-notifications"
 import { useDashboardOverview } from "@/hooks/dashboard/use-dashboard-overview"
@@ -220,12 +221,22 @@ export default function DashboardOverviewPage() {
 
   const categoryChartData = useMemo(
     () =>
-      categoryBreakdown.map((category, index) => ({
-        name: category.name,
-        amount: category.amount,
-        percentage: category.percentage,
-        fill: category.color ?? `hsl(var(--chart-${(index % 5) + 1}))`,
-      })),
+      categoryBreakdown.map((category, index) => {
+        const themeColor = category.themeKey
+          ? CATEGORY_COLOR_MAP[category.themeKey]
+          : undefined
+        const fallbackColor =
+          category.color ?? CATEGORY_COLOR_VALUES[index % CATEGORY_COLOR_VALUES.length]
+        const fill = themeColor ?? fallbackColor
+
+        return {
+          name: category.name,
+          amount: category.amount,
+          percentage: category.percentage,
+          fill,
+          themeKey: category.themeKey,
+        }
+      }),
     [categoryBreakdown]
   )
 
@@ -616,8 +627,20 @@ export default function DashboardOverviewPage() {
                               key={category.name}
                               className="flex items-center justify-between rounded-md border border-dashed border-border/60 px-3 py-2"
                             >
-                              <span>{category.name}</span>
-                              <span className="font-semibold">{category.percentage}%</span>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  aria-hidden
+                                  className="h-2.5 w-2.5 rounded-full"
+                                  style={{ backgroundColor: category.fill }}
+                                />
+                                {category.name}
+                              </span>
+                              <span
+                                className="font-semibold"
+                                style={{ color: category.fill }}
+                              >
+                                {category.percentage}%
+                              </span>
                             </div>
                           ))}
                         </div>
