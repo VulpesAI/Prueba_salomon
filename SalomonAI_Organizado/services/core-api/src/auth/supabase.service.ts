@@ -37,12 +37,23 @@ export interface SupabaseStatementInsert {
   mime_type: string | null;
   size: number | null;
   status: string;
+  processing_stage?: string | null;
   progress?: number | null;
   error_message?: string | null;
   period_start?: string | null;
   period_end?: string | null;
+  statement_date?: string | null;
   uploaded_at?: string | null;
+  processed_at?: string | null;
   checksum?: string | null;
+  content_hash?: string | null;
+  totals_hash?: string | null;
+  dedupe_hash?: string | null;
+  total_debit?: number | null;
+  total_credit?: number | null;
+  transaction_count?: number | null;
+  opening_balance?: number | null;
+  closing_balance?: number | null;
 }
 
 export interface SupabaseStatementRecord extends SupabaseStatementInsert {
@@ -54,11 +65,19 @@ export interface SupabaseStatementRecord extends SupabaseStatementInsert {
 export interface SupabaseTransactionRecord {
   id: string;
   statement_id: string;
+  external_id: string;
   posted_at?: string | null;
   description?: string | null;
+  raw_description?: string | null;
+  normalized_description?: string | null;
   amount?: number | null;
   currency?: string | null;
   merchant?: string | null;
+  category?: string | null;
+  status?: string | null;
+  checksum?: string | null;
+  dedupe_hash?: string | null;
+  metadata?: Record<string, unknown> | null;
   created_at?: string | null;
   updated_at?: string | null;
 }

@@ -61,8 +61,29 @@ Si la conexión es exitosa deberías ver el prompt de PostgreSQL. En caso contra
 
 ## 5. Sincronizar esquema y datos
 
-- `core-api` ejecuta sus migraciones en el arranque si encuentra la cadena válida; no se requiere un contenedor de PostgreSQL local.
-- Si necesitas aplicar migraciones manuales, ejecuta los comandos propios del servicio (por ejemplo `pnpm prisma migrate deploy` en `services/core-api`). Asegúrate de que las variables `DATABASE_URL` o equivalentes apunten al mismo host de Supabase.
+- Ejecuta el script SQL incluido en la raíz del proyecto para crear las tablas `accounts`, `statements`, `transactions` y las estructuras de clasificación consumidas por el pipeline de entrenamiento:
+
+  ```bash
+  psql "$FORECASTING_DATABASE_URL" -f setup-database.sql
+  ```
+
+- Como alternativa usa la CLI de Supabase (requiere `supabase login` y exportar `SUPABASE_ACCESS_TOKEN`) para aplicar la migración equivalente ubicada en `supabase/migrations/20240527120000_financial_schema.sql`:
+
+  ```bash
+  supabase db push --project-ref <ref_del_proyecto> \
+    --file supabase/migrations/20240527120000_financial_schema.sql
+  ```
+
+  Si automatizas el proceso desde CI, define también `SUPABASE_DB_PASSWORD` para que la CLI pueda conectarse sin prompts interactivos.
+
+- Importa los datasets mínimos pensados para las pruebas automatizadas (Core API y pipeline de entrenamiento) ejecutando:
+
+  ```bash
+  psql "$FORECASTING_DATABASE_URL" -f database/seeds/core_api_seed.sql
+  psql "$FORECASTING_DATABASE_URL" -f database/seeds/training_seed.sql
+  ```
+
+  Ambos archivos utilizan `ON CONFLICT` para que puedas ejecutarlos múltiples veces sin generar registros duplicados.
 
 ## 6. Buenas prácticas
 
