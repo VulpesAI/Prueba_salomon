@@ -9,7 +9,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from statistics import pstdev
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple
 from uuid import UUID, uuid4
 
 from typing import TYPE_CHECKING
@@ -27,7 +27,8 @@ import httpx
 import numpy as np
 from fastapi import Body, FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.responses import JSONResponse
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
@@ -144,7 +145,12 @@ def _decode_jwt_payload(token: str) -> Dict[str, Any]:
     return payload
 
 
-def _authorize_recommendations_request(authorization: str, user_id: str) -> None:
+def _authorize_recommendations_request(
+    authorization: str,
+    user_id: str,
+    *,
+    required_scope: str = "recs:read",
+) -> None:
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_authorization")
@@ -162,14 +168,22 @@ def _authorize_recommendations_request(authorization: str, user_id: str) -> None
 
     scopes_raw = payload.get("scope") or payload.get("scopes") or payload.get("permissions")
     if isinstance(scopes_raw, str):
-        scopes = {scope.strip() for scope in scopes_raw.split() if scope.strip()}
+        scopes = {scope.strip().lower() for scope in scopes_raw.split() if scope.strip()}
     elif isinstance(scopes_raw, (list, tuple, set)):
-        scopes = {str(scope) for scope in scopes_raw if scope}
+        scopes = {str(scope).strip().lower() for scope in scopes_raw if scope}
     else:
         scopes = set()
 
     subject = str(payload.get("sub") or payload.get("user_id") or payload.get("uid") or "")
-    if "recs:read" in scopes:
+    required = required_scope.lower()
+    if required and required in scopes:
+        return
+
+    alternative_scopes = {
+        "recs:read": {"recs:write", "recs:admin", "service:recommendations", "service:recs"},
+        "recs:write": {"recs:admin", "service:recommendations", "service:recs"},
+    }
+    if any(scope in scopes for scope in alternative_scopes.get(required, set())):
         return
 
     if subject and subject == user_id:
@@ -181,6 +195,39 @@ def _authorize_recommendations_request(authorization: str, user_id: str) -> None
 def _rule_identifier(user_id: str, rule_key: str, as_of_date: date) -> str:
     raw = f"{user_id}:{rule_key}:{as_of_date.isoformat()}".encode("utf-8")
     return hashlib.sha1(raw).hexdigest()
+
+
+def _allowed_feedback_scores(mode: str) -> Set[int]:
+    normalized = mode.lower()
+    if normalized == "five_star":
+        return {0, 1, 2, 3, 4, 5}
+    return {-1, 0, 1}
+
+
+def validate_feedback_score(score: Optional[int], mode: str) -> bool:
+    if score is None:
+        return True
+    return score in _allowed_feedback_scores(mode)
+
+
+def normalize_score_for_metrics(score: Optional[int], mode: str) -> Optional[float]:
+    if score is None:
+        return None
+    if mode == "five_star":
+        return max(min(score, 5), 0) / 5.0
+    return (score + 1) / 2.0
+
+
+def sanitize_feedback_comment(comment: Optional[str]) -> Optional[str]:
+    if comment is None:
+        return None
+    cleaned = "".join(ch if ch.isprintable() or ch in "\n\r\t" else " " for ch in comment)
+    cleaned = cleaned.strip()
+    if not cleaned:
+        return None
+    if len(cleaned) > 1000:
+        raise ValueError("comment_too_long")
+    return cleaned
 
 
 class UnauthorizedError(RuntimeError):
@@ -234,11 +281,18 @@ class RecommendationRecord:
 
 @dataclass
 class FeedbackEntry:
-    recommendation_id: str
+    id: str
     user_id: str
-    score: float
+    recommendation_id: Optional[str]
+    score: Optional[int]
     comment: Optional[str]
+    rule_key: Optional[str]
+    cluster_id: Optional[int]
+    model_version: Optional[str]
+    run_id: Optional[str]
+    client_submission_id: Optional[str]
     created_at: datetime
+    backend: str = "memory"
 
 
 @dataclass
@@ -1663,6 +1717,8 @@ class RecommendationStore:
         self._latest: Dict[str, List[RecommendationRecord]] = {}
         self._history: Dict[str, List[RecommendationRecord]] = {}
         self._feedback: Dict[str, List[FeedbackEntry]] = {}
+        self._feedback_by_submission: Dict[Tuple[str, str], FeedbackEntry] = {}
+        self._feedback_by_id: Dict[str, FeedbackEntry] = {}
         self._history_limit = history_limit
         self._lock = asyncio.Lock()
 
@@ -1685,11 +1741,203 @@ class RecommendationStore:
     async def add_feedback(self, feedback: FeedbackEntry) -> None:
         async with self._lock:
             self._feedback.setdefault(feedback.user_id, []).append(feedback)
+            self._feedback_by_id[feedback.id] = feedback
+            if feedback.client_submission_id:
+                key = (feedback.user_id, feedback.client_submission_id)
+                self._feedback_by_submission[key] = feedback
 
     async def get_feedback(self, user_id: str) -> List[FeedbackEntry]:
         async with self._lock:
             return list(self._feedback.get(user_id, []))
 
+    async def find_feedback_by_submission(self, user_id: str, client_submission_id: str) -> Optional[FeedbackEntry]:
+        async with self._lock:
+            return self._feedback_by_submission.get((user_id, client_submission_id))
+
+    async def get_feedback_by_id(self, feedback_id: str) -> Optional[FeedbackEntry]:
+        async with self._lock:
+            return self._feedback_by_id.get(feedback_id)
+
+    async def recommendation_belongs_to_user(self, recommendation_id: str, user_id: str) -> bool:
+        async with self._lock:
+            for collection in (self._latest.get(user_id, []), self._history.get(user_id, [])):
+                if any(rec.id == recommendation_id for rec in collection):
+                    return True
+        return False
+
+    async def clear_feedback(self) -> None:
+        async with self._lock:
+            self._feedback.clear()
+            self._feedback_by_submission.clear()
+            self._feedback_by_id.clear()
+
+
+class FeedbackRepository(Protocol):
+    backend: str
+
+    async def save(self, feedback: FeedbackEntry) -> FeedbackEntry:
+        ...
+
+    async def find_by_submission(self, user_id: str, client_submission_id: str) -> Optional[FeedbackEntry]:
+        ...
+
+
+class MemoryFeedbackRepository:
+    backend = "memory"
+
+    def __init__(self, store: RecommendationStore) -> None:
+        self._store = store
+
+    async def save(self, feedback: FeedbackEntry) -> FeedbackEntry:
+        await self._store.add_feedback(feedback)
+        return feedback
+
+    async def find_by_submission(self, user_id: str, client_submission_id: str) -> Optional[FeedbackEntry]:
+        return await self._store.find_feedback_by_submission(user_id, client_submission_id)
+
+
+class SupabaseFeedbackRepository:
+    backend = "supabase"
+
+    def __init__(
+        self,
+        base_url: str,
+        service_key: str,
+        *,
+        table_name: str = "rx_recommendations_feedback",
+        timeout: float = 10.0,
+    ) -> None:
+        if not base_url or not service_key:
+            raise ValueError("Supabase URL and key are required to enable feedback persistence")
+        self._base_url = base_url.rstrip("/")
+        self._service_key = service_key
+        self._table_name = table_name
+        self._timeout = timeout
+
+    @property
+    def _rest_endpoint(self) -> str:
+        return f"{self._base_url}/rest/v1/{self._table_name}"
+
+    def _headers(self) -> Dict[str, str]:
+        return {
+            "apikey": self._service_key,
+            "Authorization": f"Bearer {self._service_key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=representation",
+        }
+
+    async def save(self, feedback: FeedbackEntry) -> FeedbackEntry:
+        payload = {
+            "id": feedback.id,
+            "user_id": feedback.user_id,
+            "recommendation_id": feedback.recommendation_id,
+            "score": feedback.score,
+            "comment": feedback.comment,
+            "rule_key": feedback.rule_key,
+            "cluster_id": feedback.cluster_id,
+            "model_version": feedback.model_version,
+            "run_id": feedback.run_id,
+            "client_submission_id": feedback.client_submission_id,
+            "created_at": feedback.created_at.isoformat(),
+        }
+        params = {"on_conflict": "user_id,client_submission_id"}
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(
+                    self._rest_endpoint,
+                    json=payload,
+                    params=params,
+                    headers=self._headers(),
+                )
+        except httpx.HTTPError as exc:  # pragma: no cover - network failures are logged
+            logger.warning("Error enviando feedback a Supabase: %s", exc)
+            return feedback
+
+        if response.status_code not in {200, 201}:
+            logger.warning(
+                "Supabase rechazó el feedback con estado %s: %s",
+                response.status_code,
+                response.text,
+            )
+            return feedback
+
+        try:
+            records = response.json()
+        except json.JSONDecodeError:
+            return feedback
+
+        if isinstance(records, list) and records:
+            mapped = self._map_record(records[0])
+            if mapped:
+                mapped.backend = self.backend
+                return mapped
+        return feedback
+
+    async def find_by_submission(self, user_id: str, client_submission_id: str) -> Optional[FeedbackEntry]:
+        params = {
+            "select": "*",
+            "user_id": f"eq.{user_id}",
+            "client_submission_id": f"eq.{client_submission_id}",
+            "limit": 1,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(
+                    self._rest_endpoint,
+                    params=params,
+                    headers=self._headers(),
+                )
+        except httpx.HTTPError as exc:  # pragma: no cover - network failures are logged
+            logger.warning("Error consultando feedback en Supabase: %s", exc)
+            return None
+
+        if response.status_code != 200:
+            logger.warning(
+                "Supabase devolvió estado %s al consultar feedback: %s",
+                response.status_code,
+                response.text,
+            )
+            return None
+
+        try:
+            records = response.json()
+        except json.JSONDecodeError:
+            return None
+
+        if not isinstance(records, list) or not records:
+            return None
+
+        entry = self._map_record(records[0])
+        if entry:
+            entry.backend = self.backend
+        return entry
+
+    def _map_record(self, record: Dict[str, Any]) -> Optional[FeedbackEntry]:
+        try:
+            created_at_raw = record.get("created_at")
+            created_at = (
+                datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+                if isinstance(created_at_raw, str)
+                else utcnow()
+            )
+            return FeedbackEntry(
+                id=str(record.get("id")),
+                user_id=str(record.get("user_id")),
+                recommendation_id=(str(record.get("recommendation_id")) if record.get("recommendation_id") else None),
+                score=int(record["score"]) if record.get("score") is not None else None,
+                comment=record.get("comment"),
+                rule_key=record.get("rule_key"),
+                cluster_id=int(record["cluster_id"]) if record.get("cluster_id") is not None else None,
+                model_version=record.get("model_version"),
+                run_id=str(record.get("run_id")) if record.get("run_id") else None,
+                client_submission_id=(
+                    str(record.get("client_submission_id")) if record.get("client_submission_id") else None
+                ),
+                created_at=ensure_utc(created_at),
+                backend=self.backend,
+            )
+        except Exception:  # pragma: no cover - defensive parsing
+            return None
 
 class RecommendationModelManager:
     def __init__(self, n_clusters: int = 4) -> None:
@@ -3003,19 +3251,35 @@ def _generate_rule_recommendations(
 
 
 class FeedbackRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    user_id: UUID = Field(..., validation_alias=AliasChoices("user_id", "userId"))
+    recommendation_id: Optional[UUID] = Field(
+        None, validation_alias=AliasChoices("recommendation_id", "recommendationId")
+    )
+    score: Optional[int] = Field(None, validation_alias=AliasChoices("score"))
+    comment: Optional[str] = Field(
+        None,
+        max_length=1000,
+        validation_alias=AliasChoices("comment"),
+    )
+    rule_key: Optional[str] = Field(None, validation_alias=AliasChoices("rule_key", "ruleKey"))
+    cluster_id: Optional[int] = Field(None, validation_alias=AliasChoices("cluster_id", "clusterId"))
+    model_version: Optional[str] = Field(None, validation_alias=AliasChoices("model_version", "modelVersion"))
+    run_id: Optional[UUID] = Field(None, validation_alias=AliasChoices("run_id", "runId"))
+    client_submission_id: Optional[UUID] = Field(
+        None,
+        validation_alias=AliasChoices("client_submission_id", "clientSubmissionId"),
+    )
+
+
+class FeedbackSubmissionResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    recommendation_id: str = Field(..., alias="recommendationId")
-    user_id: Optional[str] = Field(None, alias="userId")
-    score: float = Field(..., ge=0.0, le=1.0)
-    comment: Optional[str] = Field(None, max_length=500)
-
-
-class FeedbackResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    status: str
-    submitted_at: datetime = Field(..., alias="submittedAt")
+    feedback_id: UUID = Field(..., alias="feedback_id")
+    stored: str
+    will_persist: str = Field(..., alias="will_persist")
+    duplicate: bool = False
 
 
 class PipelineStatusResponse(BaseModel):
@@ -3124,6 +3388,23 @@ recommendation_pipeline = RecommendationPipeline(
     cluster_count=settings.cluster_count,
     max_fetch_limit=settings.max_fetch_limit,
 )
+
+feedback_memory_repository = MemoryFeedbackRepository(recommendation_store)
+supabase_feedback_repository: Optional[SupabaseFeedbackRepository]
+if settings.enable_supabase_feedback and settings.supabase_url and settings.supabase_anon_key:
+    try:
+        supabase_feedback_repository = SupabaseFeedbackRepository(
+            base_url=settings.supabase_url,
+            service_key=settings.supabase_anon_key,
+        )
+        logger.info("Feedback persistence en Supabase habilitada")
+    except ValueError as exc:
+        logger.warning("No fue posible habilitar Supabase para feedback: %s", exc)
+        supabase_feedback_repository = None
+else:
+    if settings.enable_supabase_feedback:
+        logger.warning("Supabase feedback habilitado pero faltan credenciales")
+    supabase_feedback_repository = None
 
 
 @app.on_event("startup")
@@ -3365,19 +3646,116 @@ async def get_recommendation_feedback(user_id: str) -> List[Dict[str, Any]]:
     ]
 
 
-@app.post("/recommendations/feedback", response_model=FeedbackResponse)
-async def submit_feedback(feedback: FeedbackRequest) -> FeedbackResponse:
+@app.post(
+    "/recommendations/feedback",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=FeedbackSubmissionResponse,
+)
+async def submit_feedback(
+    feedback: FeedbackRequest,
+    authorization: str = Header(..., alias="Authorization"),
+) -> Response:
+    user_id_str = str(feedback.user_id)
+    _authorize_recommendations_request(authorization, user_id_str, required_scope="recs:write")
+
+    score_value = feedback.score
+    mode = settings.feedback_score_mode
+    if not validate_feedback_score(score_value, mode):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_score")
+
+    try:
+        sanitized_comment = sanitize_feedback_comment(feedback.comment)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="comment_too_long") from None
+
+    recommendation_id = str(feedback.recommendation_id) if feedback.recommendation_id else None
+    run_id = str(feedback.run_id) if feedback.run_id else None
+    client_submission_id = str(feedback.client_submission_id) if feedback.client_submission_id else None
+    rule_key = feedback.rule_key.strip() if feedback.rule_key else None
+    model_version = feedback.model_version.strip() if feedback.model_version else None
+
+    if recommendation_id:
+        belongs = await recommendation_store.recommendation_belongs_to_user(recommendation_id, user_id_str)
+        if not belongs:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="recommendation_not_found_for_user",
+            )
+
+    duplicate_entry: Optional[FeedbackEntry] = None
+    if client_submission_id:
+        duplicate_entry = await recommendation_store.find_feedback_by_submission(
+            user_id_str, client_submission_id
+        )
+        if not duplicate_entry and supabase_feedback_repository:
+            duplicate_entry = await supabase_feedback_repository.find_by_submission(
+                user_id_str, client_submission_id
+            )
+            if duplicate_entry:
+                await recommendation_store.add_feedback(duplicate_entry)
+
+    if duplicate_entry:
+        response_payload = FeedbackSubmissionResponse(
+            feedback_id=UUID(duplicate_entry.id),
+            stored=duplicate_entry.backend,
+            will_persist="supabase" if supabase_feedback_repository else "supabase_when_enabled",
+            duplicate=True,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content=response_payload.model_dump(by_alias=True),
+        )
+
     entry = FeedbackEntry(
-        recommendation_id=feedback.recommendation_id,
-        user_id=feedback.user_id or "anonymous",
-        score=feedback.score,
-        comment=feedback.comment,
+        id=str(uuid4()),
+        user_id=user_id_str,
+        recommendation_id=recommendation_id,
+        score=score_value,
+        comment=sanitized_comment,
+        rule_key=rule_key,
+        cluster_id=feedback.cluster_id,
+        model_version=model_version,
+        run_id=run_id,
+        client_submission_id=client_submission_id,
         created_at=utcnow(),
     )
-    await recommendation_store.add_feedback(entry)
-    FEEDBACK_SUBMISSIONS.labels(has_comment="yes" if feedback.comment else "no").inc()
-    FEEDBACK_SCORE.observe(feedback.score)
-    return FeedbackResponse(status="received", submittedAt=entry.created_at)
+
+    await feedback_memory_repository.save(entry)
+
+    if supabase_feedback_repository:
+        try:
+            persisted = await supabase_feedback_repository.save(entry)
+            if persisted and persisted.id == entry.id:
+                entry.backend = persisted.backend
+        except Exception:  # pragma: no cover - defensive guard
+            logger.warning("Fallo al persistir feedback en Supabase", exc_info=True)
+
+    FEEDBACK_SUBMISSIONS.labels(has_comment="yes" if sanitized_comment else "no").inc()
+    normalized_score = normalize_score_for_metrics(score_value, mode)
+    if normalized_score is not None:
+        FEEDBACK_SCORE.observe(normalized_score)
+
+    logger.info(
+        "event=feedback_received user_hash=%s recommendation_id=%s rule_key=%s cluster_id=%s score=%s has_comment=%s backend=%s",
+        hash_identifier(user_id_str),
+        recommendation_id or "none",
+        rule_key or "none",
+        feedback.cluster_id if feedback.cluster_id is not None else "none",
+        score_value if score_value is not None else "none",
+        "yes" if sanitized_comment else "no",
+        entry.backend,
+    )
+
+    response_payload = FeedbackSubmissionResponse(
+        feedback_id=UUID(entry.id),
+        stored="memory",
+        will_persist="supabase" if supabase_feedback_repository else "supabase_when_enabled",
+        duplicate=False,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content=response_payload.model_dump(by_alias=True),
+    )
 
 
 @app.post("/recommendations", response_model=RecommendationItem)

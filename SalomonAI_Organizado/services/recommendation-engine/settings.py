@@ -50,6 +50,10 @@ class RecommendationSettings(BaseSettings):
     recs_min_score: float = Field(default=0.3, alias="RECS_MIN_SCORE")
     features_default_window: str = Field(default="30d", alias="FEATURES_DEFAULT_WINDOW")
     pipeline_required_origin: str = Field(default="core_api", alias="PIPELINE_REQUIRED_ORIGIN")
+    feedback_score_mode: str = Field(default="ternary", alias="FEEDBACK_SCORE_MODE")
+    enable_supabase_feedback: bool = Field(default=False, alias="ENABLE_SUPABASE_FEEDBACK")
+    supabase_url: Optional[str] = Field(default=None, alias="SUPABASE_URL")
+    supabase_anon_key: Optional[str] = Field(default=None, alias="SUPABASE_ANON_KEY")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
@@ -60,6 +64,18 @@ class RecommendationSettings(BaseSettings):
             return value or ["*"]
         parts = [item.strip() for item in value.split(",") if item.strip()]
         return parts or ["*"]
+
+    @field_validator("feedback_score_mode", mode="before")
+    @classmethod
+    def normalize_feedback_mode(cls, value: str | None) -> str:
+        if not value:
+            return "ternary"
+        normalized = str(value).strip().lower()
+        if normalized in {"ternary", "-1_0_1"}:
+            return "ternary"
+        if normalized in {"five_star", "0_5", "0-5"}:
+            return "five_star"
+        raise ValueError("feedback_score_mode must be 'ternary' or 'five_star'")
 
     @property
     def refresh_interval(self) -> int:
