@@ -5,14 +5,14 @@ import { CATEGORY_COLOR_MAP } from "./config/category-colors";
 
 const palette = {
   primary: {
-    DEFAULT: "#743DFF",
+    DEFAULT: "#007CF0",
     foreground: "#F5F7FF",
-    from: "#743DFF",
-    to: "#007CF0",
+    from: "#007CF0",
+    to: "#22C55E",
   },
   "primary-dark": {
-    from: "#5C2AD6",
-    to: "#0062D1",
+    from: "#005A9C",
+    to: "#1C9E4A",
   },
   secondary: {
     DEFAULT: "#081134",
@@ -132,9 +132,9 @@ const config: Config = {
         },
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, #743DFF 0%, #007CF0 100%)",
-        "gradient-hero": "linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%)",
-        "gradient-card": "linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)",
+        "gradient-primary": "linear-gradient(135deg, #007CF0 0%, #22C55E 100%)",
+        "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%)",
+        "gradient-card": "linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%)",
       },
       borderRadius: {
         lg: "var(--radius)",
