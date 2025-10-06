@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import binascii
 import hashlib
 import json
 import logging
@@ -8,7 +10,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from statistics import pstdev
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from typing import TYPE_CHECKING
 
@@ -23,7 +25,7 @@ else:
     AsyncPGPool = Any
 import httpx
 import numpy as np
-from fastapi import Body, FastAPI, Header, HTTPException, Query, status
+from fastapi import Body, FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from sklearn.cluster import KMeans
@@ -121,6 +123,64 @@ def hash_identifier(value: Optional[str]) -> str:
         return "anon"
     digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
     return digest[:12]
+
+
+def _decode_jwt_payload(token: str) -> Dict[str, Any]:
+    parts = token.split(".")
+    if len(parts) < 2:
+        raise ValueError("invalid_token")
+    payload_segment = parts[1]
+    padding = "=" * (-len(payload_segment) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(payload_segment + padding)
+    except (binascii.Error, ValueError) as error:
+        raise ValueError("invalid_token") from error
+    try:
+        payload: Any = json.loads(decoded.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("invalid_token") from error
+    if not isinstance(payload, dict):
+        raise ValueError("invalid_token")
+    return payload
+
+
+def _authorize_recommendations_request(authorization: str, user_id: str) -> None:
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_authorization")
+
+    try:
+        payload = _decode_jwt_payload(token.strip())
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_token") from None
+
+    exp = payload.get("exp")
+    if isinstance(exp, (int, float)):
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+        if expires_at < utcnow():
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="token_expired")
+
+    scopes_raw = payload.get("scope") or payload.get("scopes") or payload.get("permissions")
+    if isinstance(scopes_raw, str):
+        scopes = {scope.strip() for scope in scopes_raw.split() if scope.strip()}
+    elif isinstance(scopes_raw, (list, tuple, set)):
+        scopes = {str(scope) for scope in scopes_raw if scope}
+    else:
+        scopes = set()
+
+    subject = str(payload.get("sub") or payload.get("user_id") or payload.get("uid") or "")
+    if "recs:read" in scopes:
+        return
+
+    if subject and subject == user_id:
+        return
+
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+
+
+def _rule_identifier(user_id: str, rule_key: str, as_of_date: date) -> str:
+    raw = f"{user_id}:{rule_key}:{as_of_date.isoformat()}".encode("utf-8")
+    return hashlib.sha1(raw).hexdigest()
 
 
 class UnauthorizedError(RuntimeError):
@@ -560,6 +620,22 @@ class DatabaseClient:
             await connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_rx_recommendations_out_run ON rx_recommendations_out(run_id)"
             )
+            await connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS pipeline_runs (
+                    run_id UUID PRIMARY KEY,
+                    started_at TIMESTAMPTZ NOT NULL,
+                    finished_at TIMESTAMPTZ NULL,
+                    status TEXT NOT NULL,
+                    data_origin TEXT NULL,
+                    ingest_source TEXT NULL,
+                    metadata JSONB NULL
+                )
+                """
+            )
+            await connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_pipeline_runs_started_at ON pipeline_runs(started_at DESC)"
+            )
 
 
 class DatabaseTransactionReader:
@@ -906,6 +982,74 @@ class FeatureRepository:
                     )
         return len(features)
 
+    async def fetch_latest_for_user(
+        self,
+        user_id: str,
+        *,
+        as_of_date: Optional[date] = None,
+    ) -> List[Dict[str, Any]]:
+        pool = await self.client.get_pool()
+        if pool is None:
+            return []
+
+        query = """
+            SELECT
+                run_id,
+                user_id,
+                as_of_date,
+                window,
+                income_total,
+                expense_total,
+                net_cashflow,
+                savings_rate,
+                top_category,
+                category_shares,
+                merchant_diversity,
+                recurring_flags,
+                volatility_expense,
+                updated_at
+            FROM rx_features_user_daily
+            WHERE user_id = $1
+              AND ($2::date IS NULL OR as_of_date <= $2)
+            ORDER BY as_of_date DESC, updated_at DESC
+        """
+
+        async with pool.acquire() as connection:
+            rows = await connection.fetch(query, user_id, as_of_date)
+
+        snapshots: List[Dict[str, Any]] = []
+        seen_windows: Set[str] = set()
+        for row in rows:
+            window_label = row["window"]
+            if window_label in seen_windows:
+                continue
+            seen_windows.add(window_label)
+            category_shares = row["category_shares"]
+            if isinstance(category_shares, str):
+                category_shares = json.loads(category_shares)
+            recurring_flags = row["recurring_flags"]
+            if isinstance(recurring_flags, str):
+                recurring_flags = json.loads(recurring_flags)
+            snapshots.append(
+                {
+                    "run_id": row["run_id"],
+                    "user_id": row["user_id"],
+                    "as_of_date": row["as_of_date"],
+                    "window": window_label,
+                    "income_total": float(row["income_total"]),
+                    "expense_total": float(row["expense_total"]),
+                    "net_cashflow": float(row["net_cashflow"]),
+                    "savings_rate": float(row["savings_rate"]),
+                    "top_category": row["top_category"],
+                    "category_shares": category_shares or {},
+                    "merchant_diversity": row["merchant_diversity"],
+                    "recurring_flags": recurring_flags or {},
+                    "volatility_expense": float(row["volatility_expense"]),
+                    "updated_at": ensure_utc(row["updated_at"]),
+                }
+            )
+        return snapshots
+
 
 class ClusterModelRepository:
     def __init__(self, client: DatabaseClient) -> None:
@@ -1006,6 +1150,29 @@ class ClusterAssignmentRepository:
                         now,
                     )
 
+    async def fetch_latest(self, user_id: str) -> Optional[Dict[str, Any]]:
+        pool = await self.client.get_pool()
+        if pool is None:
+            return None
+
+        query = """
+            SELECT model_version, cluster_id, assigned_at
+            FROM rx_user_cluster_assignments
+            WHERE user_id = $1
+            ORDER BY assigned_at DESC
+            LIMIT 1
+        """
+
+        async with pool.acquire() as connection:
+            row = await connection.fetchrow(query, user_id)
+        if not row:
+            return None
+        return {
+            "model_version": row["model_version"],
+            "cluster_id": row["cluster_id"],
+            "assigned_at": ensure_utc(row["assigned_at"]),
+        }
+
 
 class RecommendationOutputRepository:
     def __init__(self, client: DatabaseClient) -> None:
@@ -1040,13 +1207,20 @@ class RecommendationOutputRepository:
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 """
                 for record in records:
-                    payload = record.payload or {
-                        "title": record.title,
-                        "description": record.description,
-                        "score": record.score,
-                        "category": record.category,
-                        "explanation": record.explanation,
-                    }
+                    if isinstance(record.payload, dict):
+                        payload = dict(record.payload)
+                    else:
+                        payload = {}
+                    payload.setdefault("title", record.title)
+                    payload.setdefault("message", record.description)
+                    payload.setdefault("description", record.description)
+                    payload.setdefault("score", record.score)
+                    payload.setdefault("category", record.category)
+                    payload.setdefault("explanation", record.explanation)
+                    payload.setdefault("priority", record.priority)
+                    payload.setdefault("generated_at", record.generated_at.isoformat())
+                    if record.cluster is not None:
+                        payload.setdefault("cluster_id", record.cluster)
                     await connection.execute(
                         query,
                         uuid4(),
@@ -1060,6 +1234,143 @@ class RecommendationOutputRepository:
                         record.valid_to,
                         record.generated_at,
                     )
+
+    async def fetch_for_user(
+        self,
+        user_id: str,
+        *,
+        as_of_date: Optional[date] = None,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        pool = await self.client.get_pool()
+        if pool is None:
+            return []
+
+        query = """
+            SELECT
+                id,
+                source,
+                cluster_id,
+                payload,
+                priority,
+                valid_from,
+                valid_to,
+                created_at,
+                run_id
+            FROM rx_recommendations_out
+            WHERE user_id = $1
+              AND (
+                    $2::date IS NULL
+                    OR (
+                        valid_from::date <= $2
+                        AND (valid_to IS NULL OR valid_to::date >= $2)
+                    )
+                )
+            ORDER BY priority ASC, created_at DESC
+            LIMIT $3
+        """
+
+        async with pool.acquire() as connection:
+            rows = await connection.fetch(query, user_id, as_of_date, limit)
+
+        results: List[Dict[str, Any]] = []
+        for row in rows:
+            payload = row["payload"]
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except json.JSONDecodeError:
+                    payload = {}
+            results.append(
+                {
+                    "id": row["id"],
+                    "source": row["source"],
+                    "cluster_id": row["cluster_id"],
+                    "payload": payload or {},
+                    "priority": row["priority"],
+                    "valid_from": ensure_utc(row["valid_from"]),
+                    "valid_to": ensure_utc(row["valid_to"]) if row["valid_to"] else None,
+                    "created_at": ensure_utc(row["created_at"]),
+                    "run_id": row["run_id"],
+                }
+            )
+        return results
+class PipelineRunRepository:
+    def __init__(self, client: DatabaseClient) -> None:
+        self.client = client
+
+    async def record(
+        self,
+        run_id: str,
+        *,
+        started_at: datetime,
+        status: str,
+        finished_at: Optional[datetime] = None,
+        data_origin: Optional[str] = None,
+        ingest_source: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        pool = await self.client.get_pool()
+        if pool is None:
+            return
+
+        metadata_payload = json.dumps(metadata) if metadata else None
+
+        async with pool.acquire() as connection:
+            await connection.execute(
+                """
+                INSERT INTO pipeline_runs (
+                    run_id,
+                    started_at,
+                    finished_at,
+                    status,
+                    data_origin,
+                    ingest_source,
+                    metadata
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (run_id) DO UPDATE SET
+                    finished_at = EXCLUDED.finished_at,
+                    status = EXCLUDED.status,
+                    data_origin = EXCLUDED.data_origin,
+                    ingest_source = EXCLUDED.ingest_source,
+                    metadata = COALESCE(EXCLUDED.metadata, pipeline_runs.metadata)
+                """,
+                run_id,
+                started_at,
+                finished_at,
+                status,
+                data_origin,
+                ingest_source,
+                metadata_payload,
+            )
+
+    async def get_last_success(self) -> Optional[Dict[str, Any]]:
+        pool = await self.client.get_pool()
+        if pool is None:
+            return None
+
+        query = """
+            SELECT run_id, started_at, finished_at, status, data_origin, ingest_source
+            FROM pipeline_runs
+            WHERE status IN ('ok', 'success')
+            ORDER BY started_at DESC
+            LIMIT 1
+        """
+
+        async with pool.acquire() as connection:
+            row = await connection.fetchrow(query)
+        if not row:
+            return None
+        return {
+            "run_id": row["run_id"],
+            "started_at": ensure_utc(row["started_at"]),
+            "finished_at": ensure_utc(row["finished_at"]) if row["finished_at"] else None,
+            "status": row["status"],
+            "data_origin": row["data_origin"],
+            "ingest_source": row["ingest_source"],
+        }
+
+
 class FeatureBuilder:
     """Transforma transacciones en features agregadas por usuario."""
 
@@ -1711,22 +2022,47 @@ class TransactionFetcher:
         self.page_limit = page_limit
         self.db_reader = db_reader
         self._http_client_factory = http_client_factory or self._default_client_factory
+        self._last_origin: Optional[str] = None
+        self._last_ingest_source: Optional[str] = None
 
     def _default_client_factory(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(timeout=self.timeout)
 
+    @property
+    def last_origin(self) -> Optional[str]:
+        return self._last_origin
+
+    @property
+    def last_ingest_source(self) -> Optional[str]:
+        return self._last_ingest_source
+
     async def fetch_transactions(self, since: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        self._last_origin = None
+        self._last_ingest_source = None
+
         if self.mode == "kafka":
-            return await self._consume_from_kafka()
+            self._last_origin = "kafka"
+            records = await self._consume_from_kafka()
+            self._update_ingest_source(records)
+            return records
         if self.mode == "db":
-            return await self._fetch_from_db(since)
+            records = await self._fetch_from_db(since)
+            self._last_origin = "database"
+            self._update_ingest_source(records)
+            return records
 
         try:
-            return await self._fetch_from_api(since)
+            self._last_origin = "core_api"
+            records = await self._fetch_from_api(since)
+            self._update_ingest_source(records)
+            return records
         except APINotFoundError:
             if self.db_reader:
                 logger.warning("Endpoint de movimientos no disponible; usando fallback a BD")
-                return await self._fetch_from_db(since)
+                records = await self._fetch_from_db(since)
+                self._last_origin = "database"
+                self._update_ingest_source(records)
+                return records
             raise
 
     async def _fetch_from_db(self, since: Optional[datetime]) -> List[Dict[str, Any]]:
@@ -1872,6 +2208,19 @@ class TransactionFetcher:
                         pass
         return current_count >= self.page_limit
 
+    def _update_ingest_source(self, transactions: List[Dict[str, Any]]) -> None:
+        self._last_ingest_source = None
+        for item in transactions:
+            if not isinstance(item, dict):
+                continue
+            for key in ("ingest_source", "ingestSource", "source", "data_origin"):
+                value = item.get(key)
+                if isinstance(value, str) and value:
+                    self._last_ingest_source = value.lower()
+                    return
+        if self._last_ingest_source is None:
+            self._last_ingest_source = self._last_origin
+
     async def _consume_from_kafka(self) -> List[Dict[str, Any]]:
         try:
             from aiokafka import AIOKafkaConsumer  # type: ignore
@@ -1923,6 +2272,7 @@ class RecommendationPipeline:
         cluster_repository: ClusterModelRepository,
         assignment_repository: ClusterAssignmentRepository,
         recommendation_repository: RecommendationOutputRepository,
+        pipeline_run_repository: PipelineRunRepository,
         interval_seconds: int = 300,
         min_cluster_users: int = 50,
         cluster_count: int = 5,
@@ -1940,6 +2290,7 @@ class RecommendationPipeline:
         self.cluster_repository = cluster_repository
         self.assignment_repository = assignment_repository
         self.recommendation_repository = recommendation_repository
+        self.pipeline_run_repository = pipeline_run_repository
         self.interval_seconds = interval_seconds
         self.min_cluster_users = max(min_cluster_users, 1)
         self.cluster_count = max(cluster_count, 1)
@@ -1989,10 +2340,14 @@ class RecommendationPipeline:
         since = since_override or await self.state_repository.get_global_since()
         stages: List[Dict[str, Any]] = []
         metrics_start = time.perf_counter()
+        data_origin: Optional[str] = None
+        ingest_source: Optional[str] = None
         try:
             # Fetch stage
             self._current_stage = "fetch"
             transactions = await self.fetcher.fetch_transactions(since)
+            data_origin = self.fetcher.last_origin
+            ingest_source = self.fetcher.last_ingest_source
             if self.max_fetch_limit and len(transactions) > self.max_fetch_limit:
                 logger.info(
                     "fetch_limit_applied", extra={"limit": self.max_fetch_limit, "fetched": len(transactions)}
@@ -2147,6 +2502,16 @@ class RecommendationPipeline:
                 "duration_ms": duration_ms,
             }
 
+            await self._record_run(
+                run_id,
+                started_at=started_at,
+                status="success",
+                finished_at=utcnow(),
+                data_origin=data_origin,
+                ingest_source=ingest_source,
+                stages=stages,
+            )
+
             self._last_run = started_at
             self._last_summary = summary
             self._last_run_id = run_id
@@ -2169,6 +2534,15 @@ class RecommendationPipeline:
                 ],
                 "duration_ms": round((utcnow() - started_at).total_seconds() * 1000, 2),
             }
+            await self._record_run(
+                run_id,
+                started_at=started_at,
+                status="unauthorized",
+                finished_at=utcnow(),
+                data_origin=data_origin,
+                ingest_source=ingest_source,
+                stages=stages,
+            )
             self._last_summary = summary
             self._last_run = started_at
             self._last_run_id = run_id
@@ -2176,12 +2550,45 @@ class RecommendationPipeline:
         except Exception:
             PIPELINE_RUNS.labels(status="error").inc()
             PIPELINE_RUN_DURATION.observe(time.perf_counter() - metrics_start)
+            await self._record_run(
+                run_id,
+                started_at=started_at,
+                status="error",
+                finished_at=utcnow(),
+                data_origin=data_origin,
+                ingest_source=ingest_source,
+                stages=stages,
+            )
             raise
         finally:
             async with self._lock:
                 self._running = False
                 self._current_run_id = None
                 self._current_stage = None
+
+    async def _record_run(
+        self,
+        run_id: str,
+        *,
+        started_at: datetime,
+        status: str,
+        finished_at: Optional[datetime],
+        data_origin: Optional[str],
+        ingest_source: Optional[str],
+        stages: List[Dict[str, Any]],
+    ) -> None:
+        try:
+            await self.pipeline_run_repository.record(
+                run_id,
+                started_at=started_at,
+                finished_at=finished_at,
+                status=status,
+                data_origin=data_origin,
+                ingest_source=ingest_source,
+                metadata={"stages": stages},
+            )
+        except Exception:  # pragma: no cover - logging only
+            logger.exception("pipeline_run_record_failed", extra={"run_id": run_id, "status": status})
 
 
     async def _schedule_loop(self) -> None:
@@ -2249,6 +2656,28 @@ class RecommendationItem(BaseModel):
     payload: Dict[str, Any] = Field(default_factory=dict)
 
 
+class RecommendationAction(BaseModel):
+    type: str
+    label: str
+    url: Optional[str] = None
+
+
+class PersonalizedRecommendationItem(BaseModel):
+    id: str
+    source: str
+    cluster_id: Optional[int] = None
+    model_version: Optional[str] = None
+    title: str
+    message: str
+    actions: List[RecommendationAction] = Field(default_factory=list)
+    evidence: Dict[str, Any] = Field(default_factory=dict)
+    priority: int = 5
+    score: float = Field(0.0, ge=0.0, le=1.0)
+    valid_from: date
+    valid_to: Optional[date] = None
+    created_at: datetime
+
+
 class UserFeatureSummary(BaseModel):
     total_income: float
     total_expenses: float
@@ -2267,13 +2696,310 @@ class UserFeatureSummary(BaseModel):
     last_transaction_at: Optional[datetime]
 
 
-class PersonalizedRecommendationsResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+class PersonalizedRecommendationsEnvelope(BaseModel):
+    user_id: str
+    generated_at: datetime
+    as_of_date: date
+    items: List[PersonalizedRecommendationItem]
+    meta: Dict[str, Any] = Field(default_factory=dict)
 
-    user_id: str = Field(..., alias="userId")
-    generated_at: datetime = Field(..., alias="generatedAt")
-    recommendations: List[RecommendationItem]
-    feature_summary: UserFeatureSummary = Field(..., alias="featureSummary")
+
+def _build_item_from_persisted(
+    record: Dict[str, Any],
+    *,
+    include_cluster: bool,
+    cluster_info: Optional[Dict[str, Any]],
+) -> Optional[PersonalizedRecommendationItem]:
+    payload = record.get("payload") or {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    title = str(payload.get("title") or payload.get("name") or payload.get("type") or "Recomendación financiera")
+    message = str(payload.get("message") or payload.get("description") or payload.get("explanation") or "")
+
+    actions_payload = payload.get("actions")
+    actions: List[RecommendationAction] = []
+    if isinstance(actions_payload, list):
+        for action in actions_payload:
+            if not isinstance(action, dict):
+                continue
+            action_type = str(action.get("type") or "link")
+            label = str(action.get("label") or action.get("title") or "Más información")
+            url = action.get("url")
+            actions.append(RecommendationAction(type=action_type, label=label, url=url))
+
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, dict):
+        evidence = {}
+
+    score_value = payload.get("score") or payload.get("confidence")
+    try:
+        score = float(score_value) if score_value is not None else 0.0
+    except (TypeError, ValueError):  # pragma: no cover - defensive
+        score = 0.0
+
+    priority_raw = record.get("priority") or payload.get("priority")
+    try:
+        priority = int(priority_raw) if priority_raw is not None else 5
+    except (TypeError, ValueError):
+        priority = 5
+
+    cluster_id = record.get("cluster_id") if include_cluster else None
+    if include_cluster and cluster_id is None:
+        cluster_id = payload.get("cluster_id")
+    model_version = payload.get("model_version") if include_cluster else None
+    if include_cluster and model_version is None and cluster_info:
+        model_version = cluster_info.get("model_version")
+    if include_cluster and cluster_id is None and cluster_info:
+        cluster_id = cluster_info.get("cluster_id")
+
+    valid_from_value = record.get("valid_from")
+    valid_to_value = record.get("valid_to")
+    created_at_value = record.get("created_at")
+
+    if isinstance(valid_from_value, datetime):
+        valid_from = ensure_utc(valid_from_value).date()
+    elif isinstance(valid_from_value, date):
+        valid_from = valid_from_value
+    else:
+        valid_from = None
+
+    if isinstance(valid_to_value, datetime):
+        valid_to = ensure_utc(valid_to_value).date()
+    elif isinstance(valid_to_value, date):
+        valid_to = valid_to_value
+    else:
+        valid_to = None
+
+    if isinstance(created_at_value, datetime):
+        created_at = ensure_utc(created_at_value)
+    else:
+        created_at = utcnow()
+
+    if valid_from is None:
+        valid_from = created_at.date()
+
+    identifier = record.get("id")
+    if identifier is None:
+        return None
+
+    return PersonalizedRecommendationItem(
+        id=str(identifier),
+        source=str(record.get("source") or payload.get("source") or "rules"),
+        cluster_id=cluster_id if include_cluster else None,
+        model_version=model_version if include_cluster else None,
+        title=title,
+        message=message,
+        actions=actions,
+        evidence=evidence,
+        priority=priority,
+        score=score,
+        valid_from=valid_from,
+        valid_to=valid_to,
+        created_at=created_at,
+    )
+
+
+def _generate_rule_recommendations(
+    *,
+    user_id: str,
+    features: List[Dict[str, Any]],
+    as_of_date: date,
+    lang: str,
+    cluster_info: Optional[Dict[str, Any]],
+    include_cluster: bool,
+    limit: int,
+) -> List[PersonalizedRecommendationItem]:
+    feature_map: Dict[str, Dict[str, Any]] = {}
+    for snapshot in features:
+        window_label = str(snapshot.get("window") or "").lower()
+        feature_map[window_label] = snapshot
+
+    default_window = settings.features_default_window.lower()
+    base_feature = feature_map.get(default_window)
+    if base_feature is None and features:
+        base_feature = features[0]
+
+    if base_feature is None:
+        return []
+
+    window_30 = feature_map.get("30d") or base_feature
+    window_90 = feature_map.get("90d") or feature_map.get("90days")
+
+    now = utcnow()
+    recommendations: Dict[str, PersonalizedRecommendationItem] = {}
+
+    def add_rule(
+        rule_key: str,
+        *,
+        title: str,
+        message: str,
+        priority: int,
+        score: float,
+        evidence: Dict[str, Any],
+        actions: List[RecommendationAction],
+    ) -> None:
+        if score < settings.recs_min_score:
+            return
+        identifier = _rule_identifier(user_id, rule_key, as_of_date)
+        cluster_id = cluster_info.get("cluster_id") if include_cluster and cluster_info else None
+        model_version = cluster_info.get("model_version") if include_cluster and cluster_info else None
+        item = PersonalizedRecommendationItem(
+            id=identifier,
+            source="rules",
+            cluster_id=cluster_id,
+            model_version=model_version,
+            title=title,
+            message=message,
+            actions=list(actions),
+            evidence=evidence,
+            priority=priority,
+            score=score,
+            valid_from=as_of_date,
+            valid_to=as_of_date + timedelta(days=30),
+            created_at=now,
+        )
+        existing = recommendations.get(rule_key)
+        if existing is None or (priority < existing.priority or score > existing.score):
+            recommendations[rule_key] = item
+
+    income_total = float(base_feature.get("income_total") or 0.0)
+    expense_total = float(base_feature.get("expense_total") or 0.0)
+    savings_rate = float(base_feature.get("savings_rate") or 0.0)
+
+    net_cashflow_30d = float(window_30.get("net_cashflow") or 0.0)
+    category_shares = window_30.get("category_shares") or {}
+    if not isinstance(category_shares, dict):
+        category_shares = {}
+    recurring_flags = window_30.get("recurring_flags") or {}
+    if not isinstance(recurring_flags, dict):
+        recurring_flags = {}
+
+    restaurants_share = 0.0
+    for key in ("restaurantes", "restaurant", "dining"):
+        if key in category_shares:
+            try:
+                restaurants_share = float(category_shares[key])
+                break
+            except (TypeError, ValueError):  # pragma: no cover - defensive
+                continue
+
+    if savings_rate < 0.1 and income_total > 0:
+        actions = [
+            RecommendationAction(
+                type="education",
+                label="Cómo armar presupuesto base" if lang.startswith("es") else "Build a basic budget",
+                url="https://salomon.ai/recursos/presupuesto-base",
+            )
+        ]
+        evidence = {
+            "savings_rate": round(savings_rate, 4),
+            "income_total": round(income_total, 2),
+            "expense_total": round(expense_total, 2),
+            "net_cashflow_30d": round(net_cashflow_30d, 2),
+        }
+        message = (
+            "Ahorra al menos 10% de tus ingresos mensuales. Ajusta tu presupuesto y automatiza un aporte." if lang.startswith("es")
+            else "Grow your monthly savings to at least 10% by adjusting your baseline budget."
+        )
+        add_rule(
+            "low_savings",
+            title="Aumenta tu ahorro mensual" if lang.startswith("es") else "Increase your monthly savings",
+            message=message,
+            priority=2,
+            score=0.8,
+            evidence=evidence,
+            actions=actions,
+        )
+
+    if restaurants_share > 0.25:
+        actions = [
+            RecommendationAction(
+                type="limit",
+                label="Define un tope semanal" if lang.startswith("es") else "Set a weekly cap",
+                url="https://salomon.ai/recursos/gasto-restaurantes",
+            )
+        ]
+        evidence = {
+            "category_shares": {"restaurantes": round(restaurants_share, 4)},
+            "net_cashflow_30d": round(net_cashflow_30d, 2),
+        }
+        message = (
+            "Tus gastos en restaurantes superan el 25% del total. Define un tope y planifica comidas en casa." if lang.startswith("es")
+            else "Restaurant spending exceeds 25% of your expenses. Set a cap and plan more meals at home."
+        )
+        add_rule(
+            "dining_cap",
+            title="Reduce tus gastos en restaurantes" if lang.startswith("es") else "Reduce restaurant spending",
+            message=message,
+            priority=3,
+            score=0.75,
+            evidence=evidence,
+            actions=actions,
+        )
+
+    has_rent = bool(recurring_flags.get("arriendo") or recurring_flags.get("rent"))
+    late_payment_risk = net_cashflow_30d < 0
+    if has_rent and late_payment_risk:
+        actions = [
+            RecommendationAction(
+                type="reminder",
+                label="Activa recordatorios de arriendo" if lang.startswith("es") else "Set rent reminders",
+                url="https://salomon.ai/recursos/arriendo",
+            )
+        ]
+        evidence = {
+            "recurring_flags": {"arriendo": True},
+            "net_cashflow_30d": round(net_cashflow_30d, 2),
+        }
+        message = (
+            "Tu flujo de caja es negativo y tienes arriendo recurrente. Activa recordatorios y reserva un fondo de emergencia."
+            if lang.startswith("es")
+            else "Cash flow is negative and rent is recurring. Schedule reminders and build an emergency buffer."
+        )
+        add_rule(
+            "rent_buffer",
+            title="Protege tu pago de arriendo" if lang.startswith("es") else "Protect your rent payment",
+            message=message,
+            priority=2,
+            score=0.72,
+            evidence=evidence,
+            actions=actions,
+        )
+
+    net_cashflow_90d = 0.0
+    if window_90:
+        try:
+            net_cashflow_90d = float(window_90.get("net_cashflow") or 0.0)
+        except (TypeError, ValueError):
+            net_cashflow_90d = 0.0
+    if window_90 and net_cashflow_90d < 0:
+        actions = [
+            RecommendationAction(
+                type="coaching",
+                label="Agenda asesoría" if lang.startswith("es") else "Book a coaching session",
+                url="https://salomon.ai/recursos/consolidacion",
+            )
+        ]
+        evidence = {"net_cashflow_90d": round(net_cashflow_90d, 2)}
+        message = (
+            "Registra gastos variables y activa alertas para revertir el flujo negativo en 90 días." if lang.startswith("es")
+            else "Track discretionary spending and set alerts to reverse the negative 90-day cash flow."
+        )
+        add_rule(
+            "consolidation_plan",
+            title="Planifica un plan de consolidación" if lang.startswith("es") else "Plan a consolidation strategy",
+            message=message,
+            priority=4,
+            score=0.7,
+            evidence=evidence,
+            actions=actions,
+        )
+
+    ordered = sorted(recommendations.values(), key=lambda item: (item.priority, -item.score))
+    if limit > 0:
+        ordered = ordered[:limit]
+    return ordered
 
 
 class FeedbackRequest(BaseModel):
@@ -2367,6 +3093,7 @@ feature_repository = FeatureRepository(database_client)
 cluster_model_repository = ClusterModelRepository(database_client)
 cluster_assignment_repository = ClusterAssignmentRepository(database_client)
 recommendation_output_repository = RecommendationOutputRepository(database_client)
+pipeline_run_repository = PipelineRunRepository(database_client)
 transaction_fetcher = TransactionFetcher(
     mode=pipeline_mode,
     api_url=financial_movements_url,
@@ -2391,6 +3118,7 @@ recommendation_pipeline = RecommendationPipeline(
     cluster_repository=cluster_model_repository,
     assignment_repository=cluster_assignment_repository,
     recommendation_repository=recommendation_output_repository,
+    pipeline_run_repository=pipeline_run_repository,
     interval_seconds=pipeline_interval,
     min_cluster_users=settings.min_cluster_users,
     cluster_count=settings.cluster_count,
@@ -2511,50 +3239,106 @@ async def get_user_features(user_id: str) -> UserFeatureSummary:
     )
 
 
-@app.get("/recommendations/personalized/{user_id}", response_model=PersonalizedRecommendationsResponse)
+@app.get(
+    "/recommendations/personalized/{user_id}",
+    response_model=PersonalizedRecommendationsEnvelope,
+    responses={204: {"description": "No Content"}},
+)
 async def get_personalized_recommendations(
-    user_id: str,
-    refresh: bool = Query(False, description="Forzar actualización del pipeline antes de responder"),
-) -> PersonalizedRecommendationsResponse:
-    if refresh:
-        await recommendation_pipeline.run_once()
+    user_id: UUID,
+    limit: int = Query(20, ge=1),
+    include_cluster: bool = Query(True),
+    as_of_date: Optional[date] = Query(None),
+    lang: str = Query("es-CL"),
+    authorization: str = Header(..., alias="Authorization"),
+) -> PersonalizedRecommendationsEnvelope | Response:
+    user_id_str = str(user_id)
+    _authorize_recommendations_request(authorization, user_id_str)
 
-    features = await feature_store.get(user_id)
-    if not features:
-        logger.info("No se encontraron features para usuario %s, ejecutando pipeline de respaldo", user_id)
-        await recommendation_pipeline.run_once()
-        features = await feature_store.get(user_id)
-        if not features:
-            raise HTTPException(status_code=404, detail="No hay transacciones suficientes para generar recomendaciones")
+    effective_limit = max(1, min(limit, settings.recs_max_items))
 
-    recommendations = model_manager.generate_recommendations(features)
-    await recommendation_store.save(user_id, recommendations)
+    last_run = await pipeline_run_repository.get_last_success()
+    if not last_run:
+        raise HTTPException(status_code=status.HTTP_424_FAILED_DEPENDENCY, detail="pipeline_not_ready")
 
-    RECOMMENDATIONS_SERVED.labels(endpoint="personalized").inc(len(recommendations))
+    origin_value = (last_run.get("ingest_source") or last_run.get("data_origin") or "").lower()
+    allowed_origins = {value.strip().lower() for value in settings.pipeline_required_origin.split(",") if value.strip()}
+    if origin_value == "mock":
+        raise HTTPException(status_code=status.HTTP_424_FAILED_DEPENDENCY, detail="pipeline_not_ready")
+    if allowed_origins:
+        valid_set = allowed_origins | {"belvo"}
+        if origin_value and origin_value not in valid_set:
+            raise HTTPException(status_code=status.HTTP_424_FAILED_DEPENDENCY, detail="pipeline_not_ready")
+        if not origin_value:
+            raise HTTPException(status_code=status.HTTP_424_FAILED_DEPENDENCY, detail="pipeline_not_ready")
 
-    response = PersonalizedRecommendationsResponse(
-        userId=user_id,
-        generatedAt=utcnow(),
-        recommendations=[RecommendationItem(**asdict(rec)) for rec in recommendations],
-        featureSummary=UserFeatureSummary(
-            total_income=features.total_income,
-            total_expenses=features.total_expenses,
-            net_cash_flow=features.net_cash_flow,
-            average_transaction=features.average_transaction,
-            discretionary_ratio=features.discretionary_ratio,
-            essential_ratio=features.essential_ratio,
-            savings_rate=features.savings_rate,
-            top_category=features.top_category,
-            category_totals=features.category_totals,
-            category_shares=features.category_shares,
-            merchant_diversity=features.merchant_diversity,
-            recurring_flags=features.recurring_flags,
-            volatility_expense=features.volatility_expense,
-            transaction_count=features.transaction_count,
-            last_transaction_at=features.last_transaction_at,
-        ),
+    reference_dt = last_run.get("finished_at") or last_run.get("started_at") or utcnow()
+    if isinstance(reference_dt, datetime):
+        reference_dt = ensure_utc(reference_dt)
+        reference_date = reference_dt.date()
+    elif isinstance(reference_dt, date):
+        reference_date = reference_dt
+    else:
+        reference_date = utcnow().date()
+
+    effective_as_of = as_of_date or reference_date
+
+    persisted_records = await recommendation_output_repository.fetch_for_user(
+        user_id=user_id_str,
+        as_of_date=effective_as_of,
+        limit=effective_limit,
     )
-    return response
+
+    cluster_info: Optional[Dict[str, Any]] = None
+    if include_cluster:
+        cluster_info = await cluster_assignment_repository.fetch_latest(user_id_str)
+
+    items: List[PersonalizedRecommendationItem] = []
+    for record in persisted_records:
+        item = _build_item_from_persisted(
+            record,
+            include_cluster=include_cluster,
+            cluster_info=cluster_info,
+        )
+        if item and item.score >= settings.recs_min_score:
+            items.append(item)
+
+    response_as_of = effective_as_of
+
+    if not items:
+        feature_snapshots = await feature_repository.fetch_latest_for_user(user_id_str, as_of_date=effective_as_of)
+        if not feature_snapshots:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no_real_data")
+        snapshot_dates = [snap.get("as_of_date") for snap in feature_snapshots if isinstance(snap.get("as_of_date"), date)]
+        if snapshot_dates:
+            response_as_of = max(snapshot_dates)
+        items = _generate_rule_recommendations(
+            user_id=user_id_str,
+            features=feature_snapshots,
+            as_of_date=response_as_of,
+            lang=lang,
+            cluster_info=cluster_info if include_cluster else None,
+            include_cluster=include_cluster,
+            limit=effective_limit,
+        )
+    else:
+        persisted_dates = [item.valid_from for item in items if item.valid_from]
+        if persisted_dates:
+            response_as_of = max(persisted_dates)
+
+    if not items:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    response_items = items[:effective_limit]
+    RECOMMENDATIONS_SERVED.labels(endpoint="personalized").inc(len(response_items))
+
+    return PersonalizedRecommendationsEnvelope(
+        user_id=user_id_str,
+        generated_at=utcnow(),
+        as_of_date=response_as_of,
+        items=response_items,
+        meta={"count": len(response_items)},
+    )
 
 
 @app.get("/recommendations/personalized/{user_id}/history", response_model=List[RecommendationItem])
