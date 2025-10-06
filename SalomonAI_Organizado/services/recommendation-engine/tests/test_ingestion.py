@@ -19,6 +19,7 @@ FeatureBuilder = recommendation_main.FeatureBuilder
 FeatureStore = recommendation_main.FeatureStore
 RecommendationModelManager = recommendation_main.RecommendationModelManager
 RecommendationPipeline = recommendation_main.RecommendationPipeline
+RecommendationStore = recommendation_main.RecommendationStore
 TransactionFetcher = recommendation_main.TransactionFetcher
 TransactionNormalizer = recommendation_main.TransactionNormalizer
 
@@ -98,6 +99,39 @@ class FakeStateRepository:
         return dict(self._snapshot)
 
 
+class FakeFeatureRepository:
+    def __init__(self) -> None:
+        self.saved: List[Any] = []
+
+    async def bulk_upsert(self, features: List[Any]) -> int:
+        self.saved.extend(features)
+        return len(features)
+
+
+class FakeClusterRepository:
+    def __init__(self) -> None:
+        self.saved: List[Any] = []
+
+    async def save(self, result: Any) -> None:
+        self.saved.append(result)
+
+
+class FakeAssignmentRepository:
+    def __init__(self) -> None:
+        self.assignments: Dict[str, Dict[str, int]] = {}
+
+    async def replace(self, model_version: str, assignments: Dict[str, int]) -> None:
+        self.assignments[model_version] = dict(assignments)
+
+
+class FakeRecommendationRepository:
+    def __init__(self) -> None:
+        self.saved: Dict[str, List[Any]] = {}
+
+    async def replace_for_run(self, run_id: str, records: List[Any]) -> None:
+        self.saved[run_id] = list(records)
+
+
 class FakeFetcher:
     def __init__(self, transactions: List[Dict[str, Any]]) -> None:
         self.transactions = transactions
@@ -136,27 +170,43 @@ async def test_pipeline_updates_state_and_features() -> None:
     )
     builder = FeatureBuilder()
     store = FeatureStore()
+    rec_store = RecommendationStore()
     manager = RecommendationModelManager()
     normalizer = TransactionNormalizer()
     repository = FakeRepository()
     state_repository = FakeStateRepository()
+    feature_repo = FakeFeatureRepository()
+    cluster_repo = FakeClusterRepository()
+    assignment_repo = FakeAssignmentRepository()
+    recommendation_repo = FakeRecommendationRepository()
 
     pipeline = RecommendationPipeline(
         fetcher=fetcher,  # type: ignore[arg-type]
         builder=builder,
         store=store,
+        recommendation_cache=rec_store,
         model_manager=manager,
         normalizer=normalizer,
         repository=repository,  # type: ignore[arg-type]
         state_repository=state_repository,  # type: ignore[arg-type]
+        feature_repository=feature_repo,  # type: ignore[arg-type]
+        cluster_repository=cluster_repo,  # type: ignore[arg-type]
+        assignment_repository=assignment_repo,  # type: ignore[arg-type]
+        recommendation_repository=recommendation_repo,  # type: ignore[arg-type]
         interval_seconds=1,
+        min_cluster_users=1,
+        cluster_count=1,
     )
 
     summary = await pipeline.run_once()
 
-    assert summary["ingested_count"] == 2
-    assert summary["normalized"] == 2
-    assert summary["users_tracked"] == 1
+    assert "run_id" in summary
+    stages = {stage["name"]: stage for stage in summary["stages"]}
+    ingest_stage = stages["ingest"]
+    assert ingest_stage["ingested"] == 2
+    assert ingest_stage["normalized"] == 2
+    features_stage = stages["features"]
+    assert features_stage["users"] == 1
     assert state_repository.last_synced is not None
     status = pipeline.status()
     assert status["last_synced_at"] is not None

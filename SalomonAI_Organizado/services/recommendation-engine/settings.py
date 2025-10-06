@@ -27,13 +27,17 @@ class RecommendationSettings(BaseSettings):
     )
     pipeline_refresh_seconds: int = Field(default=300, alias="PIPELINE_REFRESH_SECONDS")
     ingest_poll_seconds: Optional[int] = Field(default=None, alias="INGEST_POLL_SECONDS")
-    pipeline_cluster_count: int = Field(default=4, alias="PIPELINE_CLUSTER_COUNT")
+    pipeline_cluster_count: int = Field(default=5, alias="PIPELINE_CLUSTER_COUNT")
     pipeline_api_timeout: float = Field(default=15.0, alias="PIPELINE_API_TIMEOUT")
     pipeline_kafka_batch: int = Field(default=500, alias="PIPELINE_KAFKA_BATCH")
     allowed_origins: List[str] = Field(default_factory=lambda: ["*"], alias="ALLOWED_ORIGINS")
     port: int = Field(default=8000, alias="PORT")
     core_api_token: Optional[str] = Field(default=None, alias="CORE_API_TOKEN")
     pipeline_page_limit: int = Field(default=500, alias="PIPELINE_PAGE_LIMIT")
+    min_cluster_users: int = Field(default=50, alias="MIN_CLUSTER_USERS")
+    pipeline_admin_token: Optional[str] = Field(default=None, alias="PIPELINE_ADMIN_TOKEN")
+    max_fetch_limit: int = Field(default=1000, alias="MAX_FETCH_LIMIT")
+    kmeans_k: Optional[int] = Field(default=None, alias="KMEANS_K")
 
     db_host: Optional[str] = Field(default=None, alias="DB_HOST")
     db_port: Optional[int] = Field(default=5432, alias="DB_PORT")
@@ -58,6 +62,12 @@ class RecommendationSettings(BaseSettings):
         if self.ingest_poll_seconds is not None and self.ingest_poll_seconds > 0:
             return self.ingest_poll_seconds
         return max(self.pipeline_refresh_seconds, 1)
+
+    @property
+    def cluster_count(self) -> int:
+        if self.kmeans_k is not None and self.kmeans_k > 0:
+            return self.kmeans_k
+        return max(self.pipeline_cluster_count, 1)
 
     def build_database_dsn(self) -> Optional[str]:
         if not self.db_host or not self.db_user or not self.db_name:
