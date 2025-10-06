@@ -3,10 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { SupabaseService, SupabaseUserTransactionRecord } from '../auth/supabase.service';
 import type { DashboardConfig, DemoConfig } from '../config/configuration';
-import {
-  DashboardGranularity,
-  DashboardSummaryQueryDto,
-} from './dto/dashboard-summary-query.dto';
+import { DashboardGranularity, DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
 
 export interface DashboardTotals {
   inflow: number;
@@ -70,8 +67,12 @@ export class DashboardService {
     const dashboardConfig = this.configService.get<DashboardConfig>('dashboard', { infer: true });
     const demoConfig = this.configService.get<DemoConfig>('demo', { infer: true });
 
-    const granularity = query.granularity ?? dashboardConfig?.defaultGranularity ?? DashboardGranularity.MONTH;
-    const { transactions, startDate, endDate } = await this.filterTransactions(query, dashboardConfig);
+    const granularity =
+      query.granularity ?? dashboardConfig?.defaultGranularity ?? DashboardGranularity.MONTH;
+    const { transactions, startDate, endDate } = await this.filterTransactions(
+      query,
+      dashboardConfig,
+    );
 
     const currency =
       query.currency ??
@@ -121,7 +122,9 @@ export class DashboardService {
 
     const maxRangeInDays = config?.maxRangeInDays ?? 365;
     if (startDate && endDate) {
-      const diffInDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const diffInDays = Math.ceil(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
       if (diffInDays > maxRangeInDays) {
         throw new BadRequestException(`Date range cannot exceed ${maxRangeInDays} days`);
       }
@@ -166,7 +169,10 @@ export class DashboardService {
     return { transactions: filtered, startDate, endDate };
   }
 
-  private computeTotals(transactions: SupabaseUserTransactionRecord[], currency: string): DashboardTotals {
+  private computeTotals(
+    transactions: SupabaseUserTransactionRecord[],
+    currency: string,
+  ): DashboardTotals {
     return transactions.reduce(
       (totals, transaction) => {
         const amount = transaction.amount ?? 0;
@@ -291,7 +297,9 @@ export class DashboardService {
       aggregate.institution = aggregate.institution ?? statement.account?.institution ?? null;
     }
 
-    return Array.from(accountGroups.values()).sort((a, b) => b.inflow + b.outflow - (a.inflow + a.outflow));
+    return Array.from(accountGroups.values()).sort(
+      (a, b) => b.inflow + b.outflow - (a.inflow + a.outflow),
+    );
   }
 
   private buildTimeline(
@@ -333,7 +341,9 @@ export class DashboardService {
       case DashboardGranularity.DAY:
         return date.toISOString().slice(0, 10);
       case DashboardGranularity.WEEK: {
-        const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+        const target = new Date(
+          Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+        );
         const day = target.getUTCDay() || 7;
         target.setUTCDate(target.getUTCDate() + 4 - day);
         const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));

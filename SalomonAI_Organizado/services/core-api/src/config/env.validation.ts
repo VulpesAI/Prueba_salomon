@@ -39,9 +39,7 @@ export const envValidationSchema = Joi.object({
   BELVO_TIMEOUT: Joi.number().integer().min(1000).optional(),
   MOVEMENTS_DEFAULT_PAGE_SIZE: Joi.number().integer().min(1).optional(),
   MOVEMENTS_MAX_PAGE_SIZE: Joi.number().integer().min(1).optional(),
-  DASHBOARD_DEFAULT_GRANULARITY: Joi.string()
-    .valid('day', 'week', 'month')
-    .optional(),
+  DASHBOARD_DEFAULT_GRANULARITY: Joi.string().valid('day', 'week', 'month').optional(),
   DASHBOARD_MAX_RANGE_IN_DAYS: Joi.number().integer().min(1).optional(),
   RECOMMENDATION_ENGINE_URL: Joi.string().uri().allow('', null).optional(),
   RECOMMENDATION_ENGINE_TIMEOUT_MS: Joi.number().integer().min(100).optional(),

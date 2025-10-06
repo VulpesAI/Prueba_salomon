@@ -16,7 +16,10 @@ import {
   SupabaseStatementRecord,
   SupabaseTransactionRecord,
 } from '../src/auth/supabase.service';
-import { ParsingEngineProducer, StatementQueuedEvent } from '../src/statements/parsing-engine.producer';
+import {
+  ParsingEngineProducer,
+  StatementQueuedEvent,
+} from '../src/statements/parsing-engine.producer';
 
 class InMemorySupabaseService {
   private readonly storage = new Map<string, Buffer>();
@@ -204,7 +207,11 @@ describe('StatementsController (e2e)', () => {
     const fileStats = await fsPromises.stat(expectedFilePath);
 
     expect(fileStats.isFile()).toBe(true);
-    expect(producerMock.events[0]).toMatchObject({ statementId, userId, filePath: expectedFilePath });
+    expect(producerMock.events[0]).toMatchObject({
+      statementId,
+      userId,
+      filePath: expectedFilePath,
+    });
 
     const listResponse = await request(app.getHttpServer())
       .get('/api/v1/statements')
