@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional
 from urllib.parse import quote_plus
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -54,6 +54,14 @@ class RecommendationSettings(BaseSettings):
     enable_supabase_feedback: bool = Field(default=False, alias="ENABLE_SUPABASE_FEEDBACK")
     supabase_url: Optional[str] = Field(default=None, alias="SUPABASE_URL")
     supabase_anon_key: Optional[str] = Field(default=None, alias="SUPABASE_ANON_KEY")
+    min_tx_per_window: int = Field(default=12, alias="MIN_TX_PER_WINDOW")
+    min_days_history: int = Field(default=45, alias="MIN_DAYS_HISTORY")
+    min_confidence: float = Field(default=0.6, alias="MIN_CONFIDENCE")
+    investing_guardrail: bool = Field(default=True, alias="INVESTING_GUARDRAIL")
+    max_recs_per_run: int = Field(default=5, alias="MAX_RECS_PER_RUN")
+    rules_config_path: str = Field(default="./config/rules.yaml", alias="RULES_CONFIG_PATH")
+    rules_hot_reload: bool = Field(default=False, alias="RULES_HOT_RELOAD")
+    rule_min_accept: float = Field(default=0.35, alias="RULE_MIN_ACCEPT")
     enable_qdrant_sync: bool = Field(default=False, validation_alias=AliasChoices("ENABLE_QDRANT_SYNC", "RECOMMENDATION_ENABLE_QDRANT_SYNC"))
     qdrant_url: Optional[str] = Field(
         default=None,
