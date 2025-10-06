@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+from urllib.parse import quote_plus
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,11 +26,22 @@ class RecommendationSettings(BaseSettings):
         alias="KAFKA_TRANSACTIONS_TOPIC",
     )
     pipeline_refresh_seconds: int = Field(default=300, alias="PIPELINE_REFRESH_SECONDS")
+    ingest_poll_seconds: Optional[int] = Field(default=None, alias="INGEST_POLL_SECONDS")
     pipeline_cluster_count: int = Field(default=4, alias="PIPELINE_CLUSTER_COUNT")
     pipeline_api_timeout: float = Field(default=15.0, alias="PIPELINE_API_TIMEOUT")
     pipeline_kafka_batch: int = Field(default=500, alias="PIPELINE_KAFKA_BATCH")
     allowed_origins: List[str] = Field(default_factory=lambda: ["*"], alias="ALLOWED_ORIGINS")
     port: int = Field(default=8000, alias="PORT")
+    core_api_token: Optional[str] = Field(default=None, alias="CORE_API_TOKEN")
+    pipeline_page_limit: int = Field(default=500, alias="PIPELINE_PAGE_LIMIT")
+
+    db_host: Optional[str] = Field(default=None, alias="DB_HOST")
+    db_port: Optional[int] = Field(default=5432, alias="DB_PORT")
+    db_user: Optional[str] = Field(default=None, alias="DB_USER")
+    db_pass: Optional[str] = Field(default=None, alias="DB_PASS")
+    db_name: Optional[str] = Field(default=None, alias="DB_NAME")
+    db_schema: Optional[str] = Field(default="public", alias="DB_SCHEMA")
+    db_sslmode: Optional[str] = Field(default=None, alias="DB_SSLMODE")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
@@ -40,6 +52,29 @@ class RecommendationSettings(BaseSettings):
             return value or ["*"]
         parts = [item.strip() for item in value.split(",") if item.strip()]
         return parts or ["*"]
+
+    @property
+    def refresh_interval(self) -> int:
+        if self.ingest_poll_seconds is not None and self.ingest_poll_seconds > 0:
+            return self.ingest_poll_seconds
+        return max(self.pipeline_refresh_seconds, 1)
+
+    def build_database_dsn(self) -> Optional[str]:
+        if not self.db_host or not self.db_user or not self.db_name:
+            return None
+
+        password = quote_plus(self.db_pass or "")
+        schema = self.db_schema or "public"
+        sslmode = self.db_sslmode
+        base = f"postgresql://{self.db_user}:{password}@{self.db_host}:{self.db_port or 5432}/{self.db_name}"
+        params: List[str] = []
+        if sslmode:
+            params.append(f"sslmode={sslmode}")
+        if schema != "public":
+            params.append(f"options=-csearch_path%3D{quote_plus(schema)}")
+        if params:
+            return f"{base}?{'&'.join(params)}"
+        return base
 
 
 @lru_cache()
