@@ -145,6 +145,7 @@ export class DashboardService {
       horizonDays: query.horizonDays,
       model: query.model,
       refresh: query.refresh,
+      forecastType: 'cashflow_projection',
     });
   }
 
@@ -505,7 +506,10 @@ export class DashboardService {
 
     let forecast: SupabaseForecastResultRecord | null = null;
     try {
-      forecast = await this.supabaseService.getLatestForecastResult(options.userId);
+      forecast = await this.supabaseService.getLatestForecastResult(
+        options.userId,
+        'cashflow_projection',
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Unable to retrieve forecast for user ${options.userId}: ${message}`);

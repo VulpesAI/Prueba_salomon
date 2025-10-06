@@ -259,19 +259,19 @@ Respuesta (resumida):
 }
 ```
 
-## Módulo `financial-forecasts`
+## Módulo `forecasting`
 
 ### Componentes clave
 
-- **Servicio**: `FinancialForecastsService` consume un motor externo vía HTTP (`engineUrl`) para generar proyecciones, persistiendo los resultados en la tabla `financial_forecasts`. Expone métodos `refreshForecastsForUser`, `getForecastSummary` y `getForecastSeries` usados por el dashboard y otros servicios.【F:services/core-api/src/financial-forecasts/financial-forecasts.service.ts†L1-L164】
-- **Scheduler**: `FinancialForecastsScheduler` ejecuta un cron diario (01:00) que recorre usuarios activos y refresca proyecciones según el horizonte configurado.【F:services/core-api/src/financial-forecasts/financial-forecasts.scheduler.ts†L1-L37】
-- **Entidad**: Define columnas `forecastDate`, `predictedValue`, `modelType`, `metadata` para almacenar trazabilidad del modelo y resultados.【F:services/core-api/src/financial-forecasts/entities/financial-forecast.entity.ts†L1-L45】
+- **Orquestador**: `ForecastingOrchestratorService` invoca el motor externo, normaliza el payload y persiste el resultado en Supabase (`forecast_results`) para evitar recálculos innecesarios.【F:services/core-api/src/recommendations/forecasting-orchestrator.service.ts†L1-L118】【F:services/core-api/src/recommendations/forecasting-orchestrator.service.ts†L94-L116】
+- **Gateway para dashboard/IA**: `DashboardForecastingGatewayService` centraliza las llamadas HTTP al motor y expone una respuesta normalizada al resto de módulos (dashboard, intents de IA, conectores).【F:services/core-api/src/dashboard/forecasting-gateway.service.ts†L21-L112】
+- **Consumo en dashboard**: `DashboardService` consulta Supabase mediante `SupabaseService.getLatestForecastResult`, arma el resumen (`DashboardProjectionSummary`) y cae en un cálculo histórico cuando no hay datos almacenados.【F:services/core-api/src/dashboard/dashboard.service.ts†L500-L566】
 
 ### Flujos
 
-1. **Refresco**: Se consulta el motor con parámetros `horizon` y `model`, se guarda la serie y se emite evento `metrics.updated` para monitoreo/BI.【F:services/core-api/src/financial-forecasts/financial-forecasts.service.ts†L34-L90】
-2. **Transformación**: `toSummary` calcula tendencia (`upward`, `downward`, `stable`) midiendo cambio porcentual entre primer y último punto.【F:services/core-api/src/financial-forecasts/financial-forecasts.service.ts†L116-L164】
-3. **Consumo en dashboard**: `GET /dashboard/forecasts` retorna el último resumen o un objeto vacío si no hay datos, permitiendo a front-end manejar estados iniciales.【F:services/core-api/src/dashboard/dashboard.controller.ts†L121-L171】
+1. **Generación**: `generateForecast` recibe `userId`, modelo y horizonte, construye la URL (`/forecasts/:userId`) y maneja timeouts/errores del motor externo.【F:services/core-api/src/recommendations/forecasting-orchestrator.service.ts†L26-L83】
+2. **Persistencia**: `persistForecastResult` convierte cada punto `{ date, amount }` en un registro JSON y lo almacena en Supabase, junto con metadatos como `model_type`, `history_days` y `generated_at`.【F:services/core-api/src/recommendations/forecasting-orchestrator.service.ts†L94-L116】
+3. **Lectura**: `buildProjectionSummary` recupera la última proyección almacenada, filtra puntos válidos y calcula totales/promedios antes de mostrar los datos en el dashboard; en ausencia de registros recurre a un promedio histórico de transacciones.【F:services/core-api/src/dashboard/dashboard.service.ts†L500-L566】【F:services/core-api/src/dashboard/dashboard.service.ts†L568-L637】
 
 ### Ejemplo de respuesta del dashboard
 
@@ -281,11 +281,11 @@ Respuesta (resumida):
   "generatedAt": "2024-05-12T01:00:00.000Z",
   "horizonDays": 30,
   "historyDays": 120,
-  "forecasts": [
+  "points": [
     { "date": "2024-05-13", "amount": 520000 },
     { "date": "2024-05-14", "amount": 518500 }
   ],
-  "trend": { "direction": "downward", "change": -15000, "changePercentage": -2.8 }
+  "source": "forecasting-engine"
 }
 ```
 
@@ -296,7 +296,7 @@ Respuesta (resumida):
 | **Firebase Admin** | Validar tokens ID, sincronizar usuarios, enviar notificaciones push. | Se inicializa con credenciales del servicio (`FIREBASE_SERVICE_ACCOUNT_KEY` o variables individuales) en `FirebaseAdminService`.【F:services/core-api/src/firebase/firebase-admin.service.ts†L1-L47】 |
 | **Belvo API** | Conexión a instituciones financieras, extracción de cuentas/transacciones. | `BelvoService` selecciona sandbox/producción vía `BELVO_ENVIRONMENT` y usa `BELVO_SECRET_ID`/`BELVO_SECRET_PASSWORD` para autenticación Basic. |【F:services/core-api/src/belvo/belvo.service.ts†L1-L118】|
 | **Qdrant** | Almacenamiento vectorial para clasificar movimientos y reglas. | `createQdrantConfig` define `QDRANT_URL`/`collectionName` y `QdrantService` inicializa el cliente REST verificando conectividad en `onModuleInit`. |【F:services/core-api/src/config/app.config.ts†L18-L33】【F:services/core-api/src/qdrant/qdrant.service.ts†L1-L47】|
-| **Forecasting engine** | Generación de series temporales y tendencias financieras. | `configuration.ts` carga `FORECASTING_ENGINE_URL` y `FORECASTING_DEFAULT_HORIZON_DAYS`, usados por `FinancialForecastsService` y el scheduler. |【F:services/core-api/src/config/configuration.ts†L1-L33】【F:services/core-api/src/financial-forecasts/financial-forecasts.service.ts†L34-L63】|
+| **Forecasting engine** | Generación de series temporales y tendencias financieras. | `configuration.ts` carga `FORECASTING_ENGINE_URL`, modelo y horizonte por defecto; `ForecastingOrchestratorService` y `DashboardForecastingGatewayService` consumen esos valores para llamar al motor y persistir resultados. |【F:services/core-api/src/config/configuration.ts†L80-L168】【F:services/core-api/src/recommendations/forecasting-orchestrator.service.ts†L1-L116】【F:services/core-api/src/dashboard/forecasting-gateway.service.ts†L21-L112】|
 | **SIEM externo** | Auditoría de eventos de seguridad (login, MFA, rotación tokens). | `SiemLoggerService` envía eventos al endpoint `SIEM_ENDPOINT` con token opcional `SIEM_TOKEN`. |【F:services/core-api/src/security/siem-logger.service.ts†L1-L40】|
 
 ### Configuración de CORS

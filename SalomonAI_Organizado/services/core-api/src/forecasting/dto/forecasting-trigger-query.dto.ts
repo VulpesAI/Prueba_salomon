@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 import { FORECASTING_MODELS } from '../../dashboard/dto/dashboard-projection-query.dto';
 
@@ -19,4 +19,9 @@ export class ForecastingTriggerQueryDto {
   @Type(() => Boolean)
   @IsBoolean()
   refresh?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  type?: string;
 }

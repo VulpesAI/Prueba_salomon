@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
 import { fetch } from 'undici';
 
-import { SupabaseService } from '../auth/supabase.service';
 import type { ForecastingConfig } from '../config/configuration';
 import type {
   ForecastingEngineResponse,
@@ -17,10 +15,7 @@ export class ForecastingOrchestratorService {
   private readonly logger = new Logger(ForecastingOrchestratorService.name);
   private readonly config: ForecastingConfig | undefined;
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly supabaseService: SupabaseService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     this.config = this.configService.get<ForecastingConfig>('forecasting', { infer: true });
   }
 
@@ -36,8 +31,13 @@ export class ForecastingOrchestratorService {
     }
 
     try {
-      const response = await this.callForecastingEngine(userId, options);
-      await this.persistForecastResult(response);
+      const forecastType =
+        this.normalizeForecastType(options.forecastType ?? null) ?? 'cashflow_projection';
+      const response = await this.callForecastingEngine(userId, {
+        ...options,
+        forecastType,
+      });
+      await this.persistForecastResult(response, forecastType);
       return this.normalizeResponse(response);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -68,6 +68,11 @@ export class ForecastingOrchestratorService {
       url.searchParams.set('refresh', 'true');
     }
 
+    const forecastType = this.normalizeForecastType(options.forecastType ?? null);
+    if (forecastType) {
+      url.searchParams.set('forecast_type', forecastType);
+    }
+
     const timeoutMs = Math.max(this.config?.timeoutMs ?? 10000, 1000);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -91,29 +96,36 @@ export class ForecastingOrchestratorService {
     }
   }
 
-  private async persistForecastResult(payload: ForecastingEngineResponse): Promise<void> {
-    if (!this.supabaseService.isEnabled()) {
-      this.logger.debug('Supabase is not configured; skipping forecast persistence.');
-      return;
-    }
-
-    const generatedAtIso = new Date(payload.generated_at).toISOString();
-    const recordId = payload.user_id || randomUUID();
+  private async persistForecastResult(
+    payload: ForecastingEngineResponse,
+    forecastType: string,
+  ): Promise<void> {
+    const baseUrl = this.getForecastingBaseUrl();
+    const url = new URL('/forecast/save', baseUrl);
 
     try {
-      await this.supabaseService.upsertForecastResult({
-        id: recordId,
-        userId: payload.user_id,
-        generatedAt: generatedAtIso,
-        horizonDays: payload.horizon_days,
-        historyDays: payload.history_days,
-        modelType: payload.model_type,
-        metadata: payload.metadata ?? null,
-        points: payload.forecasts.map((point) => ({
-          date: point.date,
-          amount: point.amount,
-        })),
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: payload.user_id,
+          forecast_type: forecastType,
+          forecast_data: payload,
+          calculated_at: new Date(payload.generated_at).toISOString(),
+        }),
       });
+
+      if (!response.ok) {
+        const text = await response.text();
+        this.logger.warn(
+          `Forecasting engine rejected persistence for user ${payload.user_id}: ${response.status} ${
+            text || response.statusText
+          }`,
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to persist forecast for user ${payload.user_id}: ${message}`);
@@ -161,5 +173,18 @@ export class ForecastingOrchestratorService {
     return (FORECASTING_MODELS.find((entry) => entry === normalized) ?? null) as
       | ForecastingEngineResponse['model_type']
       | null;
+  }
+
+  private normalizeForecastType(type: string | null): string | null {
+    if (!type) {
+      return null;
+    }
+
+    const trimmed = type.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    return trimmed.slice(0, 128);
   }
 }

@@ -193,20 +193,10 @@ export interface SupabaseForecastPointRecord {
   amount: number;
 }
 
-export interface SupabaseForecastResultUpsert {
-  id: string;
-  userId: string;
-  generatedAt: string;
-  horizonDays: number;
-  historyDays: number;
-  modelType: string;
-  metadata: Record<string, unknown> | null;
-  points: SupabaseForecastPointRecord[];
-}
-
 export interface SupabaseForecastResultRecord {
   id: string;
   userId: string;
+  forecastType: string;
   generatedAt: string;
   horizonDays: number;
   historyDays: number;
@@ -636,40 +626,18 @@ export class SupabaseService {
     }
   }
 
-  async upsertForecastResult(payload: SupabaseForecastResultUpsert): Promise<void> {
-    const client = this.getClientOrThrow();
-
-    const record = {
-      id: payload.id,
-      user_id: payload.userId,
-      generated_at: payload.generatedAt,
-      horizon_days: payload.horizonDays,
-      history_days: payload.historyDays,
-      model_type: payload.modelType,
-      metadata: payload.metadata,
-      forecast_points: payload.points,
-    };
-
-    const { error } = await client.from('forecast_results').upsert(record, { onConflict: 'id' });
-
-    if (error) {
-      this.logger.error(
-        `Failed to upsert forecast result for user ${payload.userId}: ${error.message}`,
-      );
-      throw error;
-    }
-  }
-
-  async getLatestForecastResult(userId: string): Promise<SupabaseForecastResultRecord | null> {
+  async getLatestForecastResult(
+    userId: string,
+    forecastType = 'cashflow_projection',
+  ): Promise<SupabaseForecastResultRecord | null> {
     const client = this.getClientOrThrow();
 
     const { data, error } = await client
       .from('forecast_results')
-      .select(
-        'id, user_id, generated_at, horizon_days, history_days, model_type, metadata, forecast_points',
-      )
+      .select('id, user_id, forecast_type, forecast_data, calculated_at, created_at')
       .eq('user_id', userId)
-      .order('generated_at', { ascending: false })
+      .eq('forecast_type', forecastType)
+      .order('calculated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -687,26 +655,112 @@ export class SupabaseService {
     const row = data as {
       id: string;
       user_id: string;
-      generated_at: string;
-      horizon_days?: number | string | null;
-      history_days?: number | string | null;
-      model_type: string;
-      metadata: Record<string, unknown> | null;
-      forecast_points: SupabaseForecastPointRecord[] | null;
+      forecast_type: string;
+      calculated_at?: string | null;
+      created_at?: string | null;
+      forecast_data: Record<string, unknown> | null;
     };
+
+    const parsed = this.normalizeForecastData(row.forecast_data);
+
+    const generatedCandidates = [parsed.generatedAt, row.calculated_at, row.created_at].filter(
+      (value): value is string => typeof value === 'string' && value.length > 0,
+    );
+
+    let generatedAtIso = new Date().toISOString();
+    for (const candidate of generatedCandidates) {
+      const candidateDate = new Date(candidate);
+      if (!Number.isNaN(candidateDate.valueOf())) {
+        generatedAtIso = candidateDate.toISOString();
+        break;
+      }
+    }
 
     return {
       id: row.id,
       userId: row.user_id,
-      generatedAt: row.generated_at,
-      horizonDays:
-        row.horizon_days !== undefined && row.horizon_days !== null ? Number(row.horizon_days) : 0,
-      historyDays:
-        row.history_days !== undefined && row.history_days !== null ? Number(row.history_days) : 0,
-      modelType: row.model_type,
-      metadata: row.metadata ?? null,
-      points: Array.isArray(row.forecast_points) ? row.forecast_points : [],
+      forecastType: row.forecast_type,
+      generatedAt: generatedAtIso,
+      horizonDays: parsed.horizonDays ?? parsed.points.length ?? 0,
+      historyDays: parsed.historyDays ?? 0,
+      modelType: parsed.modelType ?? 'auto',
+      metadata: parsed.metadata ?? null,
+      points: parsed.points,
     } satisfies SupabaseForecastResultRecord;
+  }
+
+  private normalizeForecastData(
+    raw: Record<string, unknown> | null,
+  ): {
+    generatedAt?: string;
+    horizonDays?: number;
+    historyDays?: number;
+    modelType?: string;
+    metadata?: Record<string, unknown> | null;
+    points: SupabaseForecastPointRecord[];
+  } {
+    if (!raw || typeof raw !== 'object') {
+      return { points: [], metadata: null };
+    }
+
+    const metadata = raw['metadata'];
+    const metadataRecord =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+        ? (metadata as Record<string, unknown>)
+        : null;
+
+    const forecasts = Array.isArray(raw['forecasts'])
+      ? (raw['forecasts'] as Array<Record<string, unknown>>)
+      : [];
+
+    const points = forecasts
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return null;
+        }
+
+        const dateValue = entry['date'];
+        if (typeof dateValue !== 'string') {
+          return null;
+        }
+
+        const amountValue = entry['amount'];
+        const amount =
+          typeof amountValue === 'number'
+            ? amountValue
+            : typeof amountValue === 'string'
+            ? Number(amountValue)
+            : 0;
+
+        return { date: dateValue, amount } satisfies SupabaseForecastPointRecord;
+      })
+      .filter((point): point is SupabaseForecastPointRecord => Boolean(point));
+
+    const horizonValue = raw['horizon_days'];
+    const historyValue = raw['history_days'];
+
+    const horizonDays =
+      typeof horizonValue === 'number'
+        ? horizonValue
+        : typeof horizonValue === 'string'
+        ? Number(horizonValue)
+        : undefined;
+
+    const historyDays =
+      typeof historyValue === 'number'
+        ? historyValue
+        : typeof historyValue === 'string'
+        ? Number(historyValue)
+        : undefined;
+
+    return {
+      generatedAt: typeof raw['generated_at'] === 'string' ? (raw['generated_at'] as string) : undefined,
+      horizonDays: Number.isFinite(horizonDays) ? (horizonDays as number) : undefined,
+      historyDays: Number.isFinite(historyDays) ? (historyDays as number) : undefined,
+      modelType: typeof raw['model_type'] === 'string' ? (raw['model_type'] as string) : undefined,
+      metadata: metadataRecord,
+      points,
+    };
   }
 
   private toBuffer(data: Buffer | Uint8Array | ArrayBuffer): Buffer {

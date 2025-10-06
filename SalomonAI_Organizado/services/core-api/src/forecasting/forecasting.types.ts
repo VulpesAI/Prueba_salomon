@@ -30,4 +30,5 @@ export interface ForecastingRequestOptions {
   horizonDays?: number;
   model?: string;
   refresh?: boolean;
+  forecastType?: string;
 }
