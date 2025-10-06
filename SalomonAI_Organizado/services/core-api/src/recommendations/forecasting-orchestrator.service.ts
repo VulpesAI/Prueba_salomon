@@ -49,7 +49,9 @@ export class ForecastingOrchestratorService {
   }
 
   private async callForecastingEngine(userId: string): Promise<ForecastEngineResponse> {
-    const url = new URL(`/forecasts/${encodeURIComponent(userId)}`, this.config!.baseUrl);
+    const baseUrl = this.getForecastingBaseUrl();
+
+    const url = new URL(`/forecasts/${encodeURIComponent(userId)}`, baseUrl);
 
     if (this.config?.defaultHorizonDays) {
       url.searchParams.set('horizon', String(this.config.defaultHorizonDays));
@@ -104,5 +106,14 @@ export class ForecastingOrchestratorService {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to persist forecast for user ${payload.user_id}: ${message}`);
     }
+  }
+
+  private getForecastingBaseUrl(): string {
+    const baseUrl = this.config?.baseUrl;
+    if (!baseUrl) {
+      throw new Error('Forecasting engine base URL is not configured.');
+    }
+
+    return baseUrl;
   }
 }

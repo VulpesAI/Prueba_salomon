@@ -21,6 +21,7 @@ export interface SupabaseConfig {
 export interface StatementsConfig {
   bucket: string;
   statusTopic: string;
+  uploadDir: string;
 }
 
 export interface ParsingEngineMessagingConfig {
@@ -131,7 +132,7 @@ const parseList = (value?: string): string[] => {
 
 export default (): CoreConfiguration => {
   const port = Number(process.env.PORT ?? 8080);
-  const parsingEngineTopic = process.env.PARSING_ENGINE_TOPIC ?? 'parsing-engine.statements';
+  const parsingEngineTopic = process.env.PARSING_ENGINE_TOPIC ?? 'statements.in';
   const parsingEngineBrokers = parseList(process.env.PARSING_ENGINE_KAFKA_BROKERS);
   const resultsTopic =
     process.env.PARSED_STATEMENTS_TOPIC ?? 'parsing-engine.parsed_statement';
@@ -182,6 +183,7 @@ export default (): CoreConfiguration => {
     statements: {
       bucket: process.env.STATEMENTS_BUCKET ?? 'statements',
       statusTopic: process.env.STATEMENTS_STATUS_TOPIC ?? 'parsing-engine.statements',
+      uploadDir: process.env.STATEMENTS_UPLOAD_DIR ?? '/uploads',
     },
     messaging: {
       parsingEngine: {
