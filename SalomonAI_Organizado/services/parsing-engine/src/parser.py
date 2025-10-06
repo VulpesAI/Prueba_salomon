@@ -8,6 +8,7 @@ import io
 import logging
 import re
 import tempfile
+import unicodedata
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -65,6 +66,114 @@ CSV_DATE_CANDIDATES = ("fecha", "date", "fecha transaccion", "transaction date")
 CSV_AMOUNT_CANDIDATES = ("monto", "amount", "cargo", "abono", "importe", "valor")
 CSV_DESCRIPTION_CANDIDATES = ("descripcion", "description", "detalle", "concepto")
 CSV_CATEGORY_CANDIDATES = ("categoria", "category", "segmento")
+
+CATEGORY_KEYWORDS: Dict[str, tuple[str, ...]] = {
+    "Alimentación": (
+        "supermercado",
+        "restaurant",
+        "restaurante",
+        "comida",
+        "delivery",
+        "cocina",
+        "mercado",
+        "lider",
+        "jumbo",
+        "tottus",
+        "unimarc",
+    ),
+    "Transporte": (
+        "uber",
+        "cabify",
+        "metro",
+        "bip",
+        "transporte",
+        "bus",
+        "micro",
+        "taxi",
+        "shell",
+        "copec",
+        "petrobras",
+        "bencina",
+        "gasolina",
+        "peaje",
+    ),
+    "Vivienda": (
+        "arriendo",
+        "renta",
+        "hipoteca",
+        "inmobiliaria",
+        "condominio",
+        "dividendo",
+        "luz",
+        "electricidad",
+        "agua",
+        "gas",
+        "aseo",
+        "contribuciones",
+    ),
+    "Servicios": (
+        "netflix",
+        "spotify",
+        "plan",
+        "telecom",
+        "telefon",
+        "internet",
+        "movistar",
+        "entel",
+        "claro",
+        "vtr",
+        "servicio",
+    ),
+    "Salud": (
+        "farmacia",
+        "salud",
+        "clinica",
+        "consulta",
+        "doctor",
+        "dentista",
+        "isapre",
+        "fonasa",
+    ),
+    "Educación": (
+        "colegio",
+        "universidad",
+        "matricula",
+        "curso",
+        "educacion",
+        "instituto",
+    ),
+    "Entretenimiento": (
+        "cine",
+        "teatro",
+        "evento",
+        "concierto",
+        "juego",
+        "gaming",
+        "suscrip",
+    ),
+    "Finanzas": (
+        "seguro",
+        "prima",
+        "comision",
+        "banco",
+        "interes",
+        "cuota",
+        "tarjeta",
+    ),
+    "Compras": (
+        "tienda",
+        "almacen",
+        "retail",
+        "falabella",
+        "paris",
+        "ripley",
+        "compra",
+        "shopping",
+    ),
+}
+
+DEFAULT_EXPENSE_CATEGORY = "Otros gastos"
+DEFAULT_INCOME_CATEGORY = "Ingresos"
 
 LINE_TRANSACTION_PATTERN = re.compile(
     r"^(?P<date>\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s+(?P<description>.+?)\s+(?P<amount>[+-]?[\d.,]+)\s*$"
@@ -197,6 +306,7 @@ class StatementParser:
             category = (str(row.get(category_header, "")) or "").strip() if category_header else ""
 
             amount = self._parse_amount(amount_value)
+            predicted_category = self._categorize(description, amount)
 
             if not date or not description or amount is None:
                 continue
@@ -210,8 +320,11 @@ class StatementParser:
                 "currency": self.default_currency,
             }
 
-            if category:
-                transaction["category"] = category
+            final_category = category or predicted_category
+            if final_category:
+                transaction["category"] = final_category
+            if category and predicted_category and category.lower() != predicted_category.lower():
+                transaction["predictedCategory"] = predicted_category
 
             metadata = {k: v for k, v in metadata.items() if k not in {date_header, amount_header, description_header}}
             if metadata:
@@ -234,6 +347,7 @@ class StatementParser:
             date = self._normalize_date(match.group("date"))
             amount = self._parse_amount(match.group("amount"))
             description = match.group("description").strip()
+            predicted_category = self._categorize(description, amount)
 
             if not date or amount is None or not description:
                 continue
@@ -246,6 +360,7 @@ class StatementParser:
                     "normalizedDescription": description,
                     "amount": amount,
                     "currency": self.default_currency,
+                    "category": predicted_category,
                 }
             )
 
@@ -348,6 +463,31 @@ class StatementParser:
             return round(float(value), 2)
         except ValueError:
             return None
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        normalized = unicodedata.normalize("NFD", value or "")
+        sanitized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+        return sanitized.lower()
+
+    def _categorize(self, description: str, amount: Optional[float]) -> str:
+        if not description:
+            return DEFAULT_INCOME_CATEGORY if amount and amount > 0 else DEFAULT_EXPENSE_CATEGORY
+
+        normalized = self._normalize_text(description)
+
+        for category, keywords in CATEGORY_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword in normalized:
+                    return category
+
+        if amount is not None and amount > 0:
+            return DEFAULT_INCOME_CATEGORY
+
+        if amount is not None and amount < 0:
+            return DEFAULT_EXPENSE_CATEGORY
+
+        return DEFAULT_EXPENSE_CATEGORY
 
     @staticmethod
     def _build_summary(transactions: List[dict]) -> dict:
