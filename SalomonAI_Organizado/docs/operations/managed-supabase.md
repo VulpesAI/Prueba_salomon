@@ -99,3 +99,28 @@ Si la conexión es exitosa deberías ver el prompt de PostgreSQL. En caso contra
 - Valida los tokens del frontend obteniéndolos a través de `supabase.auth.signInWithPassword` u otros flujos soportados por Supabase y reenvía el `access_token` al Core API.
 
 Con estos pasos ya puedes trabajar exclusivamente con la base de datos administrada sin desplegar el contenedor `postgres` local.
+
+## 8. Diagnóstico cuando las tablas no aparecen
+
+Si después de configurar las credenciales no ves las tablas creadas en Supabase, revisa lo siguiente antes de repetir la migración:
+
+1. **Confirma la llave usada**. El SDK debe inicializarse con la `service_role` (valor largo y secreto) para ejecutar operaciones administrativas. Las claves `anon` solo sirven para el frontend. Verifica tu `.env`:
+
+   ```dotenv
+   SUPABASE_URL=https://<tu-proyecto>.supabase.co
+   SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... # service_role
+   ```
+
+2. **Método de creación**. Supabase no crea tablas automáticamente. Usa alguno de estos caminos:
+
+   - Panel web → Table Editor → New Table.
+   - Editor SQL ejecutando `supabase/migrations/20240527120000_financial_schema.sql` o tus scripts personalizados.
+   - Llamadas explícitas desde el backend (solo funcionan si la tabla ya existe; los `insert` no crean esquemas nuevos).
+
+3. **Proyecto correcto**. Asegúrate de que `SUPABASE_URL` apunte al proyecto deseado. Copia la URL exacta desde **Project Settings → API** (ejemplo: `https://abcdxyz123.supabase.co`).
+
+4. **Scripts de inicialización**. Revisa si tu servicio tiene algún paso automático (`runMigrations`, `init_db.sql`, etc.). Si no existe, Supabase no generará tablas por ti.
+
+5. **Solución recomendada**. Mantén un script declarativo (`supabase/migrations/*.sql` o `scripts/init_db.sql`) y ejecútalo con `supabase db push` o desde el SQL Editor. Así puedes reproducir el esquema en cualquier ambiente.
+
+Esta lista te ayudará a detectar configuraciones incorrectas y asegurar que los entornos nuevos obtengan las tablas esperadas desde el primer despliegue.
