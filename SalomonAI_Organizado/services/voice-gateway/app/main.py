@@ -227,16 +227,57 @@ async def synthesize(
     clients: Dict[str, object] = Depends(get_clients),
 ) -> VoiceSynthesisResponse:
     tts: BaseTTSClient = clients["tts"]
-    provider_name = type(tts).__name__
+    provider_name = getattr(tts, "name", type(tts).__name__)
+
+    text = (payload.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="empty_text")
+    if len(text) > settings.tts_max_chars:
+        raise HTTPException(status_code=400, detail="text_too_long")
+
+    audio_format = (payload.format or settings.resolved_tts_format).lower()
+    if audio_format not in {"mp3", "wav"}:
+        raise HTTPException(status_code=400, detail="format_not_supported")
+
+    voice = payload.voice or settings.resolved_tts_voice
+    language = payload.language or settings.resolved_tts_language
+    speed = payload.speed if payload.speed is not None else settings.tts_default_speed
+    if speed <= 0:
+        raise HTTPException(status_code=400, detail="invalid_speed")
+
     start_time = time.perf_counter()
-    result = await tts.synthesize(payload.text, language=payload.language, voice=payload.voice)
+    try:
+        result = await tts.synthesize(
+            text=text,
+            language=language,
+            voice=voice,
+            audio_format=audio_format,
+            speed=speed,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - errores del proveedor
+        logger.exception("Error al sintetizar audio con %s: %s", provider_name, exc)
+        raise HTTPException(status_code=502, detail="tts_failed") from exc
+
     duration = time.perf_counter() - start_time
-    SYNTHESIS_TOTAL.labels(provider=provider_name).inc()
-    SYNTHESIS_LATENCY.labels(provider=provider_name).observe(duration)
+    provider_label = result.get("provider", provider_name)
+    SYNTHESIS_TOTAL.labels(provider=provider_label).inc()
+    SYNTHESIS_LATENCY.labels(provider=provider_label).observe(duration)
+
+    audio_base64 = result.get("audio_base64", "")
+    if not audio_base64:
+        raise HTTPException(status_code=502, detail="invalid_tts_response")
+    mime = result.get("mime", f"audio/{audio_format}")
+    duration_ms = result.get("duration_ms")
+    if duration_ms is None:
+        duration_ms = int(duration * 1000)
+
     return VoiceSynthesisResponse(
-        audio_base64=result.get("audio_base64", ""),
-        format=result.get("format", "audio/wav"),
-        provider=type(tts).__name__,
+        audio_base64=audio_base64,
+        mime=mime,
+        provider=provider_label,
+        duration_ms=duration_ms,
     )
 
 

@@ -44,6 +44,13 @@ class TranscriptionResult(TypedDict, total=False):
     raw: Dict[str, Any]
 
 
+class TtsResult(TypedDict, total=False):
+    audio_base64: str
+    mime: str
+    provider: str
+    duration_ms: int
+
+
 class STTProvider(ABC):
     name = "base"
     supports_streaming = False
@@ -207,45 +214,154 @@ class CoquiSttProvider(STTProvider):
 
 
 class BaseTTSClient(ABC):
+    name = "base"
+
     @abstractmethod
-    async def synthesize(self, text: str, language: str = "es-CL", voice: str | None = None) -> Dict[str, str]:
+    async def synthesize(
+        self,
+        text: str,
+        *,
+        language: str,
+        voice: str,
+        audio_format: str,
+        speed: float,
+    ) -> TtsResult:
         raise NotImplementedError
 
 
 class MockTTSClient(BaseTTSClient):
-    async def synthesize(self, text: str, language: str = "es-CL", voice: str | None = None) -> Dict[str, str]:
-        _ = (text, language, voice)
+    name = "mock"
+
+    async def synthesize(
+        self,
+        text: str,
+        *,
+        language: str,
+        voice: str,
+        audio_format: str,
+        speed: float,
+    ) -> TtsResult:
+        _ = (text, language, voice, audio_format, speed)
         await asyncio.sleep(0.1)
-        return {"audio_base64": _SILENCE_WAV_BASE64, "format": "audio/wav"}
+        return TtsResult(
+            audio_base64=_SILENCE_WAV_BASE64,
+            mime="audio/wav",
+            provider=self.name,
+            duration_ms=100,
+        )
 
 
 class OpenAITTSClient(BaseTTSClient):
+    name = "openai"
+
     def __init__(self) -> None:
         if not settings.resolved_openai_api_key:
             raise ValueError("OPENAI_API_KEY es obligatorio para usar el proveedor OpenAI")
         self._client = AsyncOpenAI(api_key=settings.resolved_openai_api_key)
         self._model = settings.openai_tts_model
+        self._default_voice = settings.openai_tts_voice
+        self._default_format = settings.openai_tts_format
 
-    async def synthesize(self, text: str, language: str = "es-CL", voice: str | None = None) -> Dict[str, str]:
+    async def synthesize(
+        self,
+        text: str,
+        *,
+        language: str,
+        voice: str,
+        audio_format: str,
+        speed: float,
+    ) -> TtsResult:
         _ = language
-        voice_id = voice or settings.openai_tts_voice
+        started = time.perf_counter()
+        fmt = audio_format or self._default_format
+        voice_id = voice or self._default_voice
+        request_kwargs: Dict[str, Any] = {
+            "model": self._model,
+            "voice": voice_id,
+            "input": text,
+            "format": fmt,
+        }
+        if speed and abs(speed - 1.0) > 1e-3:
+            request_kwargs["voice_settings"] = {"speaking_rate": speed}
+
         try:
-            response = await self._client.audio.speech.create(
-                model=self._model,
-                voice=voice_id,
-                input=text,
-                format=settings.openai_tts_format,
-            )
-            audio_bytes = await response.read()
+            response = await self._client.audio.speech.create(**request_kwargs)
         except Exception as exc:  # pragma: no cover - errores del SDK
             logger.error("Error de OpenAI TTS: %s", exc)
             raise
 
+        try:
+            if hasattr(response, "read"):
+                read_result = response.read()
+                audio_bytes = (
+                    await read_result if asyncio.iscoroutine(read_result) else read_result
+                )
+            elif isinstance(response, (bytes, bytearray)):
+                audio_bytes = bytes(response)
+            elif hasattr(response, "content"):
+                audio_bytes = response.content  # type: ignore[attr-defined]
+            else:
+                audio_bytes = bytes(response)
+        except Exception as exc:  # pragma: no cover - manejo defensivo
+            logger.error("No se pudo leer la respuesta de audio de OpenAI: %s", exc)
+            raise
+
+        duration_ms = int((time.perf_counter() - started) * 1000)
         audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
-        return {
-            "audio_base64": audio_base64,
-            "format": f"audio/{settings.openai_tts_format}",
-        }
+        return TtsResult(
+            audio_base64=audio_base64,
+            mime=f"audio/{fmt}",
+            provider=self.name,
+            duration_ms=duration_ms,
+        )
+
+
+class AwsPollyTTSClient(BaseTTSClient):
+    name = "aws"
+
+    async def synthesize(
+        self,
+        text: str,
+        *,
+        language: str,
+        voice: str,
+        audio_format: str,
+        speed: float,
+    ) -> TtsResult:  # pragma: no cover - stub
+        _ = (text, language, voice, audio_format, speed)
+        raise HTTPException(status_code=503, detail="aws_tts_not_configured")
+
+
+class GoogleTTSClient(BaseTTSClient):
+    name = "gcp"
+
+    async def synthesize(
+        self,
+        text: str,
+        *,
+        language: str,
+        voice: str,
+        audio_format: str,
+        speed: float,
+    ) -> TtsResult:  # pragma: no cover - stub
+        _ = (text, language, voice, audio_format, speed)
+        raise HTTPException(status_code=503, detail="google_tts_not_configured")
+
+
+class AzureTTSClient(BaseTTSClient):
+    name = "azure"
+
+    async def synthesize(
+        self,
+        text: str,
+        *,
+        language: str,
+        voice: str,
+        audio_format: str,
+        speed: float,
+    ) -> TtsResult:  # pragma: no cover - stub
+        _ = (text, language, voice, audio_format, speed)
+        raise HTTPException(status_code=503, detail="azure_tts_not_configured")
 
 
 @lru_cache()
@@ -273,5 +389,11 @@ def get_tts_client() -> BaseTTSClient:
         return MockTTSClient()
     if provider == "openai":
         return OpenAITTSClient()
+    if provider == "aws":
+        return AwsPollyTTSClient()
+    if provider in {"google", "gcp"}:
+        return GoogleTTSClient()
+    if provider == "azure":
+        return AzureTTSClient()
     logger.warning("TTS provider '%s' no implementado, usando Mock", provider)
     return MockTTSClient()

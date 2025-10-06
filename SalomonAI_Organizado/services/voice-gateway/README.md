@@ -26,3 +26,5 @@ Configura `VOICE_STT_PROVIDER` / `VOICE_TTS_PROVIDER` según el proveedor desead
 - Define `OPENAI_API_KEY`, `OPENAI_STT_MODEL` (por defecto `whisper-1`) y `OPENAI_STT_RESPONSE_FORMAT` (`text` o `verbose_json`).
 - El tamaño máximo se controla con `VOICE_MAX_AUDIO_SECONDS` y `VOICE_MAX_AUDIO_BYTES`.
 - Para TTS vía OpenAI define `OPENAI_TTS_MODEL`, `OPENAI_TTS_VOICE` y `OPENAI_TTS_FORMAT` (compatibles con las variables heredadas `VOICE_OPENAI_*`).
+- Controla los valores por defecto del endpoint `/voice/speech` con `VOICE_TTS_DEFAULT_VOICE`, `VOICE_TTS_DEFAULT_FORMAT`, `VOICE_TTS_DEFAULT_LANG`, `VOICE_TTS_SPEED` y `VOICE_TTS_MAX_CHARS`.
+- `VOICE_TTS_PROVIDER` soporta `openai` (predeterminado), con stubs disponibles para `aws`, `gcp` y `azure` que devuelven `503` hasta configurar credenciales reales.
