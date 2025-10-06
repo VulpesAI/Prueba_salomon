@@ -245,7 +245,10 @@ export default function TransactionsSummariesPage() {
     }
   }, [account, accountOptions])
 
-  const categories = summary?.categories ?? []
+  const categories = useMemo(
+    () => summary?.categories ?? [],
+    [summary?.categories]
+  )
 
   const filteredSummaries = useMemo(() => {
     if (!benchmark) {

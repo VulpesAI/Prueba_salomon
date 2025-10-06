@@ -16,6 +16,7 @@ import {
 import type {
   NotificationDigestSettings,
   NotificationSettingsResponse,
+  NotificationTemplateSettings,
   UserNotificationPreferences,
 } from "@/types/dashboard"
 
@@ -81,15 +82,56 @@ export const useNotificationSettings = () => {
     mutationFn: async (_, preferences) => updateNotificationPreferences(preferences),
   })
 
-  const templatesMutation = useApiMutation<UpdateTemplatesInput, Error, UpdateTemplatesInput>({
+  const templatesMutation = useApiMutation<
+    NotificationTemplateSettings[],
+    Error,
+    UpdateTemplatesInput
+  >({
     mutationFn: async (_, templates) => updateNotificationTemplates(templates),
-    onSuccess: (templates) => {
+    onSuccess: (updatedTemplates, variables) => {
       queryClient.setQueryData<NotificationSettingsResponse | undefined>(
         queryKeys.dashboard.notificationSettings(),
-        (previous) =>
-          previous
-            ? { ...previous, templates }
-            : { digest: null, channels: { email: true, push: true, sms: true, inApp: true }, templates }
+        (previous) => {
+          const mergeTemplates = () => {
+            if (updatedTemplates.length > 0) {
+              return updatedTemplates.map((template) => {
+                const previousTemplate = previous?.templates.find(
+                  (item) => item.id === template.id
+                )
+
+                return previousTemplate
+                  ? { ...previousTemplate, ...template }
+                  : template
+              })
+            }
+
+            if (previous) {
+              return previous.templates.map((template) => {
+                const updated = variables?.find((item) => item.id === template.id)
+                return updated
+                  ? { ...template, subject: updated.subject }
+                  : template
+              })
+            }
+
+            return (variables ?? []).map((template) => ({
+              id: template.id,
+              subject: template.subject,
+              name: template.id,
+              defaultSubject: template.subject,
+            }))
+          }
+
+          const nextTemplates = mergeTemplates()
+
+          return previous
+            ? { ...previous, templates: nextTemplates }
+            : {
+                digest: null,
+                channels: { email: true, push: true, sms: true, inApp: true },
+                templates: nextTemplates,
+              }
+        }
       )
     },
   })

@@ -26,7 +26,7 @@ export const useDashboardSummary = ({
   maxCategories,
   currency,
 }: UseDashboardSummaryOptions) => {
-  const summaryQuery = useApiQuery<DashboardSummaryResponse, Error, DashboardSummaryResponse | undefined>({
+  const summaryQuery = useApiQuery<DashboardSummaryResponse, Error>({
     queryKey: userId
       ? queryKeys.dashboard.summary({
           userId,
@@ -38,20 +38,18 @@ export const useDashboardSummary = ({
         })
       : ["dashboard", "summary", "anonymous"],
     queryFn: (_, context) =>
-      userId
-        ? getDashboardSummary(
-            {
-              userId,
-              accountId,
-              startDate,
-              endDate,
-              granularity,
-              maxCategories,
-              currency,
-            },
-            { signal: context.signal }
-          )
-        : Promise.resolve(undefined),
+      getDashboardSummary(
+        {
+          userId: userId!,
+          accountId,
+          startDate,
+          endDate,
+          granularity,
+          maxCategories,
+          currency,
+        },
+        { signal: context.signal }
+      ),
     enabled: Boolean(userId),
     staleTime: 60_000,
   })

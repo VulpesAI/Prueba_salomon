@@ -203,7 +203,14 @@ export default function TransactionsAdvancedSearchPage() {
   const [presetDescription, setPresetDescription] = useState("")
 
   const conditionKey = useMemo(
-    () => JSON.stringify(conditions.map(({ id, ...rest }) => rest)),
+    () =>
+      JSON.stringify(
+        conditions.map((condition) => {
+          const { id: _conditionId, ...rest } = condition
+          void _conditionId
+          return rest
+        })
+      ),
     [conditions]
   )
 
@@ -213,7 +220,7 @@ export default function TransactionsAdvancedSearchPage() {
 
   const searchFilters = useMemo(
     () => buildSearchFilters(conditions),
-    [conditionKey, conditions]
+    [conditions]
   )
 
   const searchParams = useMemo(() => {
@@ -237,14 +244,13 @@ export default function TransactionsAdvancedSearchPage() {
     }
 
     const { userId: _userId, page: _page, pageSize: _pageSize, ...rest } = searchParams
+    void _userId
+    void _page
+    void _pageSize
     return rest
   }, [searchParams])
 
-  const movementsQuery = useApiQuery<
-    MovementsResponse,
-    Error,
-    MovementsResponse | undefined
-  >({
+  const movementsQuery = useApiQuery<MovementsResponse, Error>({
     queryKey: searchParams
       ? queryKeys.movements.search({
           userId: searchParams.userId,
@@ -253,13 +259,8 @@ export default function TransactionsAdvancedSearchPage() {
           filters: filtersKey,
         })
       : ["movements", "search", "disabled"],
-    queryFn: async (_, context) => {
-      if (!searchParams) {
-        return undefined
-      }
-
-      return searchMovements(searchParams, { signal: context.signal })
-    },
+    queryFn: (_, context) =>
+      searchMovements(searchParams!, { signal: context.signal }),
     enabled: Boolean(searchParams),
     keepPreviousData: true,
   })
@@ -320,7 +321,10 @@ export default function TransactionsAdvancedSearchPage() {
     },
   })
 
-  const movements = movementsQuery.data?.data ?? []
+  const movements = useMemo(
+    () => movementsQuery.data?.data ?? [],
+    [movementsQuery.data]
+  )
   const stats = movementsQuery.data?.stats ?? {
     count: 0,
     totalAmount: 0,
@@ -446,7 +450,11 @@ export default function TransactionsAdvancedSearchPage() {
     await savePresetMutation.mutateAsync({
       name: presetName.trim(),
       description: presetDescription.trim() || null,
-      conditions: conditions.map(({ id, ...rest }) => rest),
+      conditions: conditions.map((condition) => {
+        const { id: _conditionId, ...rest } = condition
+        void _conditionId
+        return rest
+      }),
       logicOperator,
     })
   }

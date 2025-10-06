@@ -7,6 +7,7 @@ import type {
   DashboardSummaryResponse,
   NotificationDigestSettings,
   NotificationSettingsResponse,
+  NotificationTemplateSettings,
   RecommendationFeedbackPayload,
   UserNotificationPreferences,
 } from "@/types/dashboard"
@@ -360,6 +361,19 @@ export const updateNotificationChannels = async (
 export const updateNotificationTemplates = async (
   templates: Array<{ id: string; subject: string }>
 ) => {
-  await api.put("/api/v1/dashboard/notifications/templates", { templates })
-  return templates
+  const response = await api.put<NotificationTemplateSettings[]>(
+    "/api/v1/dashboard/notifications/templates",
+    { templates }
+  )
+
+  if (response.data) {
+    return response.data
+  }
+
+  return templates.map((template) => ({
+    id: template.id,
+    subject: template.subject,
+    name: template.id,
+    defaultSubject: template.subject,
+  }))
 }
