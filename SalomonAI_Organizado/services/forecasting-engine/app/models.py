@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date as date_type, datetime
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 
 class ForecastPoint(BaseModel):
-    date: date = Field(..., description="Date of the forecasted value")
+    date: date_type = Field(..., description="Date of the forecasted value")
     amount: float = Field(..., description="Predicted net cash flow for the date")
 
 

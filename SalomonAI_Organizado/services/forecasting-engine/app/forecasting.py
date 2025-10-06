@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Literal, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Literal, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -23,6 +23,14 @@ from .database import session_scope
 from .models import ForecastPoint, ForecastResponse
 
 logger = logging.getLogger(__name__)
+
+
+class ModelSelectionError(RuntimeError):
+    """Raised when no statistical model can be fitted."""
+
+    def __init__(self, message: str, errors: Optional[Dict[str, str]] = None) -> None:
+        super().__init__(message)
+        self.errors: Dict[str, str] = errors or {}
 
 
 class ForecastingEngine:
@@ -87,6 +95,35 @@ class ForecastingEngine:
         forecast = model.predict(future)["yhat"].to_numpy()
         return forecast
 
+    def _run_model(
+        self,
+        history: pd.Series,
+        horizon: int,
+        preference: Literal["auto", "arima", "prophet"],
+    ) -> Tuple[np.ndarray, Literal["arima", "prophet"], Dict[str, str]]:
+        if preference == "prophet":
+            return self._fit_prophet(history, horizon), "prophet", {}
+        if preference == "arima":
+            return self._fit_arima(history, horizon), "arima", {}
+
+        errors: Dict[str, str] = {}
+        if PROPHET_AVAILABLE:
+            try:
+                forecast = self._fit_prophet(history, horizon)
+                return forecast, "prophet", {}
+            except Exception as exc:  # pragma: no cover - executed in error scenarios
+                logger.warning("Auto-selection: Prophet failed for history with %s days: %s", len(history), exc)
+                errors["prophet"] = str(exc)
+
+        try:
+            forecast = self._fit_arima(history, horizon)
+            return forecast, "arima", errors
+        except Exception as exc:  # pragma: no cover - executed in error scenarios
+            logger.warning("Auto-selection: ARIMA failed for history with %s days: %s", len(history), exc)
+            errors["arima"] = str(exc)
+
+        raise ModelSelectionError("No forecasting model could be fitted", errors)
+
     def generate_forecast(
         self,
         user_id: str,
@@ -113,29 +150,49 @@ class ForecastingEngine:
                 "history_sum": float(history.sum()),
             }
 
-            try:
-                if model_preference == "prophet":
-                    forecast_values = self._fit_prophet(history, horizon_days)
-                elif model_preference == "arima":
-                    forecast_values = self._fit_arima(history, horizon_days)
-                else:
-                    if PROPHET_AVAILABLE and history_days >= self.settings.minimum_history_days:
-                        forecast_values = self._fit_prophet(history, horizon_days)
-                        model_used = "prophet"
-                    else:
-                        forecast_values = self._fit_arima(history, horizon_days)
-                        model_used = "arima"
-            except Exception as exc:
-                logger.warning("Falling back to heuristic projection for user %s: %s", user_id, exc)
+            if history_days < self.settings.minimum_history_days:
                 forecast_values = self._fallback_projection(history, horizon_days)
                 model_used = "auto"
-                metadata["reason"] = "model_error"
-                metadata["error"] = str(exc)
+                metadata.update(
+                    {
+                        "reason": "insufficient_history",
+                        "minimum_history_days": self.settings.minimum_history_days,
+                        "message": "Historial insuficiente para modelos estadísticos; se usó promedio móvil.",
+                    }
+                )
+            else:
+                try:
+                    forecast_values, selected_model, model_errors = self._run_model(
+                        history,
+                        horizon_days,
+                        model_preference,
+                    )
+                    model_used = selected_model
+                    if model_errors:
+                        metadata.setdefault("reason", "model_degraded")
+                        metadata["model_errors"] = model_errors
+                except ModelSelectionError as exc:
+                    logger.warning(
+                        "Falling back to heuristic projection for user %s after model selection failure: %s",
+                        user_id,
+                        exc,
+                    )
+                    forecast_values = self._fallback_projection(history, horizon_days)
+                    model_used = "auto"
+                    metadata["reason"] = "model_error"
+                    metadata["error"] = str(exc)
+                    if exc.errors:
+                        metadata["model_errors"] = exc.errors
+                except Exception as exc:  # pragma: no cover - unexpected failure path
+                    logger.warning("Falling back to heuristic projection for user %s: %s", user_id, exc)
+                    forecast_values = self._fallback_projection(history, horizon_days)
+                    model_used = "auto"
+                    metadata["reason"] = "model_error"
+                    metadata["error"] = str(exc)
 
-        generated_at = datetime.utcnow()
-        start_date = history.index.max().date() if not history.empty else datetime.utcnow().date()
+        generated_at = datetime.now(timezone.utc)
         if history.empty:
-            start_date = datetime.utcnow().date()
+            start_date = generated_at.date()
         else:
             start_date = history.index.max().date()
 
