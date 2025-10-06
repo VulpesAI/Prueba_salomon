@@ -21,7 +21,7 @@ describe('ResultsConnectorService (integration)', () => {
     const brokers = [container.getBootstrapServers()];
 
     const configStub = {
-      get: <T,>(key: string): T | undefined => {
+      get: <T>(key: string): T | undefined => {
         if (key === 'messaging.results') {
           return {
             enabled: true,

@@ -27,7 +27,8 @@ export class BelvoService {
 
   constructor(private readonly configService: ConfigService) {
     this.config =
-      this.configService.get<BelvoConfig>('belvo', { infer: true }) ?? ({
+      this.configService.get<BelvoConfig>('belvo', { infer: true }) ??
+      ({
         enabled: false,
         timeoutMs: 15000,
       } satisfies BelvoConfig);
@@ -73,7 +74,10 @@ export class BelvoService {
     };
   }
 
-  async triggerSynchronization(linkId: string, dto: TriggerBelvoSyncDto): Promise<BelvoSyncResponse> {
+  async triggerSynchronization(
+    linkId: string,
+    dto: TriggerBelvoSyncDto,
+  ): Promise<BelvoSyncResponse> {
     const scheduledAt = new Date().toISOString();
     const dataset = dto.dataset ?? 'transactions';
 

@@ -134,8 +134,7 @@ export default (): CoreConfiguration => {
   const port = Number(process.env.PORT ?? 8080);
   const parsingEngineTopic = process.env.PARSING_ENGINE_TOPIC ?? 'statements.in';
   const parsingEngineBrokers = parseList(process.env.PARSING_ENGINE_KAFKA_BROKERS);
-  const resultsTopic =
-    process.env.PARSED_STATEMENTS_TOPIC ?? 'parsing-engine.parsed_statement';
+  const resultsTopic = process.env.PARSED_STATEMENTS_TOPIC ?? 'statements.out';
   const resultsBrokers = parseList(
     process.env.PARSED_STATEMENTS_KAFKA_BROKERS ?? process.env.PARSING_ENGINE_KAFKA_BROKERS,
   );
@@ -148,8 +147,7 @@ export default (): CoreConfiguration => {
   const defaultPageSize = Number(process.env.MOVEMENTS_DEFAULT_PAGE_SIZE ?? 25);
   const maxPageSize = Number(process.env.MOVEMENTS_MAX_PAGE_SIZE ?? 200);
   const dashboardGranularity =
-    (process.env.DASHBOARD_DEFAULT_GRANULARITY as DashboardConfig['defaultGranularity']) ??
-    'month';
+    (process.env.DASHBOARD_DEFAULT_GRANULARITY as DashboardConfig['defaultGranularity']) ?? 'month';
   const dashboardMaxRange = Number(process.env.DASHBOARD_MAX_RANGE_IN_DAYS ?? 365);
   const recommendationUrl = process.env.RECOMMENDATION_ENGINE_URL ?? null;
   const recommendationTimeout = Number(process.env.RECOMMENDATION_ENGINE_TIMEOUT_MS ?? 5000);
@@ -207,8 +205,7 @@ export default (): CoreConfiguration => {
       defaultLocale: process.env.DEFAULT_LOCALE ?? 'es-CL',
     },
     belvo: {
-      enabled:
-        Boolean(process.env.BELVO_SECRET_ID) && Boolean(process.env.BELVO_SECRET_PASSWORD),
+      enabled: Boolean(process.env.BELVO_SECRET_ID) && Boolean(process.env.BELVO_SECRET_PASSWORD),
       baseUrl: process.env.BELVO_BASE_URL ?? 'https://sandbox.belvo.com',
       secretId: process.env.BELVO_SECRET_ID ?? undefined,
       secretPassword: process.env.BELVO_SECRET_PASSWORD ?? undefined,

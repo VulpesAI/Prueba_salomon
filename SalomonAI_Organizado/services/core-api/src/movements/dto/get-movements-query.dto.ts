@@ -1,13 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsISO8601,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsISO8601, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export enum MovementSortField {
   POSTED_AT = 'postedAt',

@@ -104,13 +104,15 @@ export class StatementsService {
         fileBuffer: file.buffer,
       });
 
-      const statementRecord = await this.supabaseService.insertStatement(this.buildStatementInsert({
-        statementId,
-        dto,
-        file,
-        accountId: account.id,
-        storagePath,
-      }));
+      const statementRecord = await this.supabaseService.insertStatement(
+        this.buildStatementInsert({
+          statementId,
+          dto,
+          file,
+          accountId: account.id,
+          storagePath,
+        }),
+      );
       statementCreated = true;
 
       await this.parsingEngineProducer.emitStatementQueued({

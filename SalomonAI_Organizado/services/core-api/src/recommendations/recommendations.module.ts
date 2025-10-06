@@ -11,7 +11,11 @@ import { RecommendationsIngestionService } from './recommendations-ingestion.ser
 @Module({
   imports: [ConfigModule, AuthModule],
   controllers: [RecommendationsController, RecommendationsIngestionController],
-  providers: [RecommendationsGatewayService, RecommendationsIngestionService, ForecastingOrchestratorService],
+  providers: [
+    RecommendationsGatewayService,
+    RecommendationsIngestionService,
+    ForecastingOrchestratorService,
+  ],
   exports: [RecommendationsIngestionService, ForecastingOrchestratorService],
 })
 export class RecommendationsModule {}

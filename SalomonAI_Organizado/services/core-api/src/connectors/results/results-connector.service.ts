@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Consumer, Kafka, KafkaMessage, Producer, logLevel } from 'kafkajs';
+import { Kafka, KafkaMessage, Producer, logLevel } from 'kafkajs';
 
 import { SupabaseService, ParsedStatementResultPayload } from '../../auth/supabase.service';
 import { ForecastingOrchestratorService } from '../../recommendations/forecasting-orchestrator.service';
@@ -8,11 +8,11 @@ import { RecommendationsIngestionService } from '../../recommendations/recommend
 import type { ResultsMessagingConfig } from '../../config/configuration';
 
 @Injectable()
-export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
+export class ResultsConnectorService implements OnModuleDestroy {
   private readonly logger = new Logger(ResultsConnectorService.name);
-  private consumer: Consumer | null = null;
-  private topic: string | null = null;
+  private readonly brokers: string[] = [];
   private producer: Producer | null = null;
+  private producerPromise: Promise<Producer | null> | null = null;
   private dlqTopic: string | null = null;
   private maxRetries = 3;
   private retryDelayMs = 1000;
@@ -22,9 +22,7 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
     private readonly supabaseService: SupabaseService,
     private readonly ingestionService: RecommendationsIngestionService,
     private readonly forecastingService: ForecastingOrchestratorService,
-  ) {}
-
-  async onModuleInit(): Promise<void> {
+  ) {
     const config = this.configService.get<ResultsMessagingConfig>('messaging.results', {
       infer: true,
     });
@@ -34,74 +32,36 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const kafka = new Kafka({
-      clientId: `core-api-results-${Math.random().toString(36).slice(2, 10)}`,
-      brokers: config.brokers,
-      logLevel: logLevel.NOTHING,
-    });
-
-    this.consumer = kafka.consumer({ groupId: config.groupId });
-    this.topic = config.topic;
     this.maxRetries = Math.max(config.maxRetries ?? 3, 0);
     this.retryDelayMs = Math.max(config.retryDelayMs ?? 1000, 0);
     this.dlqTopic = config.dlqTopic ?? null;
-
-    if (this.dlqTopic) {
-      this.producer = kafka.producer();
-      await this.producer.connect();
-      this.logger.log(`Results connector DLQ enabled on topic ${this.dlqTopic}`);
-    }
-
-    await this.consumer.connect();
-    await this.consumer.subscribe({ topic: config.topic, fromBeginning: false });
-
-    await this.consumer.run({
-      eachMessage: async ({ topic, message }) => {
-        await this.handleMessage(topic, message);
-      },
-    });
-
-    this.logger.log(`Results connector subscribed to topic ${config.topic}`);
+    this.brokers = config.brokers;
   }
 
   async onModuleDestroy(): Promise<void> {
-    await Promise.all([
-      (async () => {
-        if (!this.consumer) {
-          return;
-        }
+    if (!this.producer) {
+      return;
+    }
 
-        try {
-          await this.consumer.disconnect();
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unknown';
-          this.logger.error(`Failed to disconnect results connector: ${message}`);
-        }
-      })(),
-      (async () => {
-        if (!this.producer) {
-          return;
-        }
-
-        try {
-          await this.producer.disconnect();
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unknown';
-          this.logger.error(`Failed to disconnect results DLQ producer: ${message}`);
-        }
-      })(),
-    ]);
+    try {
+      await this.producer.disconnect();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown';
+      this.logger.error(`Failed to disconnect results DLQ producer: ${message}`);
+    } finally {
+      this.producer = null;
+    }
   }
 
-  private async handleMessage(topic: string, message: KafkaMessage): Promise<void> {
+  async handleKafkaMessage(topic: string, message: KafkaMessage, payload: unknown): Promise<void> {
     if (!message.value) {
       this.logger.warn('Received Kafka message without value for parsed statement connector.');
       return;
     }
 
     try {
-      const payload = JSON.parse(message.value.toString());
-      const normalized = this.normalizePayload(payload);
+      const rawPayload = this.extractPayload(payload, message);
+      const normalized = this.normalizePayload(rawPayload);
       await this.processMessageWithRetry(topic, message, normalized);
     } catch (error) {
       const messageText = error instanceof Error ? error.message : 'Unknown error';
@@ -146,10 +106,24 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private extractPayload(payload: unknown, message: KafkaMessage): Record<string, unknown> {
+    if (this.isRecord(payload)) {
+      return payload;
+    }
+
+    try {
+      return JSON.parse(message.value?.toString() ?? '{}') as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+
   private async afterStatementProcessed(payload: ParsedStatementResultPayload): Promise<void> {
     const userId = payload.userId;
     if (!userId) {
-      this.logger.warn('Received parsed statement result without userId; skipping ingestion hooks.');
+      this.logger.warn(
+        'Received parsed statement result without userId; skipping ingestion hooks.',
+      );
       return;
     }
 
@@ -159,7 +133,9 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
           await this.ingestionService.ingestUser(userId);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error';
-          this.logger.warn(`Failed to refresh recommendation ingestion for user ${userId}: ${message}`);
+          this.logger.warn(
+            `Failed to refresh recommendation ingestion for user ${userId}: ${message}`,
+          );
         }
       })(),
       (async () => {
@@ -173,64 +149,69 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
     ]);
   }
 
-  private normalizePayload(raw: Record<string, any>): ParsedStatementResultPayload {
-    const transactions: ParsedStatementResultPayload['transactions'] = Array.isArray(raw.transactions)
-      ? raw.transactions
-      : Array.isArray(raw.items)
-      ? raw.items
-      : [];
+  private normalizePayload(raw: Record<string, unknown>): ParsedStatementResultPayload {
+    const statementId = this.getStringValue(raw, ['statementId', 'statement_id', 'id']) ?? '';
+    const userId = this.getStringValue(raw, ['userId', 'user_id', 'owner_id']) ?? '';
+    const statusRaw = this.getStringValue(raw, ['status', 'result_status']) ?? 'completed';
+    const error = this.getStringValue(raw, ['error', 'error_message']);
+    const processedAt = this.getStringValue(raw, ['processedAt', 'processed_at', 'completed_at']);
+    const summarySource = this.toRecord(raw['summary'] ?? raw['statement'] ?? raw['meta'] ?? {});
+    const transactionsSource = this.resolveTransactions(raw);
+
+    const transactions = transactionsSource
+      .map((entry, index) => this.normalizeTransaction(entry, raw, statementId, index))
+      .filter(
+        (entry): entry is ParsedStatementResultPayload['transactions'][number] => entry !== null,
+      );
 
     return {
-      statementId: raw.statementId ?? raw.statement_id ?? raw.id,
-      userId: raw.userId ?? raw.user_id ?? raw.owner_id ?? '',
-      status: (raw.status ?? raw.result_status ?? 'completed').toLowerCase() === 'failed'
-        ? 'failed'
-        : 'completed',
-      error: raw.error ?? raw.error_message ?? null,
-      processedAt: raw.processedAt ?? raw.processed_at ?? raw.completed_at ?? null,
-      summary: this.normalizeSummary(raw.summary ?? raw.statement ?? raw.meta ?? {}),
-      transactions: transactions.map((transaction: Record<string, any>, index: number) => ({
-        id: transaction.id ?? transaction.uuid ?? undefined,
-        externalId: transaction.externalId ?? transaction.external_id ?? undefined,
-        postedAt: transaction.postedAt ?? transaction.posted_at ?? null,
-        description: transaction.description ?? null,
-        rawDescription: transaction.rawDescription ?? transaction.raw_description ?? null,
-        normalizedDescription:
-          transaction.normalizedDescription ?? transaction.normalized_description ?? null,
-        amount: transaction.amount ?? null,
-        currency: transaction.currency ?? raw.currency ?? null,
-        merchant: transaction.merchant ?? transaction.vendor ?? null,
-        category: transaction.category ?? transaction.segment ?? null,
-        status: transaction.status ?? null,
-        metadata: transaction.metadata ?? null,
-      })),
+      statementId,
+      userId,
+      status: statusRaw.toLowerCase() === 'failed' ? 'failed' : 'completed',
+      error: error ?? null,
+      processedAt: processedAt ?? null,
+      summary: this.normalizeSummary(summarySource),
+      transactions,
     };
   }
 
-  private normalizeSummary(raw: Record<string, any>) {
+  private normalizeSummary(raw: Record<string, unknown>) {
     return {
-      openingBalance: raw.openingBalance ?? raw.opening_balance ?? null,
-      closingBalance: raw.closingBalance ?? raw.closing_balance ?? null,
-      totalCredit: raw.totalCredit ?? raw.total_credit ?? null,
-      totalDebit: raw.totalDebit ?? raw.total_debit ?? null,
-      transactionCount: raw.transactionCount ?? raw.transaction_count ?? null,
-      periodStart: raw.periodStart ?? raw.period_start ?? null,
-      periodEnd: raw.periodEnd ?? raw.period_end ?? null,
-      statementDate: raw.statementDate ?? raw.statement_date ?? null,
-      checksum: raw.checksum ?? null,
+      openingBalance: this.getNumberValue(raw, ['openingBalance', 'opening_balance']),
+      closingBalance: this.getNumberValue(raw, ['closingBalance', 'closing_balance']),
+      totalCredit: this.getNumberValue(raw, ['totalCredit', 'total_credit']),
+      totalDebit: this.getNumberValue(raw, ['totalDebit', 'total_debit']),
+      transactionCount: this.getNumberValue(raw, ['transactionCount', 'transaction_count']),
+      periodStart: this.getStringValue(raw, ['periodStart', 'period_start']),
+      periodEnd: this.getStringValue(raw, ['periodEnd', 'period_end']),
+      statementDate: this.getStringValue(raw, ['statementDate', 'statement_date']),
+      checksum: this.getStringValue(raw, ['checksum']),
     };
   }
 
-  private async sendToDlq(topic: string, message: KafkaMessage, errorMessage: string): Promise<void> {
-    if (!this.producer || !this.dlqTopic) {
+  private async sendToDlq(
+    topic: string,
+    message: KafkaMessage,
+    errorMessage: string,
+  ): Promise<void> {
+    if (!this.dlqTopic) {
       this.logger.warn(
         `DLQ is not configured. Dropping message from topic ${topic} with error: ${errorMessage}`,
       );
       return;
     }
 
+    const producer = await this.getDlqProducer();
+
+    if (!producer) {
+      this.logger.warn(
+        `Failed to obtain DLQ producer. Dropping message from topic ${topic} with error: ${errorMessage}`,
+      );
+      return;
+    }
+
     try {
-      await this.producer.send({
+      await producer.send({
         topic: this.dlqTopic,
         messages: [
           {
@@ -254,5 +235,132 @@ export class ResultsConnectorService implements OnModuleInit, OnModuleDestroy {
     }
 
     await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private async getDlqProducer(): Promise<Producer | null> {
+    if (!this.dlqTopic || this.brokers.length === 0) {
+      return null;
+    }
+
+    if (this.producer) {
+      return this.producer;
+    }
+
+    if (this.producerPromise) {
+      return this.producerPromise;
+    }
+
+    const kafka = new Kafka({
+      clientId: `core-api-results-dlq-${Math.random().toString(36).slice(2, 10)}`,
+      brokers: this.brokers,
+      logLevel: logLevel.NOTHING,
+    });
+
+    const producer = kafka.producer();
+    this.producerPromise = producer
+      .connect()
+      .then(() => {
+        this.logger.log(`Results connector DLQ enabled on topic ${this.dlqTopic}`);
+        this.producer = producer;
+        return producer;
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(`Failed to connect results DLQ producer: ${message}`);
+        return null;
+      })
+      .finally(() => {
+        this.producerPromise = null;
+      });
+
+    return this.producerPromise;
+  }
+
+  private resolveTransactions(raw: Record<string, unknown>): unknown[] {
+    const primary = raw['transactions'];
+    if (Array.isArray(primary)) {
+      return primary;
+    }
+
+    const fallback = raw['items'];
+    if (Array.isArray(fallback)) {
+      return fallback;
+    }
+
+    return [];
+  }
+
+  private normalizeTransaction(
+    entry: unknown,
+    raw: Record<string, unknown>,
+    statementId: string,
+    index: number,
+  ): ParsedStatementResultPayload['transactions'][number] | null {
+    if (!this.isRecord(entry)) {
+      return null;
+    }
+
+    const currency =
+      this.getStringValue(entry, ['currency']) ?? this.getStringValue(raw, ['currency']);
+    const metadataValue = entry['metadata'];
+    const metadata = this.isRecord(metadataValue) ? metadataValue : null;
+
+    return {
+      id: this.getStringValue(entry, ['id', 'uuid']) ?? undefined,
+      externalId:
+        this.getStringValue(entry, ['externalId', 'external_id']) ??
+        this.getStringValue(entry, ['id', 'uuid']) ??
+        (statementId ? `${statementId}-${index}` : undefined),
+      postedAt: this.getStringValue(entry, ['postedAt', 'posted_at']),
+      description: this.getStringValue(entry, ['description']),
+      rawDescription: this.getStringValue(entry, ['rawDescription', 'raw_description']),
+      normalizedDescription: this.getStringValue(entry, [
+        'normalizedDescription',
+        'normalized_description',
+      ]),
+      amount: this.getNumberValue(entry, ['amount']),
+      currency: currency ?? null,
+      merchant: this.getStringValue(entry, ['merchant', 'vendor']),
+      category: this.getStringValue(entry, ['category', 'segment']),
+      status: this.getStringValue(entry, ['status']),
+      metadata,
+    };
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private toRecord(value: unknown): Record<string, unknown> {
+    return this.isRecord(value) ? value : {};
+  }
+
+  private getStringValue(source: Record<string, unknown>, keys: string[]): string | null {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.length > 0) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  private getNumberValue(source: Record<string, unknown>, keys: string[]): number | null {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+
+      if (typeof value === 'string' && value.trim().length > 0) {
+        const parsed = Number(value);
+        if (!Number.isNaN(parsed)) {
+          return parsed;
+        }
+      }
+    }
+
+    return null;
   }
 }

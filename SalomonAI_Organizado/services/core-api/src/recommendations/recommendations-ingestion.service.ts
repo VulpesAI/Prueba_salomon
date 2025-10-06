@@ -118,9 +118,7 @@ export class RecommendationsIngestionService implements OnModuleInit, OnModuleDe
 
     try {
       const transactions = await this.supabaseService.listUserTransactions(userId);
-      const normalized = transactions.map((transaction) =>
-        this.normalizeTransaction(transaction),
-      );
+      const normalized = transactions.map((transaction) => this.normalizeTransaction(transaction));
       this.transactions.set(userId, normalized);
       this.lastRefreshByUser.set(userId, new Date());
     } catch (error) {
@@ -133,7 +131,8 @@ export class RecommendationsIngestionService implements OnModuleInit, OnModuleDe
     const statement = transaction.statement;
     const account = transaction.account;
     const userId = statement?.user_id ?? 'unknown';
-    const timestamp = transaction.posted_at ?? statement?.statement_date ?? statement?.period_end ?? null;
+    const timestamp =
+      transaction.posted_at ?? statement?.statement_date ?? statement?.period_end ?? null;
     const category = (transaction.category ?? 'otros').toLowerCase();
     const description =
       transaction.description ??

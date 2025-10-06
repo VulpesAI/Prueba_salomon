@@ -211,21 +211,21 @@ export class SupabaseService {
     return (data as SupabaseAuthResponse | null)?.user ?? null;
   }
 
-  async uploadFile(
-    params: {
-      bucket: string;
-      path: string;
-      file: Buffer | Uint8Array | ArrayBuffer;
-      contentType?: string;
-    },
-  ): Promise<SupabaseStorageUploadResult> {
+  async uploadFile(params: {
+    bucket: string;
+    path: string;
+    file: Buffer | Uint8Array | ArrayBuffer;
+    contentType?: string;
+  }): Promise<SupabaseStorageUploadResult> {
     const client = this.getClientOrThrow();
     const fileBuffer = this.toBuffer(params.file);
 
-    const { data, error } = await client.storage.from(params.bucket).upload(params.path, fileBuffer, {
-      contentType: params.contentType,
-      upsert: true,
-    });
+    const { data, error } = await client.storage
+      .from(params.bucket)
+      .upload(params.path, fileBuffer, {
+        contentType: params.contentType,
+        upsert: true,
+      });
 
     if (error) {
       this.logger.error(`Failed to upload file to Supabase storage: ${error.message}`);
@@ -413,21 +413,23 @@ export class SupabaseService {
       checksum: summary.checksum ?? null,
     });
 
-    const transactions = (payload.transactions ?? []).map<SupabaseTransactionUpsert>((tx, index) => ({
-      statement_id: payload.statementId,
-      id: tx.id ?? tx.externalId ?? randomUUID(),
-      external_id: tx.externalId ?? tx.id ?? `${payload.statementId}-${index}`,
-      posted_at: tx.postedAt ?? null,
-      description: tx.description ?? null,
-      raw_description: tx.rawDescription ?? null,
-      normalized_description: tx.normalizedDescription ?? null,
-      amount: tx.amount ?? null,
-      currency: tx.currency ?? null,
-      merchant: tx.merchant ?? null,
-      category: tx.category ?? null,
-      status: tx.status ?? null,
-      metadata: tx.metadata ?? null,
-    }));
+    const transactions = (payload.transactions ?? []).map<SupabaseTransactionUpsert>(
+      (tx, index) => ({
+        statement_id: payload.statementId,
+        id: tx.id ?? tx.externalId ?? randomUUID(),
+        external_id: tx.externalId ?? tx.id ?? `${payload.statementId}-${index}`,
+        posted_at: tx.postedAt ?? null,
+        description: tx.description ?? null,
+        raw_description: tx.rawDescription ?? null,
+        normalized_description: tx.normalizedDescription ?? null,
+        amount: tx.amount ?? null,
+        currency: tx.currency ?? null,
+        merchant: tx.merchant ?? null,
+        category: tx.category ?? null,
+        status: tx.status ?? null,
+        metadata: tx.metadata ?? null,
+      }),
+    );
 
     if (transactions.length > 0) {
       await this.replaceStatementTransactions(payload.statementId, transactions);
@@ -448,12 +450,12 @@ export class SupabaseService {
       forecast_points: payload.points,
     };
 
-    const { error } = await client
-      .from('forecast_results')
-      .upsert(record, { onConflict: 'id' });
+    const { error } = await client.from('forecast_results').upsert(record, { onConflict: 'id' });
 
     if (error) {
-      this.logger.error(`Failed to upsert forecast result for user ${payload.userId}: ${error.message}`);
+      this.logger.error(
+        `Failed to upsert forecast result for user ${payload.userId}: ${error.message}`,
+      );
       throw error;
     }
   }

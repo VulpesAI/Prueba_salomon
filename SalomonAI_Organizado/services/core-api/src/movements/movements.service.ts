@@ -69,7 +69,10 @@ export class MovementsService {
     const config = this.configService.get<MovementsConfig>('movements', { infer: true });
     const resolvedPageSize = Number(query.pageSize ?? config?.defaultPageSize ?? 25);
     const maxPageSize = Number(config?.maxPageSize ?? 200);
-    const pageSize = Math.min(Number.isFinite(resolvedPageSize) ? resolvedPageSize : 25, maxPageSize);
+    const pageSize = Math.min(
+      Number.isFinite(resolvedPageSize) ? resolvedPageSize : 25,
+      maxPageSize,
+    );
     const resolvedPage = Number(query.page ?? 1);
     const page = Number.isFinite(resolvedPage) && resolvedPage > 0 ? resolvedPage : 1;
 
@@ -80,9 +83,9 @@ export class MovementsService {
     const total = sorted.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const offset = (page - 1) * pageSize;
-    const pageItems = sorted.slice(offset, offset + pageSize).map((transaction) =>
-      this.toContract(transaction),
-    );
+    const pageItems = sorted
+      .slice(offset, offset + pageSize)
+      .map((transaction) => this.toContract(transaction));
 
     const stats = this.computeStats(filtered);
 
@@ -230,17 +233,17 @@ export class MovementsService {
       id: transaction.id,
       statementId: statement?.id ?? transaction.statement_id,
       postedAt: transaction.posted_at ?? statement?.processed_at ?? null,
-      description: transaction.description ?? transaction.normalized_description ?? transaction.raw_description ?? null,
+      description:
+        transaction.description ??
+        transaction.normalized_description ??
+        transaction.raw_description ??
+        null,
       amount,
-      currency: transaction.currency ?? accountRecord?.currency ?? statement?.account?.currency ?? null,
+      currency:
+        transaction.currency ?? accountRecord?.currency ?? statement?.account?.currency ?? null,
       merchant: transaction.merchant ?? null,
       category: transaction.category ?? null,
-      type:
-        amount === null
-          ? 'unknown'
-          : amount >= 0
-          ? 'credit'
-          : 'debit',
+      type: amount === null ? 'unknown' : amount >= 0 ? 'credit' : 'debit',
       account: accountRecord
         ? {
             id: accountRecord.id,

@@ -35,7 +35,9 @@ export class ForecastingOrchestratorService {
 
   async generateForecast(userId: string): Promise<void> {
     if (!this.config?.baseUrl || !this.config.enabled) {
-      this.logger.debug('Forecasting engine is disabled or not configured. Skipping forecast generation.');
+      this.logger.debug(
+        'Forecasting engine is disabled or not configured. Skipping forecast generation.',
+      );
       return;
     }
 
@@ -66,10 +68,15 @@ export class ForecastingOrchestratorService {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(`Forecasting engine responded with ${response.status}: ${text || response.statusText}`);
+        throw new Error(
+          `Forecasting engine responded with ${response.status}: ${text || response.statusText}`,
+        );
       }
 
       const payload = (await response.json()) as ForecastEngineResponse;

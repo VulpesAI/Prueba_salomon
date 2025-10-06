@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 
 import { RecommendationsIngestionService } from '../recommendations-ingestion.service';
+import { SupabaseService } from '../../auth/supabase.service';
 
 describe('RecommendationsIngestionService', () => {
   const baseTransaction = {
@@ -32,7 +33,7 @@ describe('RecommendationsIngestionService', () => {
   } as const;
 
   const createService = (override?: Partial<ConfigService>) => {
-    const supabaseMock = {
+    const supabaseMock: jest.Mocked<Pick<SupabaseService, 'isEnabled' | 'listUserTransactions'>> = {
       isEnabled: jest.fn().mockReturnValue(true),
       listUserTransactions: jest.fn().mockResolvedValue([baseTransaction]),
     };
@@ -42,7 +43,10 @@ describe('RecommendationsIngestionService', () => {
       ...(override ?? {}),
     } as unknown as ConfigService;
 
-    const service = new RecommendationsIngestionService(supabaseMock as any, configService);
+    const service = new RecommendationsIngestionService(
+      supabaseMock as unknown as SupabaseService,
+      configService,
+    );
     return { service, supabaseMock };
   };
 
