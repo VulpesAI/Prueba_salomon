@@ -119,6 +119,7 @@ export type UserNotificationPreferences = {
   email?: boolean
   push?: boolean
   sms?: boolean
+  inApp?: boolean
   mutedEvents?: { key: string; until?: string | null }[]
 }
 
@@ -130,4 +131,66 @@ export type DashboardNotificationsResponse = {
 export type RecommendationFeedbackPayload = {
   recommendationId: string
   feedback: "positive" | "negative"
+}
+
+export type DashboardSummaryTotals = {
+  inflow: number
+  outflow: number
+  net: number
+  currency: string
+}
+
+export type DashboardSummaryCategory = {
+  category: string
+  total: number
+  percentage: number
+}
+
+export type DashboardSummaryAccount = {
+  accountId: string
+  name: string | null
+  institution: string | null
+  currency: string | null
+  inflow: number
+  outflow: number
+  closingBalance: number | null
+}
+
+export type DashboardSummaryTimelinePoint = {
+  period: string
+  inflow: number
+  outflow: number
+  net: number
+}
+
+export type DashboardSummaryResponse = {
+  totals: DashboardSummaryTotals
+  categories: DashboardSummaryCategory[]
+  accounts: DashboardSummaryAccount[]
+  timeline: DashboardSummaryTimelinePoint[]
+  granularity: "day" | "week" | "month"
+  range: {
+    start: string | null
+    end: string | null
+  }
+}
+
+export type NotificationDigestSettings = {
+  summaryName: string
+  frequency: string
+  sendTime: string
+  recipients: string[]
+}
+
+export type NotificationTemplateSettings = {
+  id: string
+  name: string
+  subject: string
+  defaultSubject: string
+}
+
+export type NotificationSettingsResponse = {
+  digest: NotificationDigestSettings | null
+  channels: Required<Pick<UserNotificationPreferences, "email" | "push" | "sms" | "inApp">>
+  templates: NotificationTemplateSettings[]
 }

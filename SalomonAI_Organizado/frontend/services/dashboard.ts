@@ -4,6 +4,9 @@ import type {
   DashboardIntelligenceResponse,
   DashboardNotificationsResponse,
   DashboardOverviewResponse,
+  DashboardSummaryResponse,
+  NotificationDigestSettings,
+  NotificationSettingsResponse,
   RecommendationFeedbackPayload,
   UserNotificationPreferences,
 } from "@/types/dashboard"
@@ -273,6 +276,7 @@ export const getDashboardNotifications = async ({
         email: true,
         push: true,
         sms: false,
+        inApp: true,
         mutedEvents: [{ key: "marketing", until: null }],
       },
     }
@@ -284,17 +288,78 @@ export const getDashboardNotifications = async ({
 export const updateNotificationPreferences = async (
   preferences: UserNotificationPreferences
 ) => {
-  try {
-    await api.put("/api/v1/dashboard/notifications/preferences", preferences)
-  } catch (error) {
-    logFallbackWarning("Failed to persist notification preferences", error)
-  }
+  const response = await api.put<UserNotificationPreferences>(
+    "/api/v1/dashboard/notifications/preferences",
+    preferences
+  )
 
-  return preferences
+  return response.data ?? preferences
 }
 
 export const sendDashboardRecommendationFeedback = async (
   payload: RecommendationFeedbackPayload
 ) => {
   await api.post("/api/v1/dashboard/recommendations/feedback", payload)
+}
+
+export const getDashboardSummary = async (
+  params: {
+    userId: string
+    accountId?: string
+    startDate?: string
+    endDate?: string
+    granularity?: "day" | "week" | "month"
+    maxCategories?: number
+    currency?: string
+  },
+  { signal }: RequestOptions = {}
+) => {
+  const response = await api.get<DashboardSummaryResponse>(
+    "/api/v1/dashboard/summary",
+    {
+      params,
+      signal,
+    }
+  )
+
+  return response.data
+}
+
+export const getNotificationSettings = async ({
+  signal,
+}: RequestOptions = {}) => {
+  const response = await api.get<NotificationSettingsResponse>(
+    "/api/v1/dashboard/notifications/settings",
+    { signal }
+  )
+
+  return response.data
+}
+
+export const updateNotificationDigest = async (
+  digest: NotificationDigestSettings
+) => {
+  const response = await api.put<NotificationDigestSettings>(
+    "/api/v1/dashboard/notifications/digest",
+    digest
+  )
+
+  return response.data ?? digest
+}
+
+export const updateNotificationChannels = async (
+  channels: Required<Pick<UserNotificationPreferences, "email" | "push" | "sms" | "inApp">>
+) => {
+  const response = await api.put<Required<
+    Pick<UserNotificationPreferences, "email" | "push" | "sms" | "inApp">
+  >>("/api/v1/dashboard/notifications/channels", channels)
+
+  return response.data ?? channels
+}
+
+export const updateNotificationTemplates = async (
+  templates: Array<{ id: string; subject: string }>
+) => {
+  await api.put("/api/v1/dashboard/notifications/templates", { templates })
+  return templates
 }

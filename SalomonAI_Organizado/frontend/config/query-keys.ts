@@ -11,6 +11,36 @@ export const queryKeys = {
     overview: (() => ["dashboard", "overview"]) satisfies QueryKeyFactory<[]>,
     intelligence: (() => ["dashboard", "intelligence"]) satisfies QueryKeyFactory<[]>,
     notifications: (() => ["dashboard", "notifications"]) satisfies QueryKeyFactory<[]>,
+    notificationSettings: (() =>
+      ["dashboard", "notification-settings"]) satisfies QueryKeyFactory<[]>,
+    summary: ((params: {
+      userId: string
+      accountId?: string | null
+      startDate?: string | null
+      endDate?: string | null
+      granularity?: "day" | "week" | "month" | null
+      maxCategories?: number | null
+    }) => [
+      "dashboard",
+      "summary",
+      {
+        userId: params.userId,
+        accountId: params.accountId ?? null,
+        startDate: params.startDate ?? null,
+        endDate: params.endDate ?? null,
+        granularity: params.granularity ?? null,
+        maxCategories: params.maxCategories ?? null,
+      },
+    ]) satisfies QueryKeyFactory<[
+      {
+        userId: string
+        accountId?: string | null
+        startDate?: string | null
+        endDate?: string | null
+        granularity?: "day" | "week" | "month" | null
+        maxCategories?: number | null
+      }
+    ]>,
     transactionsPage: ((page: number) => [
       "dashboard",
       "transactions",
@@ -19,6 +49,38 @@ export const queryKeys = {
   },
   user: {
     profile: (() => ["user", "profile"]) satisfies QueryKeyFactory<[]>,
+  },
+  auth: {
+    sessions: (() => ["auth", "sessions"]) satisfies QueryKeyFactory<[]>,
+  },
+  movements: {
+    search: ((params: {
+      userId: string
+      page: number
+      pageSize: number
+      filters: Record<string, unknown>
+    }) => [
+      "movements",
+      "search",
+      {
+        userId: params.userId,
+        page: params.page,
+        pageSize: params.pageSize,
+        filters: params.filters,
+      },
+    ]) satisfies QueryKeyFactory<[
+      {
+        userId: string
+        page: number
+        pageSize: number
+        filters: Record<string, unknown>
+      }
+    ]>,
+    presets: ((userId: string) => [
+      "movements",
+      "presets",
+      { userId },
+    ]) satisfies QueryKeyFactory<[string]>,
   },
   statements: {
     list: (() => ["statements", "list"]) satisfies QueryKeyFactory<[]>,

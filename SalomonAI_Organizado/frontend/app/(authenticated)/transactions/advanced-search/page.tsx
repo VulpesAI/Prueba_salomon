@@ -1,14 +1,15 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowUpRight, Download, Plus, Save, X } from "lucide-react"
+import { ArrowUpRight, Download, Loader2, Plus, Save, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Pagination,
   PaginationContent,
@@ -27,171 +28,376 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useApiMutation, useApiQuery } from "@/hooks/use-api"
+import { useAuth } from "@/context/AuthContext"
+import { queryKeys } from "@/config/query-keys"
+import {
+  createMovementPreset,
+  getMovementPresets,
+  searchMovements,
+  type MovementsSearchParams,
+} from "@/services/movements"
+import type {
+  MovementCondition,
+  MovementConditionField,
+  MovementConditionOperator,
+  MovementPreset,
+  MovementPresetsResponse,
+  MovementsResponse,
+} from "@/types/movements"
+import { useToast } from "@/hooks/use-toast"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { esCL } from "@/i18n/es-CL"
 import { formatCurrency, formatDate } from "@/lib/intl"
 
 const t = esCL.transactions.advancedSearch
 
-const mockResults = [
+type ConditionState = MovementCondition & { id: string }
+
+const FIELD_CONFIG: Array<{
+  value: MovementConditionField
+  label: string
+  operators: MovementConditionOperator[]
+  placeholder: string
+}> = [
   {
-    id: "res-001",
-    description: "Pago arriendo departamento",
-    date: "2024-03-12",
-    amount: -550_000,
-    category: "Arriendo",
+    value: "amount",
+    label: "Monto",
+    operators: ["gt", "lt", "eq", "between"],
+    placeholder: "Ej: 50000 o 10000,50000",
   },
   {
-    id: "res-002",
-    description: "Compra supermercado Lider",
-    date: "2024-03-10",
-    amount: -86_500,
-    category: "Supermercado",
+    value: "description",
+    label: "Descripción",
+    operators: ["contains"],
+    placeholder: "Ej: supermercado",
   },
   {
-    id: "res-003",
-    description: "Suscripción streaming familiar",
-    date: "2024-03-06",
-    amount: -12_990,
-    category: "Suscripciones",
+    value: "category",
+    label: "Categoría",
+    operators: ["contains"],
+    placeholder: "Ej: Transporte",
   },
   {
-    id: "res-004",
-    description: "Recarga tarjeta Bip!",
-    date: "2024-03-04",
-    amount: -5_000,
-    category: "Transporte",
+    value: "merchant",
+    label: "Comercio",
+    operators: ["contains"],
+    placeholder: "Ej: Starbucks",
   },
   {
-    id: "res-005",
-    description: "Depósito sueldo",
-    date: "2024-03-01",
-    amount: 1_650_000,
-    category: "Ingresos",
+    value: "postedAt",
+    label: "Fecha",
+    operators: ["between"],
+    placeholder: "YYYY-MM-DD, YYYY-MM-DD",
   },
 ]
 
-const savedSegments = t.segments.items
+const OPERATOR_LABELS: Record<MovementConditionOperator, string> = {
+  gt: ">",
+  lt: "<",
+  eq: "=",
+  contains: "contiene",
+  between: "entre",
+}
 
-const conditionFields = t.conditions.fields
-const operators = t.conditions.operators
+const DEFAULT_PAGE_SIZE = 10
+
+const createConditionId = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `condition-${Math.random().toString(36).slice(2)}`
+
+const buildSearchFilters = (conditions: ConditionState[]) => {
+  const filters: Partial<MovementsSearchParams> = {}
+
+  for (const condition of conditions) {
+    const value = condition.value.trim()
+    if (!value) {
+      continue
+    }
+
+    if (condition.field === "amount") {
+      if (condition.operator === "between") {
+        const [min, max] = value.split(",").map((item) => Number(item.trim()))
+        if (!Number.isNaN(min)) {
+          filters.minAmount = min
+        }
+        if (!Number.isNaN(max)) {
+          filters.maxAmount = max
+        }
+        continue
+      }
+
+      const numericValue = Number(value)
+      if (Number.isNaN(numericValue)) {
+        continue
+      }
+
+      if (condition.operator === "gt") {
+        filters.minAmount = numericValue
+      } else if (condition.operator === "lt") {
+        filters.maxAmount = numericValue
+      } else if (condition.operator === "eq") {
+        filters.minAmount = numericValue
+        filters.maxAmount = numericValue
+      }
+      continue
+    }
+
+    if (condition.field === "postedAt") {
+      const [start, end] = value.split(",").map((item) => item.trim())
+      if (start) {
+        filters.startDate = start
+      }
+      if (end) {
+        filters.endDate = end
+      }
+      continue
+    }
+
+    if (condition.field === "description") {
+      filters.search = value
+      continue
+    }
+
+    if (condition.field === "category") {
+      filters.category = value
+      continue
+    }
+
+    if (condition.field === "merchant") {
+      filters.merchant = value
+    }
+  }
+
+  return filters
+}
 
 export default function TransactionsAdvancedSearchPage() {
-  const [conditions, setConditions] = useState([
-    { id: "cond-1", field: "Monto", operator: ">", value: "5000" },
-    { id: "cond-2", field: "Categoría", operator: "no contiene", value: "Ingresos" },
+  const { user } = useAuth()
+  const userId = user?.id ?? null
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  const [conditions, setConditions] = useState<ConditionState[]>([
+    { id: createConditionId(), field: "amount", operator: "gt", value: "5000" },
+    { id: createConditionId(), field: "category", operator: "contains", value: "Ingresos" },
   ])
   const [logicOperator, setLogicOperator] = useState<"AND" | "OR">("AND")
   const [selectedRows, setSelectedRows] = useState<string[]>([])
   const [page, setPage] = useState(1)
-  const pageSize = 3
+  const pageSize = DEFAULT_PAGE_SIZE
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
+  const [presetName, setPresetName] = useState("")
+  const [presetDescription, setPresetDescription] = useState("")
 
-  const filteredResults = useMemo(() => {
-    const evaluateCondition = (
-      result: (typeof mockResults)[number],
-      condition: (typeof conditions)[number],
-    ) => {
-      const value = condition.value.trim()
-      if (!value) {
-        return true
-      }
+  const conditionKey = useMemo(
+    () => JSON.stringify(conditions.map(({ id, ...rest }) => rest)),
+    [conditions]
+  )
 
-      switch (condition.field) {
-        case "Monto": {
-          const amount = result.amount
-          if (condition.operator === "entre") {
-            const [min, max] = value.split(",").map((item) => Number(item.trim()))
-            if (Number.isNaN(min) || Number.isNaN(max)) {
-              return true
-            }
-            return amount >= min && amount <= max
-          }
+  useEffect(() => {
+    setPage(1)
+  }, [conditionKey, userId])
 
-          const parsedValue = Number(value)
-          if (Number.isNaN(parsedValue)) {
-            return true
-          }
+  const searchFilters = useMemo(
+    () => buildSearchFilters(conditions),
+    [conditionKey, conditions]
+  )
 
-          if (condition.operator === ">") {
-            return amount > parsedValue
-          }
-          if (condition.operator === "<") {
-            return amount < parsedValue
-          }
-
-          return amount === parsedValue
-        }
-        case "Descripción": {
-          const description = result.description.toLowerCase()
-          if (condition.operator === "no contiene") {
-            return !description.includes(value.toLowerCase())
-          }
-          return description.includes(value.toLowerCase())
-        }
-        case "Categoría": {
-          const category = result.category.toLowerCase()
-          if (condition.operator === "no contiene") {
-            return !category.includes(value.toLowerCase())
-          }
-          return category.includes(value.toLowerCase())
-        }
-        case "Fecha": {
-          if (condition.operator === "entre") {
-            const [start, end] = value.split(",").map((item) => item.trim())
-            if (!start || !end) {
-              return true
-            }
-            const dateValue = new Date(result.date)
-            return dateValue >= new Date(start) && dateValue <= new Date(end)
-          }
-
-          return result.date.includes(value)
-        }
-        default:
-          return true
-      }
+  const searchParams = useMemo(() => {
+    if (!userId) {
+      return null
     }
 
-    const evaluator = logicOperator === "AND" ? "every" : "some"
+    return {
+      userId,
+      page,
+      pageSize,
+      sortBy: "postedAt" as MovementsSearchParams["sortBy"],
+      sortDirection: "desc" as MovementsSearchParams["sortDirection"],
+      ...searchFilters,
+    }
+  }, [userId, page, pageSize, searchFilters])
 
-    return mockResults.filter((result) => {
-      if (conditions.length === 0) {
-        return true
+  const filtersKey = useMemo(() => {
+    if (!searchParams) {
+      return {}
+    }
+
+    const { userId: _userId, page: _page, pageSize: _pageSize, ...rest } = searchParams
+    return rest
+  }, [searchParams])
+
+  const movementsQuery = useApiQuery<
+    MovementsResponse,
+    Error,
+    MovementsResponse | undefined
+  >({
+    queryKey: searchParams
+      ? queryKeys.movements.search({
+          userId: searchParams.userId,
+          page: searchParams.page,
+          pageSize: searchParams.pageSize,
+          filters: filtersKey,
+        })
+      : ["movements", "search", "disabled"],
+    queryFn: async (_, context) => {
+      if (!searchParams) {
+        return undefined
       }
 
-      return conditions[evaluator]((condition) => evaluateCondition(result, condition))
-    })
-    // TODO: Sustituir este filtro mock por la llamada real al servicio de búsqueda avanzada
-  }, [conditions, logicOperator])
+      return searchMovements(searchParams, { signal: context.signal })
+    },
+    enabled: Boolean(searchParams),
+    keepPreviousData: true,
+  })
 
-  const totalPages = Math.max(1, Math.ceil(filteredResults.length / pageSize))
-  const paginatedResults = filteredResults.slice((page - 1) * pageSize, page * pageSize)
+  const presetsQuery = useApiQuery<
+    MovementPresetsResponse,
+    Error,
+    MovementPresetsResponse | undefined
+  >({
+    queryKey: userId
+      ? queryKeys.movements.presets(userId)
+      : ["movements", "presets", "disabled"],
+    queryFn: (_, context) =>
+      userId
+        ? getMovementPresets(userId, { signal: context.signal })
+        : Promise.resolve({ presets: [] }),
+    enabled: Boolean(userId),
+  })
 
-  const addCondition = () => {
+  const savePresetMutation = useApiMutation<
+    MovementPreset,
+    Error,
+    { name: string; description?: string | null; conditions: MovementCondition[]; logicOperator: "AND" | "OR" }
+  >({
+    mutationFn: async (_, variables) => {
+      if (!userId) {
+        throw new Error("Debes iniciar sesión para guardar tus vistas.")
+      }
+
+      return createMovementPreset({
+        userId,
+        name: variables.name,
+        description: variables.description ?? null,
+        logicOperator: variables.logicOperator,
+        conditions: variables.conditions,
+      })
+    },
+    onSuccess: (preset) => {
+      setIsSaveDialogOpen(false)
+      setPresetName("")
+      setPresetDescription("")
+      toast({
+        title: "Segmento guardado",
+        description: `Registramos "${preset.name}" en tus vistas guardadas.`,
+      })
+      if (userId) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.movements.presets(userId),
+        })
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "No pudimos guardar el segmento",
+        description: error.message || "Intenta nuevamente en unos segundos.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const movements = movementsQuery.data?.data ?? []
+  const stats = movementsQuery.data?.stats ?? {
+    count: 0,
+    totalAmount: 0,
+    inflow: 0,
+    outflow: 0,
+    averageAmount: 0,
+  }
+  const pagination = movementsQuery.data?.pagination ?? {
+    page: 1,
+    pageSize,
+    total: 0,
+    totalPages: 1,
+  }
+  const totalPages = pagination.totalPages
+
+  useEffect(() => {
+    setSelectedRows([])
+  }, [pagination.page, conditionKey])
+
+  const presets = presetsQuery.data?.presets ?? []
+  const presetsError = presetsQuery.error
+    ? presetsQuery.error.message || "No pudimos recuperar tus segmentos guardados."
+    : null
+
+  const movementsError = movementsQuery.error
+    ? movementsQuery.error.message || "No pudimos obtener los movimientos."
+    : null
+
+  const handleAddCondition = useCallback(() => {
     setConditions((previous) => [
       ...previous,
-      { id: `cond-${previous.length + 1}`, field: "Descripción", operator: "contiene", value: "" },
+      { id: createConditionId(), field: "description", operator: "contains", value: "" },
     ])
-  }
+  }, [])
 
-  const updateCondition = (id: string, key: "field" | "operator" | "value", value: string) => {
-    setConditions((previous) =>
-      previous.map((condition) =>
-        condition.id === id
-          ? {
+  const handleUpdateCondition = useCallback(
+    (id: string, key: "field" | "operator" | "value", value: string) => {
+      setConditions((previous) =>
+        previous.map((condition) => {
+          if (condition.id !== id) {
+            return condition
+          }
+
+          if (key === "field") {
+            const nextField = value as MovementConditionField
+            const config = FIELD_CONFIG.find((item) => item.value === nextField)
+            const nextOperator = config?.operators[0] ?? condition.operator
+            return {
               ...condition,
-              [key]: value,
+              field: nextField,
+              operator: nextOperator,
+              value: "",
             }
-          : condition,
-      ),
-    )
-  }
+          }
 
-  const removeCondition = (id: string) => {
+          if (key === "operator") {
+            return {
+              ...condition,
+              operator: value as MovementConditionOperator,
+            }
+          }
+
+          return {
+            ...condition,
+            value,
+          }
+        })
+      )
+    },
+    []
+  )
+
+  const handleRemoveCondition = useCallback((id: string) => {
     setConditions((previous) => previous.filter((condition) => condition.id !== id))
-  }
+  }, [])
 
-  const toggleRowSelection = (id: string, checked: boolean) => {
+  const toggleRowSelection = useCallback((id: string, checked: boolean) => {
     setSelectedRows((previous) => {
       if (checked) {
         return [...previous, id]
@@ -199,16 +405,83 @@ export default function TransactionsAdvancedSearchPage() {
 
       return previous.filter((rowId) => rowId !== id)
     })
-  }
+  }, [])
 
-  const toggleAllRows = (checked: boolean) => {
-    if (checked) {
-      setSelectedRows(paginatedResults.map((result) => result.id))
+  const toggleAllRows = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        setSelectedRows(movements.map((movement) => movement.id))
+        return
+      }
+
+      setSelectedRows([])
+    },
+    [movements]
+  )
+
+  const conditionSummary = useMemo(() => {
+    if (conditions.length === 0) {
+      return ""
+    }
+
+    return conditions
+      .map((condition) => {
+        const fieldLabel = FIELD_CONFIG.find((item) => item.value === condition.field)?.label ?? condition.field
+        const operatorLabel = OPERATOR_LABELS[condition.operator]
+        return `${fieldLabel} ${operatorLabel} ${condition.value}`
+      })
+      .join(` ${logicOperator} `)
+  }, [conditions, logicOperator])
+
+  const handlePresetSubmit = async () => {
+    if (!presetName.trim()) {
+      toast({
+        title: "Define un nombre",
+        description: "Asigna un nombre al segmento para identificarlo fácilmente.",
+        variant: "destructive",
+      })
       return
     }
 
-    setSelectedRows([])
+    await savePresetMutation.mutateAsync({
+      name: presetName.trim(),
+      description: presetDescription.trim() || null,
+      conditions: conditions.map(({ id, ...rest }) => rest),
+      logicOperator,
+    })
   }
+
+  const handleDuplicatePreset = async (preset: MovementPreset) => {
+    await savePresetMutation.mutateAsync({
+      name: `${preset.name} (copia)`,
+      description: preset.description ?? null,
+      conditions: preset.conditions,
+      logicOperator: preset.logicOperator,
+    })
+  }
+
+  const movementSummaryCards = [
+    {
+      title: "Movimientos encontrados",
+      value: `${stats.count}`,
+      helper: "Coincidencias con el filtro actual.",
+    },
+    {
+      title: "Ingresos detectados",
+      value: formatCurrency(stats.inflow),
+      helper: "Montos positivos dentro del rango.",
+    },
+    {
+      title: "Gastos detectados",
+      value: formatCurrency(stats.outflow),
+      helper: "Montos negativos dentro del rango.",
+    },
+    {
+      title: "Balance neto",
+      value: formatCurrency(stats.totalAmount),
+      helper: "Resultado entre ingresos y gastos.",
+    },
+  ]
 
   return (
     <div className="space-y-8">
@@ -233,6 +506,20 @@ export default function TransactionsAdvancedSearchPage() {
         </div>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {movementSummaryCards.map((card) => (
+          <Card key={card.title}>
+            <CardHeader className="pb-2">
+              <CardDescription>{card.title}</CardDescription>
+              <CardTitle className="text-2xl font-semibold">{card.value}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">{card.helper}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card className="border border-border/70 shadow-sm">
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -250,78 +537,90 @@ export default function TransactionsAdvancedSearchPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="AND">{t.builder.logicOptions.and}</SelectItem>
-                  <SelectItem value="OR">{t.builder.logicOptions.or}</SelectItem>
+                  <SelectItem value="OR" disabled>
+                    {t.builder.logicOptions.or}
+                  </SelectItem>
                 </SelectContent>
               </Select>
-              <Button size="sm" className="gap-2" onClick={addCondition}>
+              <Button size="sm" className="gap-2" onClick={handleAddCondition}>
                 <Plus className="h-4 w-4" /> {t.builder.addCondition}
               </Button>
-              <Button variant="secondary" size="sm" className="gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                onClick={() => setIsSaveDialogOpen(true)}
+                disabled={!userId}
+              >
                 <Save className="h-4 w-4" /> {t.builder.saveView}
               </Button>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Por ahora combinamos todas las condiciones usando el operador lógico AND.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            {conditions.map((condition) => (
-              <div
-                key={condition.id}
-                className="grid gap-2 rounded-lg border bg-muted/40 p-3 sm:grid-cols-[200px_200px_1fr_auto]"
-              >
-                <Select
-                  value={condition.field}
-                  onValueChange={(value) => updateCondition(condition.id, "field", value)}
+            {conditions.map((condition) => {
+              const fieldConfig = FIELD_CONFIG.find((item) => item.value === condition.field) ?? FIELD_CONFIG[0]
+              return (
+                <div
+                  key={condition.id}
+                  className="grid gap-2 rounded-lg border bg-muted/40 p-3 sm:grid-cols-[200px_200px_1fr_auto]"
                 >
-                  <SelectTrigger aria-label={t.builder.fieldPlaceholder} className="w-full">
-                    <SelectValue placeholder={t.builder.fieldPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {conditionFields.map((field) => (
-                      <SelectItem key={field} value={field}>
-                        {field}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={condition.operator}
-                  onValueChange={(value) => updateCondition(condition.id, "operator", value)}
-                >
-                  <SelectTrigger aria-label={t.builder.operatorPlaceholder} className="w-full">
-                    <SelectValue placeholder={t.builder.operatorPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {operators.map((operator) => (
-                      <SelectItem key={operator} value={operator}>
-                        {operator}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={condition.value}
-                  onChange={(event) => updateCondition(condition.id, "value", event.target.value)}
-                  placeholder={t.builder.valuePlaceholder}
-                  aria-label={t.builder.valuePlaceholder}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeCondition(condition.id)}
-                  aria-label={t.builder.removeConditionAria}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <Select
+                    value={condition.field}
+                    onValueChange={(value) => handleUpdateCondition(condition.id, "field", value)}
+                  >
+                    <SelectTrigger aria-label={t.builder.fieldPlaceholder} className="w-full">
+                      <SelectValue placeholder={t.builder.fieldPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FIELD_CONFIG.map((field) => (
+                        <SelectItem key={field.value} value={field.value}>
+                          {field.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={condition.operator}
+                    onValueChange={(value) => handleUpdateCondition(condition.id, "operator", value)}
+                  >
+                    <SelectTrigger aria-label={t.builder.operatorPlaceholder} className="w-full">
+                      <SelectValue placeholder={t.builder.operatorPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fieldConfig.operators.map((operator) => (
+                        <SelectItem key={operator} value={operator}>
+                          {OPERATOR_LABELS[operator]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={condition.value}
+                    onChange={(event) => handleUpdateCondition(condition.id, "value", event.target.value)}
+                    placeholder={fieldConfig.placeholder}
+                    aria-label={t.builder.valuePlaceholder}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveCondition(condition.id)}
+                    aria-label={t.builder.removeConditionAria}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )
+            })}
           </div>
           <Textarea
             rows={3}
-            value={conditions.map((condition) => `${condition.field} ${condition.operator} ${condition.value}`).join(` ${logicOperator} `)}
-            onChange={() => {
-              /* TODO: Mapear actualizaciones desde el editor textual hacia el servicio de construcción */
-            }}
+            value={conditionSummary}
+            readOnly
             aria-label={t.builder.textareaLabel}
           />
         </CardContent>
@@ -340,28 +639,60 @@ export default function TransactionsAdvancedSearchPage() {
             </Link>
           </Button>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {savedSegments.map((segment) => (
-            <Card key={segment.id} className="border border-dashed">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">{segment.name}</CardTitle>
-                <CardDescription>
-                  {segment.note} · {segment.updatedAt}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between gap-2">
-                <Button variant="ghost" className="gap-2 px-0" asChild>
-                  <Link href="/transactions">
-                    {t.segments.open}
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button variant="secondary" size="sm">
-                  {t.segments.duplicate}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+        <CardContent className="space-y-3">
+          {presetsError ? (
+            <Alert variant="destructive">
+              <AlertTitle>No pudimos cargar tus segmentos</AlertTitle>
+              <AlertDescription>{presetsError}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {presets.length === 0 ? (
+              <Card className="border border-dashed">
+                <CardContent className="py-8 text-sm text-muted-foreground">
+                  No tienes segmentos guardados todavía. Guarda una vista personalizada para reutilizarla.
+                </CardContent>
+              </Card>
+            ) : (
+              presets.map((preset) => (
+                <Card key={preset.id} className="border border-dashed">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold">{preset.name}</CardTitle>
+                    <CardDescription>
+                      {preset.description ?? "Sin descripción"} · {new Date(preset.updatedAt).toLocaleDateString("es-CL")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex items-center justify-between gap-2">
+                    <Button
+                      variant="ghost"
+                      className="gap-2 px-0"
+                      onClick={() => {
+                        setConditions(
+                          preset.conditions.map((condition) => ({
+                            id: createConditionId(),
+                            ...condition,
+                          }))
+                        )
+                        setLogicOperator(preset.logicOperator)
+                        setPage(1)
+                      }}
+                    >
+                      {t.segments.open}
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleDuplicatePreset(preset)}
+                    >
+                      {t.segments.duplicate}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -386,10 +717,17 @@ export default function TransactionsAdvancedSearchPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {movementsError ? (
+            <Alert variant="destructive">
+              <AlertTitle>No pudimos obtener los movimientos</AlertTitle>
+              <AlertDescription>{movementsError}</AlertDescription>
+            </Alert>
+          ) : null}
+
           <div className="flex items-center gap-2 text-sm">
             <Checkbox
               id="select-all-results"
-              checked={paginatedResults.length > 0 && selectedRows.length === paginatedResults.length}
+              checked={movements.length > 0 && selectedRows.length === movements.length}
               onCheckedChange={(value) => toggleAllRows(Boolean(value))}
               aria-label="Seleccionar resultados"
             />
@@ -413,37 +751,51 @@ export default function TransactionsAdvancedSearchPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedResults.map((result) => {
-                const isSelected = selectedRows.includes(result.id)
-                return (
-                  <TableRow key={result.id} data-state={isSelected ? "selected" : undefined}>
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(value) => toggleRowSelection(result.id, Boolean(value))}
-                        aria-label={`Seleccionar ${result.description}`}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{result.description}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(result.date)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{result.category}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatCurrency(result.amount)}
+              {movementsQuery.isPending ? (
+                Array.from({ length: 6 }).map((_, index) => (
+                  <TableRow key={`movement-skeleton-${index}`}>
+                    <TableCell colSpan={5}>
+                      <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
-                )
-              })}
-              {paginatedResults.length === 0 ? (
+                ))
+              ) : movements.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     {t.results.empty}
                   </TableCell>
                 </TableRow>
-              ) : null}
+              ) : (
+                movements.map((movement) => {
+                  const isSelected = selectedRows.includes(movement.id)
+                  const amount = movement.amount ?? 0
+                  const categoryLabel = movement.category ?? "Sin categoría"
+                  const movementDate = movement.postedAt
+                    ? formatDate(movement.postedAt)
+                    : "Sin fecha"
+                  return (
+                    <TableRow key={movement.id} data-state={isSelected ? "selected" : undefined}>
+                      <TableCell>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(value) => toggleRowSelection(movement.id, Boolean(value))}
+                          aria-label={`Seleccionar ${movement.description ?? movement.id}`}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {movement.description ?? "Sin descripción"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{movementDate}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{categoryLabel}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatCurrency(amount)}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
             </TableBody>
           </Table>
 
@@ -465,7 +817,7 @@ export default function TransactionsAdvancedSearchPage() {
                   <PaginationItem key={`results-page-${pageNumber}`}>
                     <PaginationLink
                       href="#"
-                      isActive={pageNumber === page}
+                      isActive={pageNumber === pagination.page}
                       onClick={(event) => {
                         event.preventDefault()
                         setPage(pageNumber)
@@ -489,14 +841,59 @@ export default function TransactionsAdvancedSearchPage() {
             </PaginationContent>
             <div className="text-sm text-muted-foreground">
               {t.results.paginationLabel({
-                page,
+                page: pagination.page,
                 total: totalPages,
-                count: filteredResults.length,
+                count: pagination.total,
               })}
             </div>
           </Pagination>
         </CardContent>
       </Card>
+
+      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Guardar segmento</DialogTitle>
+            <DialogDescription>
+              Asigna un nombre para reutilizar esta combinación de filtros en el futuro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="preset-name">Nombre</Label>
+              <Input
+                id="preset-name"
+                value={presetName}
+                onChange={(event) => setPresetName(event.target.value)}
+                placeholder="Ej: Gastos esenciales del mes"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="preset-description">Descripción</Label>
+              <Input
+                id="preset-description"
+                value={presetDescription}
+                onChange={(event) => setPresetDescription(event.target.value)}
+                placeholder="Anota el objetivo del segmento"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handlePresetSubmit} disabled={savePresetMutation.isPending} className="gap-2">
+              {savePresetMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
+                </>
+              ) : (
+                "Guardar segmento"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
