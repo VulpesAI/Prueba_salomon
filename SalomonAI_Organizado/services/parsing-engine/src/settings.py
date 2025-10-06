@@ -25,6 +25,9 @@ class ParsingSettings(BaseSettings):
     connection_retries: int = Field(default=5, alias="PARSING_ENGINE_CONNECTION_RETRIES")
     retry_delay_seconds: int = Field(default=5, alias="PARSING_ENGINE_RETRY_DELAY_SECONDS")
 
+    metrics_host: str = Field(default="0.0.0.0", alias="PARSING_ENGINE_METRICS_HOST")
+    metrics_port: int = Field(default=9101, alias="PARSING_ENGINE_METRICS_PORT")
+
     supabase_url: str | None = Field(default=None, alias="SUPABASE_URL")
     supabase_service_role_key: str | None = Field(default=None, alias="SUPABASE_SERVICE_ROLE_KEY")
     statements_bucket: str = Field(default="statements", alias="STATEMENTS_BUCKET")

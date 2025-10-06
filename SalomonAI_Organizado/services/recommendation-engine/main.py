@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -14,12 +15,63 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from sklearn.cluster import KMeans
 
+from prometheus_client import Counter, Gauge, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
+
 from .settings import get_settings
 
 settings = get_settings()
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 logger = logging.getLogger("recommendation-engine")
 
+
+metrics_instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+)
+
+PIPELINE_RUNS = Counter(
+    "recommendation_engine_pipeline_runs_total",
+    "Ejecuciones del pipeline de recomendaciones",
+    labelnames=("status",),
+)
+PIPELINE_RUN_DURATION = Histogram(
+    "recommendation_engine_pipeline_duration_seconds",
+    "Duración de cada ejecución del pipeline",
+    buckets=(1, 5, 10, 30, 60, 120, 300, 600),
+)
+TRANSACTIONS_INGESTED = Counter(
+    "recommendation_engine_transactions_ingested_total",
+    "Total de transacciones ingeridas por el pipeline",
+)
+FEATURES_UPDATED = Counter(
+    "recommendation_engine_features_updated_total",
+    "Número de features recalculadas por ejecución",
+)
+USERS_TRACKED = Gauge(
+    "recommendation_engine_users_tracked",
+    "Usuarios con features almacenadas en memoria",
+)
+RECOMMENDATIONS_SERVED = Counter(
+    "recommendation_engine_recommendations_served_total",
+    "Recomendaciones entregadas a los consumidores",
+    labelnames=("endpoint",),
+)
+FEEDBACK_SUBMISSIONS = Counter(
+    "recommendation_engine_feedback_submissions_total",
+    "Cantidad de feedback recibido",
+    labelnames=("has_comment",),
+)
+FEEDBACK_SCORE = Histogram(
+    "recommendation_engine_feedback_score",
+    "Distribución de los puntajes de feedback",
+    buckets=(0.2, 0.4, 0.6, 0.8, 1.0),
+)
+PIPELINE_REFRESH_INTERVAL = Gauge(
+    "recommendation_engine_pipeline_refresh_seconds",
+    "Intervalo configurado para ejecutar el pipeline",
+)
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -547,20 +599,33 @@ class RecommendationPipeline:
 
     async def run_once(self) -> Dict[str, Any]:
         async with self._lock:
-            transactions = await self.fetcher.fetch_transactions()
-            features = self.builder.build(transactions)
-            await self.store.bulk_upsert(features)
-            all_features = await self.store.get_all()
-            self.model_manager.train(all_features)
-            summary = {
-                "transactions": len(transactions),
-                "features_updated": len(features),
-                "users_tracked": len(all_features),
-            }
-            self._last_run = utcnow()
-            self._last_summary = summary
-            logger.info("Pipeline ejecutado: %s", summary)
-            return summary
+            start_time = time.perf_counter()
+            try:
+                transactions = await self.fetcher.fetch_transactions()
+                features = self.builder.build(transactions)
+                await self.store.bulk_upsert(features)
+                all_features = await self.store.get_all()
+                self.model_manager.train(all_features)
+                summary = {
+                    "transactions": len(transactions),
+                    "features_updated": len(features),
+                    "users_tracked": len(all_features),
+                }
+                self._last_run = utcnow()
+                self._last_summary = summary
+
+                TRANSACTIONS_INGESTED.inc(len(transactions))
+                FEATURES_UPDATED.inc(len(features))
+                USERS_TRACKED.set(len(all_features))
+                PIPELINE_RUNS.labels(status="success").inc()
+                PIPELINE_RUN_DURATION.observe(time.perf_counter() - start_time)
+
+                logger.info("Pipeline ejecutado: %s", summary)
+                return summary
+            except Exception:
+                PIPELINE_RUNS.labels(status="error").inc()
+                PIPELINE_RUN_DURATION.observe(time.perf_counter() - start_time)
+                raise
 
     async def _schedule_loop(self) -> None:
         logger.info("Iniciando loop del pipeline con intervalo %ss", self.interval_seconds)
@@ -666,12 +731,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+metrics_instrumentator.instrument(
+    app,
+    excluded_handlers=["/metrics", "/health"],
+).expose(app, include_in_schema=False)
+
 
 pipeline_mode = settings.pipeline_mode.lower()
 financial_movements_url = settings.financial_movements_api_url
 kafka_bootstrap = settings.kafka_bootstrap_servers
 kafka_topic = settings.kafka_transactions_topic
 pipeline_interval = settings.pipeline_refresh_seconds
+
+PIPELINE_REFRESH_INTERVAL.set(pipeline_interval)
 
 feature_builder = FeatureBuilder()
 feature_store = FeatureStore()
@@ -774,6 +846,8 @@ async def get_personalized_recommendations(
     recommendations = model_manager.generate_recommendations(features)
     await recommendation_store.save(user_id, recommendations)
 
+    RECOMMENDATIONS_SERVED.labels(endpoint="personalized").inc(len(recommendations))
+
     response = PersonalizedRecommendationsResponse(
         userId=user_id,
         generatedAt=utcnow(),
@@ -827,6 +901,8 @@ async def submit_feedback(feedback: FeedbackRequest) -> FeedbackResponse:
         created_at=utcnow(),
     )
     await recommendation_store.add_feedback(entry)
+    FEEDBACK_SUBMISSIONS.labels(has_comment="yes" if feedback.comment else "no").inc()
+    FEEDBACK_SCORE.observe(feedback.score)
     return FeedbackResponse(status="received", submittedAt=entry.created_at)
 
 
@@ -848,6 +924,7 @@ async def generate_recommendation(transaction: TransactionData) -> Recommendatio
 
     recommendation = model_manager.generate_recommendations(features[0])[0]
     await recommendation_store.save(transaction.user_id, [recommendation])
+    RECOMMENDATIONS_SERVED.labels(endpoint="transactional").inc()
     return RecommendationItem(**asdict(recommendation))
 
 

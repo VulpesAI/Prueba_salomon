@@ -54,3 +54,22 @@ scrape_configs:
   - job_name: 'postgres'
     static_configs:
       - targets: ['postgres-exporter:9187']
+
+  # Parsing engine metrics
+  - job_name: 'parsing-engine'
+    static_configs:
+      - targets: ['parsing-engine:9101']
+
+  # Recommendation engine metrics
+  - job_name: 'recommendation-engine'
+    static_configs:
+      - targets: ['recommendation-engine:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Voice gateway metrics
+  - job_name: 'voice-gateway'
+    static_configs:
+      - targets: ['voice-gateway:8100']
+    metrics_path: '/metrics'
+    scrape_interval: 30s

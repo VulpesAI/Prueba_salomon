@@ -8,6 +8,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from prometheus_client import Counter, Histogram, start_http_server
+
 from kafka import KafkaConsumer, KafkaProducer
 from kafka.errors import KafkaError, NoBrokersAvailable
 
@@ -17,6 +19,35 @@ from .storage import StorageError, create_storage_client
 
 
 LOGGER = logging.getLogger("parsing-engine.consumer")
+
+STATEMENTS_PROCESSED = Counter(
+    "parsing_engine_statements_processed_total",
+    "Total de cartolas procesadas por el parsing-engine",
+    labelnames=("status",),
+)
+STATEMENT_PROCESSING_DURATION = Histogram(
+    "parsing_engine_processing_duration_seconds",
+    "Duración del procesamiento de cartolas en el parsing-engine",
+    buckets=(0.5, 1, 2, 5, 10, 30, 60, 120, 300),
+)
+STATEMENT_DOCUMENT_BYTES = Histogram(
+    "parsing_engine_document_bytes",
+    "Tamaño (en bytes) de los documentos procesados",
+    buckets=(1024, 10 * 1024, 50 * 1024, 100 * 1024, 200 * 1024, 500 * 1024, 1024 * 1024, 2 * 1024 * 1024, 5 * 1024 * 1024),
+)
+STATEMENTS_PUBLISHED = Counter(
+    "parsing_engine_statements_published_total",
+    "Eventos publicados exitosamente en el tópico de salida",
+)
+STATEMENT_PUBLICATION_ERRORS = Counter(
+    "parsing_engine_statement_publication_errors_total",
+    "Fallos al publicar eventos procesados",
+)
+STATEMENT_FAILURES = Counter(
+    "parsing_engine_statement_failures_total",
+    "Total de cartolas que fallaron en el procesamiento",
+    labelnames=("reason",),
+)
 
 
 @dataclass
@@ -58,6 +89,17 @@ class ParsingEngine:
 
         self.consumer: KafkaConsumer | None = None
         self.producer: KafkaProducer | None = None
+        self._metrics_started = False
+
+    def _ensure_metrics_server(self) -> None:
+        if self._metrics_started:
+            return
+
+        start_http_server(self.settings.metrics_port, addr=self.settings.metrics_host)
+        LOGGER.info(
+            "Exponiendo métricas Prometheus en %s:%s", self.settings.metrics_host, self.settings.metrics_port
+        )
+        self._metrics_started = True
 
     def create_consumer(self) -> KafkaConsumer | None:
         retries = self.settings.connection_retries
@@ -100,6 +142,7 @@ class ParsingEngine:
             return None
 
     def run(self) -> None:
+        self._ensure_metrics_server()
         self.consumer = self.create_consumer()
         if not self.consumer:
             return
@@ -135,12 +178,16 @@ class ParsingEngine:
                     statement_message.statement_id,
                     self.settings.statements_out_topic,
                 )
+                STATEMENTS_PUBLISHED.inc()
             except KafkaError as error:
                 LOGGER.error("Failed to publish parsed statement %s: %s", statement_message.statement_id, error)
+                STATEMENT_PUBLICATION_ERRORS.inc()
 
     def _process_message(self, message: StatementMessage) -> Dict[str, Any]:
         error: Optional[str] = None
         parsed = None
+        reason = ""
+        start_time = time.perf_counter()
 
         try:
             storage_path = self._resolve_storage_path(message.storage_path)
@@ -152,10 +199,12 @@ class ParsingEngine:
                 content_type=document.content_type,
             )
             status = "completed"
+            STATEMENT_DOCUMENT_BYTES.observe(len(document.content))
         except (StorageError, StatementParsingError) as exc:
             checksum = ""
             status = "failed"
             error = str(exc)
+            reason = exc.__class__.__name__
             LOGGER.error(
                 "Failed to process statement %s from %s: %s",
                 message.statement_id,
@@ -166,6 +215,7 @@ class ParsingEngine:
             checksum = ""
             status = "failed"
             error = f"Unexpected error: {exc}"
+            reason = exc.__class__.__name__
             LOGGER.exception(
                 "Unexpected error while processing statement %s",
                 message.statement_id,
@@ -173,6 +223,12 @@ class ParsingEngine:
 
         if not checksum:
             checksum = self._fallback_checksum(message)
+
+        duration = time.perf_counter() - start_time
+        STATEMENT_PROCESSING_DURATION.observe(duration)
+        STATEMENTS_PROCESSED.labels(status=status).inc()
+        if status == "failed" and reason:
+            STATEMENT_FAILURES.labels(reason=reason).inc()
 
         return build_result_payload(
             statement_id=message.statement_id,

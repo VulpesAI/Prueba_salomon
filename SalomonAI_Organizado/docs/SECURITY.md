@@ -52,3 +52,6 @@ SalomonAI. Los principales cambios introducidos son:
 3. Integrar la salida del SIEM con un playbook de respuesta a incidentes.
 4. Completar la documentación operacional (rotación de certificados, pruebas de
    recuperación frente a caída del proveedor OAuth).
+5. Mantener actualizadas las listas de verificación de despliegues en
+   `docs/operations/security-deployment-checklists.md` y automatizar su ejecución en
+   el pipeline de cambios.
