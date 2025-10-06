@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Card,
   CardContent,
@@ -32,6 +33,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useNotificationSettings } from "@/hooks/dashboard/use-notification-settings"
+import { useToast } from "@/hooks/use-toast"
 
 import { esCL } from "@/i18n/es-CL"
 
@@ -57,6 +61,9 @@ const digestCopy = notificationsCopy.digests
 const channelsCopy = notificationsCopy.channels
 const templatesCopy = notificationsCopy.templates
 const templateCatalogue = templatesCopy.items
+const templateDefaults = Object.fromEntries(
+  templateCatalogue.map((template) => [template.id, template.defaultSubject ?? ""])
+) as Record<string, string>
 
 export default function SettingsNotificationsPage() {
   const [digestStatus, setDigestStatus] = React.useState<
@@ -65,14 +72,24 @@ export default function SettingsNotificationsPage() {
   const [channelsStatus, setChannelsStatus] = React.useState<
     "idle" | "success" | "error"
   >("idle")
-  const [templateSubjects, setTemplateSubjects] = React.useState<Record<string, string>>({
-    "weekly-overview": templatesCopy.items[0]?.defaultSubject ?? "",
-    "cash-alert": templatesCopy.items[1]?.defaultSubject ?? "",
-    "closing-reminder": templatesCopy.items[2]?.defaultSubject ?? "",
-  })
+  const [templateSubjects, setTemplateSubjects] = React.useState<Record<string, string>>(templateDefaults)
   const [templateStatus, setTemplateStatus] = React.useState<
     "idle" | "success" | "error"
   >("idle")
+
+  const { toast } = useToast()
+  const {
+    settings,
+    isLoading: isLoadingSettings,
+    error: settingsError,
+    updateDigest,
+    updateChannels,
+    updateTemplates,
+    apiBaseUrl,
+    isSavingDigest,
+    isSavingChannels,
+    isSavingTemplates,
+  } = useNotificationSettings()
 
   const digestForm = useForm<DigestFormValues>({
     resolver: zodResolver(digestSchema),
@@ -94,46 +111,210 @@ export default function SettingsNotificationsPage() {
     },
   })
 
+  const resolvedTemplates = React.useMemo(() => {
+    if (settings?.templates) {
+      return settings.templates.map((template) => {
+        const fallback = templateCatalogue.find((item) => item.id === template.id)
+        return {
+          id: template.id,
+          name: template.name ?? fallback?.name ?? template.id,
+          helper: fallback?.helper ?? templatesCopy.description,
+        }
+      })
+    }
+
+    return templateCatalogue.map((template) => ({
+      id: template.id,
+      name: template.name,
+      helper: template.helper,
+    }))
+  }, [settings?.templates])
+
+  React.useEffect(() => {
+    if (!settings?.digest) {
+      return
+    }
+
+    const recipients = settings.digest.recipients.join(", ")
+    digestForm.reset({
+      summaryName: settings.digest.summaryName,
+      frequency: settings.digest.frequency,
+      sendTime: settings.digest.sendTime,
+      recipients,
+    })
+    setDigestStatus("idle")
+  }, [settings?.digest, digestForm])
+
+  React.useEffect(() => {
+    if (!settings?.channels) {
+      return
+    }
+
+    channelsForm.reset({
+      email: settings.channels.email,
+      push: settings.channels.push,
+      sms: settings.channels.sms,
+      inApp: settings.channels.inApp,
+    })
+    setChannelsStatus("idle")
+  }, [settings?.channels, channelsForm])
+
+  React.useEffect(() => {
+    if (!settings?.templates) {
+      return
+    }
+
+    setTemplateSubjects(() => {
+      const nextSubjects: Record<string, string> = { ...templateDefaults }
+      for (const template of settings.templates) {
+        nextSubjects[template.id] = template.subject
+      }
+      return nextSubjects
+    })
+    setTemplateStatus("idle")
+  }, [settings?.templates])
+
   const handleDigestSubmit = async (values: DigestFormValues) => {
     setDigestStatus("idle")
     try {
-      // TODO: Conectar con API de programación de resúmenes.
-      await new Promise((resolve) => setTimeout(resolve, 400))
-      digestForm.reset(values)
+      const recipients = values.recipients
+        .split(",")
+        .map((recipient) => recipient.trim())
+        .filter(Boolean)
+
+      await updateDigest({
+        summaryName: values.summaryName,
+        frequency: values.frequency,
+        sendTime: values.sendTime,
+        recipients,
+      })
+
+      digestForm.reset({ ...values, recipients: recipients.join(", ") })
       setDigestStatus("success")
+      toast({
+        title: "Resumen actualizado",
+        description: "Guardamos tu programación de notificaciones por correo.",
+      })
     } catch (error) {
       console.error("Error al configurar el resumen", error)
       setDigestStatus("error")
+      const message =
+        error instanceof Error
+          ? error.message
+          : `No pudimos sincronizar con ${apiBaseUrl}/dashboard/notifications/digest.`
+      toast({
+        title: "No pudimos guardar el resumen",
+        description: message,
+        variant: "destructive",
+      })
     }
   }
 
   const handleChannelsSubmit = async (values: ChannelsFormValues) => {
     setChannelsStatus("idle")
     try {
-      // TODO: Persistir canales activos contra preferencias del usuario.
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await updateChannels(values)
       channelsForm.reset(values)
       setChannelsStatus("success")
+      toast({
+        title: "Preferencias actualizadas",
+        description: "Aplicamos tus canales de notificación preferidos.",
+      })
     } catch (error) {
       console.error("Error al guardar canales", error)
       setChannelsStatus("error")
+      const message =
+        error instanceof Error
+          ? error.message
+          : `No pudimos sincronizar con ${apiBaseUrl}/dashboard/notifications/channels.`
+      toast({
+        title: "No pudimos guardar los canales",
+        description: message,
+        variant: "destructive",
+      })
     }
   }
 
   const handleTemplateSave = async () => {
     setTemplateStatus("idle")
     try {
-      // TODO: Enviar actualización de plantillas personalizadas a la API.
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      const payload = Object.entries(templateSubjects).map(([id, subject]) => ({
+        id,
+        subject: subject.trim(),
+      }))
+
+      await updateTemplates(payload)
       setTemplateStatus("success")
+      toast({
+        title: "Plantillas personalizadas",
+        description: "Sincronizamos los asuntos sugeridos para tus mensajes.",
+      })
     } catch (error) {
       console.error("Error al guardar plantillas", error)
       setTemplateStatus("error")
+      const message =
+        error instanceof Error
+          ? error.message
+          : `No pudimos sincronizar con ${apiBaseUrl}/dashboard/notifications/templates.`
+      toast({
+        title: "No pudimos guardar las plantillas",
+        description: message,
+        variant: "destructive",
+      })
     }
+  }
+
+  if (isLoadingSettings) {
+    return (
+      <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-72" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={`digest-skeleton-${index}`} className="h-10 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-52" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={`channels-skeleton-${index}`} className="h-10 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-60" />
+            <Skeleton className="h-4 w-72" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={`templates-skeleton-${index}`} className="h-10 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-8">
+      {settingsError ? (
+        <Alert variant="destructive">
+          <AlertTitle>No pudimos cargar tus preferencias</AlertTitle>
+          <AlertDescription>
+            {settingsError}. Revisa la conexión con {`${apiBaseUrl}/dashboard/notifications/settings`} e intenta nuevamente.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{digestCopy.title}</CardTitle>
@@ -222,8 +403,13 @@ export default function SettingsNotificationsPage() {
                 )}
               />
               <CardFooter className="flex flex-col items-start gap-2 px-0">
-                <Button type="submit" disabled={digestForm.formState.isSubmitting}>
-                  {digestForm.formState.isSubmitting ? digestCopy.saving : digestCopy.submit}
+                <Button
+                  type="submit"
+                  disabled={digestForm.formState.isSubmitting || isSavingDigest}
+                >
+                  {digestForm.formState.isSubmitting || isSavingDigest
+                    ? digestCopy.saving
+                    : digestCopy.submit}
                 </Button>
                 <div aria-live="polite">
                   {digestStatus === "success" && (
@@ -324,8 +510,13 @@ export default function SettingsNotificationsPage() {
                   )}
                 />
                 <CardFooter className="flex flex-col items-start gap-2 px-0">
-                  <Button type="submit" disabled={channelsForm.formState.isSubmitting}>
-                    {channelsForm.formState.isSubmitting ? channelsCopy.saving : channelsCopy.submit}
+                  <Button
+                    type="submit"
+                    disabled={channelsForm.formState.isSubmitting || isSavingChannels}
+                  >
+                    {channelsForm.formState.isSubmitting || isSavingChannels
+                      ? channelsCopy.saving
+                      : channelsCopy.submit}
                   </Button>
                   <div aria-live="polite">
                     {channelsStatus === "success" && (
@@ -352,7 +543,7 @@ export default function SettingsNotificationsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Accordion type="single" collapsible className="w-full">
-              {templateCatalogue.map((template) => (
+              {resolvedTemplates.map((template) => (
                 <AccordionItem key={template.id} value={template.id}>
                   <AccordionTrigger>{template.name}</AccordionTrigger>
                   <AccordionContent className="space-y-4 pt-4">
@@ -372,7 +563,7 @@ export default function SettingsNotificationsPage() {
               ))}
             </Accordion>
             <div className="flex flex-col items-start gap-2">
-              <Button type="button" onClick={handleTemplateSave}>
+              <Button type="button" onClick={handleTemplateSave} disabled={isSavingTemplates}>
                 {templatesCopy.submit}
               </Button>
               <div aria-live="polite">

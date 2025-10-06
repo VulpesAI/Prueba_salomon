@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -25,6 +27,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import {
   Accordion,
@@ -32,6 +35,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { useUserSessions } from "@/hooks/auth/use-user-sessions"
+import { useToast } from "@/hooks/use-toast"
+import { formatDateTime } from "@/lib/intl"
+import { AlertTriangle, Loader2, RefreshCcw } from "lucide-react"
 
 const passwordSchema = z
   .object({
@@ -50,28 +57,24 @@ const passwordSchema = z
 
 type PasswordFormValues = z.infer<typeof passwordSchema>
 
-const activeSessions = [
-  {
-    id: "session-1",
-    device: "MacBook Pro",
-    location: "Ciudad de México, MX",
-    lastActive: "Hace 2 horas",
-  },
-  {
-    id: "session-2",
-    device: "iPhone 15",
-    location: "Guadalajara, MX",
-    lastActive: "Hace 1 día",
-  },
-]
-
 export default function SettingsSecurityPage() {
   const [passwordStatus, setPasswordStatus] = React.useState<
     "idle" | "success" | "error"
   >("idle")
   const [mfaEnabled, setMfaEnabled] = React.useState(true)
   const [passkeyEnabled, setPasskeyEnabled] = React.useState(false)
-  const [revokedSessions, setRevokedSessions] = React.useState<string[]>([])
+
+  const { toast } = useToast()
+  const {
+    sessions,
+    isLoading: isLoadingSessions,
+    error: sessionsError,
+    revoke: revokeSession,
+    isRevoking: isRevokingSession,
+    activeRevocation,
+    refresh: refreshSessions,
+    apiBaseUrl: sessionsApiBaseUrl,
+  } = useUserSessions()
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -100,9 +103,24 @@ export default function SettingsSecurityPage() {
     }
   }
 
-  const handleSessionRevoke = (sessionId: string) => {
-    setRevokedSessions((prev) => [...prev, sessionId])
-    // TODO: Llamar API para revocar sesión específica.
+  const handleSessionRevoke = async (sessionId: string) => {
+    try {
+      await revokeSession(sessionId)
+      toast({
+        title: "Sesión revocada",
+        description: "Cerramos la sesión seleccionada correctamente.",
+      })
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No pudimos revocar la sesión. Intenta nuevamente."
+      toast({
+        title: "Error al revocar la sesión",
+        description: message,
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -239,46 +257,121 @@ export default function SettingsSecurityPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Dispositivos y sesiones activas</CardTitle>
-            <CardDescription>
-              Revoca accesos sospechosos o cierra sesiones que no reconozcas.
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle>Dispositivos y sesiones activas</CardTitle>
+              <CardDescription>
+                Revoca accesos sospechosos o cierra sesiones que no reconozcas.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => refreshSessions()}
+              disabled={isLoadingSessions}
+            >
+              <RefreshCcw className="h-4 w-4" /> Actualizar
+            </Button>
           </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              {activeSessions.map((session) => {
-                const isRevoked = revokedSessions.includes(session.id)
-                return (
-                  <AccordionItem key={session.id} value={session.id}>
-                    <AccordionTrigger className="text-left">
-                      {session.device} · {isRevoked ? "Sesión revocada" : session.location}
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-3 pt-4 text-sm">
-                      <p>
-                        <span className="font-medium">Ubicación estimada:</span> {session.location}
-                      </p>
-                      <p>
-                        <span className="font-medium">Última actividad:</span> {session.lastActive}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={isRevoked}
-                          onClick={() => handleSessionRevoke(session.id)}
-                        >
-                          {isRevoked ? "Sesión revocada" : "Revocar acceso"}
-                        </Button>
-                        <Button type="button" variant="ghost">
-                          Marcar como dispositivo de confianza
-                        </Button>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                )
-              })}
-            </Accordion>
+          <CardContent className="space-y-4">
+            {sessionsError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>No pudimos cargar tus sesiones</AlertTitle>
+                <AlertDescription>
+                  {sessionsError}. Verifica la conexión con {`${sessionsApiBaseUrl}/auth/sessions`} e
+                  inténtalo nuevamente.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {isLoadingSessions ? (
+              <div className="space-y-3">
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <Skeleton key={`session-skeleton-${index}`} className="h-14 w-full" />
+                ))}
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="rounded-lg border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
+                No encontramos sesiones activas. Al iniciar sesión desde un nuevo dispositivo aparecerá{" "}
+                en este listado.
+              </div>
+            ) : (
+              <Accordion type="single" collapsible className="w-full">
+                {sessions.map((session) => {
+                  const locationParts = [session.city, session.country].filter(Boolean)
+                  const locationLabel = locationParts.length
+                    ? locationParts.join(", ")
+                    : session.ipAddress ?? "Ubicación no disponible"
+                  const lastActiveLabel = session.lastActiveAt
+                    ? formatDateTime(session.lastActiveAt, {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "Sin registros"
+                  const deviceLabel = session.device ?? "Dispositivo desconocido"
+                  const isCurrent = session.isCurrent ?? false
+                  const isPendingRevocation = isRevokingSession && activeRevocation === session.id
+
+                  return (
+                    <AccordionItem key={session.id} value={session.id}>
+                      <AccordionTrigger className="text-left">
+                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{deviceLabel}</span>
+                            {isCurrent ? <Badge variant="secondary">Sesión actual</Badge> : null}
+                          </div>
+                          <span className="text-sm text-muted-foreground">{locationLabel}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3 pt-4 text-sm">
+                        <p>
+                          <span className="font-medium">Ubicación estimada:</span> {locationLabel}
+                        </p>
+                        {session.ipAddress ? (
+                          <p>
+                            <span className="font-medium">IP de origen:</span> {session.ipAddress}
+                          </p>
+                        ) : null}
+                        <p>
+                          <span className="font-medium">Última actividad:</span> {lastActiveLabel}
+                        </p>
+                        {session.userAgent ? (
+                          <p className="break-words text-muted-foreground">
+                            <span className="font-medium text-foreground">Agente:</span> {session.userAgent}
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isPendingRevocation}
+                            onClick={() => handleSessionRevoke(session.id)}
+                            className="gap-2"
+                          >
+                            {isPendingRevocation ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" /> Revocando...
+                              </>
+                            ) : (
+                              "Revocar acceso"
+                            )}
+                          </Button>
+                          <Button type="button" variant="ghost" className="text-muted-foreground">
+                            Marcar como dispositivo de confianza
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+              </Accordion>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowUpRight, BarChart3, CalendarRange, FileDown, PieChart } from "lucide-react"
 
@@ -26,91 +26,286 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/context/AuthContext"
+import { useDashboardSummary } from "@/hooks/dashboard/use-dashboard-summary"
+import { formatCurrency } from "@/lib/intl"
 
-const mockSummaries = [
-  {
-    id: "sum-1",
-    category: "Salario",
-    current: 1250000,
-    previous: 1190000,
-    contribution: 0.62,
-  },
-  {
-    id: "sum-2",
-    category: "Restaurantes",
-    current: -185000,
-    previous: -162000,
-    contribution: -0.12,
-  },
-  {
-    id: "sum-3",
-    category: "Transporte",
-    current: -90000,
-    previous: -82000,
-    contribution: -0.07,
-  },
-  {
-    id: "sum-4",
-    category: "Servicios del hogar",
-    current: -65000,
-    previous: -72000,
-    contribution: -0.06,
-  },
-  {
-    id: "sum-5",
-    category: "Compras personales",
-    current: -42000,
-    previous: -51000,
-    contribution: -0.05,
-  },
-]
+type PeriodOption = {
+  value: string
+  label: string
+  startDate?: string
+  endDate?: string
+}
 
-const periods = ["Este mes", "Últimos 3 meses", "Este año"]
-const accounts = [
-  "Todas tus cuentas",
-  "Cuenta corriente",
-  "Tarjeta de crédito",
-  "Tarjeta de débito",
-  "Cuenta de ahorros",
-]
+type AccountOption = {
+  value: string
+  label: string
+}
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value)
+const ALL_PERIODS_VALUE = "__all__"
+const ALL_ACCOUNTS_VALUE = "__all_accounts__"
+
+const createCapitalizedLabel = (value: string) =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+
+const parseTimelinePeriod = (period: string) => {
+  if (!period) {
+    return null
+  }
+
+  const direct = new Date(period)
+  if (!Number.isNaN(direct.getTime())) {
+    return direct
+  }
+
+  const fallback = new Date(`${period}-01`)
+  if (!Number.isNaN(fallback.getTime())) {
+    return fallback
+  }
+
+  return null
+}
+
+const createPeriodOption = (
+  period: string,
+  granularity: "day" | "week" | "month" | undefined,
+): PeriodOption => {
+  if (!granularity) {
+    return { value: period, label: period }
+  }
+
+  const parsed = parseTimelinePeriod(period)
+  if (!parsed) {
+    return { value: period, label: period }
+  }
+
+  if (granularity === "month") {
+    const startDate = new Date(parsed)
+    startDate.setDate(1)
+    startDate.setHours(0, 0, 0, 0)
+
+    const endDate = new Date(startDate)
+    endDate.setMonth(endDate.getMonth() + 1, 0)
+    endDate.setHours(23, 59, 59, 999)
+
+    const label = new Intl.DateTimeFormat("es-CL", {
+      month: "long",
+      year: "numeric",
+    }).format(startDate)
+
+    return {
+      value: period,
+      label: createCapitalizedLabel(label),
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    }
+  }
+
+  if (granularity === "week") {
+    const startDate = new Date(parsed)
+    const day = startDate.getDay()
+    const daysSinceMonday = (day + 6) % 7
+    startDate.setDate(startDate.getDate() - daysSinceMonday)
+    startDate.setHours(0, 0, 0, 0)
+
+    const endDate = new Date(startDate)
+    endDate.setDate(startDate.getDate() + 6)
+    endDate.setHours(23, 59, 59, 999)
+
+    const formatter = new Intl.DateTimeFormat("es-CL", {
+      day: "2-digit",
+      month: "short",
+    })
+
+    return {
+      value: period,
+      label: `Semana del ${formatter.format(startDate)} al ${formatter.format(endDate)}`,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    }
+  }
+
+  const startDate = new Date(parsed)
+  startDate.setHours(0, 0, 0, 0)
+  const endDate = new Date(startDate)
+  endDate.setHours(23, 59, 59, 999)
+
+  const label = new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(startDate)
+
+  return {
+    value: period,
+    label,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  }
+}
 
 export default function TransactionsSummariesPage() {
-  const [period, setPeriod] = useState<string>(periods[0])
-  const [account, setAccount] = useState<string>(accounts[0])
+  const [granularity, setGranularity] = useState<"day" | "week" | "month" | undefined>(undefined)
+  const [periodOptions, setPeriodOptions] = useState<PeriodOption[]>([
+    { value: ALL_PERIODS_VALUE, label: "Todos los periodos" },
+  ])
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(ALL_PERIODS_VALUE)
+  const [accountOptions, setAccountOptions] = useState<AccountOption[]>([
+    { value: ALL_ACCOUNTS_VALUE, label: "Todas tus cuentas" },
+  ])
+  const [account, setAccount] = useState<string>(ALL_ACCOUNTS_VALUE)
   const [benchmark, setBenchmark] = useState("")
   const [page, setPage] = useState(1)
   const pageSize = 4
 
-  const filteredSummaries = useMemo(() => {
-    return mockSummaries.filter((summary) => {
-      if (!benchmark) {
-        return true
-      }
+  const selectedPeriodOption = useMemo(() => {
+    return (
+      periodOptions.find((option) => option.value === selectedPeriod) ?? periodOptions[0]
+    )
+  }, [periodOptions, selectedPeriod])
 
-      return summary.category.toLowerCase().includes(benchmark.toLowerCase())
+  const { user } = useAuth()
+  const { summary, isLoading, error, refresh } = useDashboardSummary({
+    userId: user?.id ?? null,
+    accountId: account === ALL_ACCOUNTS_VALUE ? undefined : account,
+    startDate:
+      selectedPeriodOption?.value === ALL_PERIODS_VALUE
+        ? undefined
+        : selectedPeriodOption?.startDate,
+    endDate:
+      selectedPeriodOption?.value === ALL_PERIODS_VALUE
+        ? undefined
+        : selectedPeriodOption?.endDate,
+    granularity,
+  })
+
+  useEffect(() => {
+    if (!summary?.granularity || summary.granularity === granularity) {
+      return
+    }
+
+    setGranularity(summary.granularity)
+  }, [granularity, summary?.granularity])
+
+  useEffect(() => {
+    if (!summary?.timeline?.length) {
+      return
+    }
+
+    const timelineOptions = summary.timeline.map((point) =>
+      createPeriodOption(point.period, summary.granularity)
+    )
+
+    setPeriodOptions([
+      { value: ALL_PERIODS_VALUE, label: "Todos los periodos" },
+      ...timelineOptions,
+    ])
+  }, [summary?.granularity, summary?.timeline])
+
+  useEffect(() => {
+    if (!summary?.accounts?.length) {
+      return
+    }
+
+    setAccountOptions((current) => {
+      const existing = new Map(current.map((option) => [option.value, option]))
+
+      summary.accounts.forEach((accountSummary) => {
+        const value = accountSummary.accountId
+        const label =
+          accountSummary.name ??
+          accountSummary.institution ??
+          `Cuenta sin nombre (${accountSummary.accountId})`
+
+        existing.set(value, { value, label })
+      })
+
+      const merged = Array.from(existing.values()).filter(
+        (option) => option.value !== ALL_ACCOUNTS_VALUE,
+      )
+
+      return [
+        { value: ALL_ACCOUNTS_VALUE, label: "Todas tus cuentas" },
+        ...merged.sort((a, b) => a.label.localeCompare(b.label, "es")),
+      ]
     })
-  }, [benchmark])
+  }, [summary?.accounts])
+
+  useEffect(() => {
+    if (!periodOptions.some((option) => option.value === selectedPeriod)) {
+      setSelectedPeriod(periodOptions[0]?.value ?? ALL_PERIODS_VALUE)
+    }
+  }, [periodOptions, selectedPeriod])
+
+  useEffect(() => {
+    if (!accountOptions.some((option) => option.value === account)) {
+      setAccount(ALL_ACCOUNTS_VALUE)
+    }
+  }, [account, accountOptions])
+
+  const categories = useMemo(
+    () => summary?.categories ?? [],
+    [summary?.categories]
+  )
+
+  const filteredSummaries = useMemo(() => {
+    if (!benchmark) {
+      return categories
+    }
+
+    return categories.filter((summaryCategory) =>
+      summaryCategory.category.toLowerCase().includes(benchmark.toLowerCase()),
+    )
+  }, [benchmark, categories])
 
   const totalPages = Math.max(1, Math.ceil(filteredSummaries.length / pageSize))
   const paginatedSummaries = filteredSummaries.slice((page - 1) * pageSize, page * pageSize)
 
-  const totalIngresos = mockSummaries
-    .filter((summary) => summary.current > 0)
-    .reduce((acc, summary) => acc + summary.current, 0)
-  const totalGastos = mockSummaries
-    .filter((summary) => summary.current < 0)
-    .reduce((acc, summary) => acc + summary.current, 0)
-  const ahorroEstimado = totalIngresos + totalGastos
-  const totalAnterior = mockSummaries.reduce((acc, summary) => acc + summary.previous, 0)
-  const variacion = totalAnterior !== 0 ? ((ahorroEstimado - totalAnterior) / Math.abs(totalAnterior)) * 100 : 0
-  const variacionLabel = `${variacion > 0 ? "+" : ""}${variacion.toFixed(1)}%`
+  useEffect(() => {
+    setPage(1)
+  }, [account, selectedPeriod, categories])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
+
+  const totalIngresos = summary?.totals.inflow ?? 0
+  const totalGastos = summary?.totals.outflow ?? 0
+  const ahorroEstimado = summary?.totals.net ?? 0
+
+  const timeline = summary?.timeline ?? []
+  const latestPoint = timeline.at(-1)
+  const previousPoint = timeline.length > 1 ? timeline.at(-2) : undefined
+
+  const incomeChange =
+    latestPoint && previousPoint && previousPoint.inflow !== 0
+      ? ((latestPoint.inflow - previousPoint.inflow) / Math.abs(previousPoint.inflow)) * 100
+      : null
+
+  const variation =
+    latestPoint && previousPoint && previousPoint.net !== 0
+      ? ((latestPoint.net - previousPoint.net) / Math.abs(previousPoint.net)) * 100
+      : null
+
+  const incomeChangeLabel =
+    incomeChange !== null
+      ? `${incomeChange > 0 ? "+" : ""}${incomeChange.toFixed(1)}% vs periodo anterior`
+      : "Sin datos comparables"
+
+  const variationLabel =
+    variation !== null
+      ? `${variation > 0 ? "+" : ""}${variation.toFixed(1)}%`
+      : "Sin datos comparables"
+
+  const currentPeriodLabel = selectedPeriodOption?.label ?? "Todos los periodos"
+  const currentAccountLabel =
+    accountOptions.find((option) => option.value === account)?.label ?? "Todas tus cuentas"
+  const currencyCode = summary?.totals.currency ?? "CLP"
+  const isInitialLoading = isLoading && !summary
 
   return (
     <div className="space-y-8">
@@ -143,12 +338,18 @@ export default function TransactionsSummariesPage() {
           <CardHeader className="pb-2">
             <CardDescription>Ingresos del mes</CardDescription>
             <CardTitle className="text-3xl font-semibold">
-              {formatCurrency(totalIngresos)}
+              {isInitialLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : summary ? (
+                formatCurrency(totalIngresos)
+              ) : (
+                <span className="text-base font-normal text-muted-foreground">Sin datos</span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Badge variant="secondary" className="gap-1">
-              <BarChart3 className="h-3 w-3" /> +8.6% vs tu mes anterior
+              <BarChart3 className="h-3 w-3" /> {incomeChangeLabel}
             </Badge>
           </CardContent>
         </Card>
@@ -156,7 +357,13 @@ export default function TransactionsSummariesPage() {
           <CardHeader className="pb-2">
             <CardDescription>Gastos del mes</CardDescription>
             <CardTitle className="text-3xl font-semibold">
-              {formatCurrency(Math.abs(totalGastos))}
+              {isInitialLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : summary ? (
+                formatCurrency(Math.abs(totalGastos))
+              ) : (
+                <span className="text-base font-normal text-muted-foreground">Sin datos</span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -166,7 +373,15 @@ export default function TransactionsSummariesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Ahorro estimado</CardDescription>
-            <CardTitle className="text-3xl font-semibold">{formatCurrency(ahorroEstimado)}</CardTitle>
+            <CardTitle className="text-3xl font-semibold">
+              {isInitialLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : summary ? (
+                formatCurrency(ahorroEstimado)
+              ) : (
+                <span className="text-base font-normal text-muted-foreground">Sin datos</span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Button variant="ghost" className="gap-2 px-0" asChild>
@@ -179,11 +394,25 @@ export default function TransactionsSummariesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Variación vs. mes anterior</CardDescription>
-            <CardTitle className="text-3xl font-semibold">{variacionLabel}</CardTitle>
+            <CardTitle className="text-3xl font-semibold">
+              {isInitialLoading ? (
+                <Skeleton className="h-8 w-32" />
+              ) : summary ? (
+                variation !== null ? (
+                  variationLabel
+                ) : (
+                  <span className="text-base font-normal text-muted-foreground">
+                    Sin datos comparables
+                  </span>
+                )
+              ) : (
+                <span className="text-base font-normal text-muted-foreground">Sin datos</span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Badge variant="outline" className="gap-1">
-              <PieChart className="h-3 w-3" /> Tu balance mensual cambió respecto al mes pasado
+              <PieChart className="h-3 w-3" /> Tu balance mensual cambió respecto al periodo anterior
             </Badge>
           </CardContent>
         </Card>
@@ -199,26 +428,39 @@ export default function TransactionsSummariesPage() {
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={period} onValueChange={setPeriod}>
+              <Select
+                value={selectedPeriod}
+                onValueChange={(value) => {
+                  setSelectedPeriod(value)
+                  setPage(1)
+                }}
+              >
                 <SelectTrigger className="w-full sm:w-48" aria-label="Seleccionar periodo">
                   <SelectValue placeholder="Periodo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {periods.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
+                  {periodOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={account} onValueChange={setAccount}>
+              <Select
+                value={account}
+                onValueChange={(value) => {
+                  setAccount(value)
+                  setSelectedPeriod(ALL_PERIODS_VALUE)
+                  setPage(1)
+                }}
+              >
                 <SelectTrigger className="w-full sm:w-48" aria-label="Seleccionar cuenta">
                   <SelectValue placeholder="Tu cuenta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
+                  {accountOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -259,31 +501,62 @@ export default function TransactionsSummariesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Comercio/Entidad</TableHead>
-                <TableHead className="text-right">Tu cuenta ({period})</TableHead>
-                <TableHead className="text-right">Mes anterior</TableHead>
+                <TableHead>Categoría</TableHead>
+                <TableHead className="text-right">
+                  {currentAccountLabel} · {currentPeriodLabel}
+                </TableHead>
+                <TableHead className="text-right">Tipo</TableHead>
                 <TableHead className="text-right">Participación en tu balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedSummaries.map((summary) => (
-                <TableRow key={summary.id}>
-                  <TableCell className="font-medium">{summary.category}</TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {formatCurrency(summary.current)}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {formatCurrency(summary.previous)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {(summary.contribution * 100).toFixed(1)}%
-                  </TableCell>
-                </TableRow>
-              ))}
-              {paginatedSummaries.length === 0 ? (
+              {isInitialLoading
+                ? Array.from({ length: pageSize }).map((_, index) => (
+                    <TableRow key={`summary-loading-${index}`}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-40" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="ml-auto h-5 w-24" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="ml-auto h-5 w-20" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="ml-auto h-5 w-16" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : paginatedSummaries.map((summaryCategory) => {
+                    const contribution = summaryCategory.percentage
+                    const typeLabel = summaryCategory.total >= 0 ? "Ingreso" : "Gasto"
+
+                    return (
+                      <TableRow key={summaryCategory.category}>
+                        <TableCell className="font-medium">{summaryCategory.category}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(summaryCategory.total)} {currencyCode}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {typeLabel}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {contribution.toFixed(1)}%
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+              {!isInitialLoading && summary && paginatedSummaries.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    No encontramos movimientos que coincidan con lo que buscas.
+                    No encontramos categorías que coincidan con lo que buscas.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {!isInitialLoading && !summary ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    No pudimos cargar información de tu resumen.
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -331,7 +604,7 @@ export default function TransactionsSummariesPage() {
               </PaginationItem>
             </PaginationContent>
             <div className="text-sm text-muted-foreground">
-              Página {page} de {totalPages} · {filteredSummaries.length} movimientos
+              Página {page} de {totalPages} · {filteredSummaries.length} categorías
             </div>
           </Pagination>
         </CardContent>
@@ -363,6 +636,27 @@ export default function TransactionsSummariesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>No se pudo cargar tu resumen</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{error}. Intenta nuevamente en unos minutos o actualiza la página.</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  void refresh()
+                }}
+                disabled={isLoading}
+              >
+                Reintentar
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
     </div>
   )
 }
