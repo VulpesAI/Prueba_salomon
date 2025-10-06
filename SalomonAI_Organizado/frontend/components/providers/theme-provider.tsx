@@ -46,6 +46,9 @@ const sanitizeStoredTheme = (
   }
 
   return fallback;
+const initialState: ThemeProviderState = {
+  theme: 'dark',
+  setTheme: () => null,
 };
 
 const applyThemeToRoot = (nextTheme: Theme) => {
@@ -85,6 +88,50 @@ export function ThemeProvider({
 
       window.localStorage.setItem(storageKey, newTheme);
       applyThemeToRoot(newTheme);
+  const getInitialTheme = useCallback(
+    () => {
+      if (typeof window === 'undefined') {
+        return defaultTheme;
+      }
+
+      const storedTheme = window.localStorage.getItem(storageKey);
+
+      if (storedTheme === 'light' || storedTheme === 'dark') {
+        return storedTheme;
+      }
+
+      if (storedTheme === 'system') {
+        window.localStorage.setItem(storageKey, defaultTheme);
+      }
+
+      return defaultTheme;
+    },
+    [defaultTheme, storageKey]
+  );
+
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+
+
+      return defaultTheme;
+    },
+    [defaultTheme, storageKey]
+  );
+
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+
+  useIsomorphicLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+  }, [theme]);
+
+  const setTheme = useCallback(
+    (newTheme: Theme) => {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(storageKey, newTheme);
+      }
       setThemeState(newTheme);
     },
     [storageKey]
