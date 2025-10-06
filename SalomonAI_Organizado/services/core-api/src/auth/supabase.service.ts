@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { SupabaseClient, createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import type { AuthUser } from '@supabase/supabase-js';
+import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 interface SupabaseAuthResponse {
   user: AuthUser | null;
@@ -100,6 +101,40 @@ export interface SupabaseTransactionUpsert
 export interface SupabaseUserTransactionRecord extends SupabaseTransactionRecord {
   statement: SupabaseStatementRecord | null;
   account: SupabaseAccountRecord | null;
+}
+
+export type SupabaseTransactionSortField = 'posted_at' | 'amount';
+export type SupabaseTransactionSortDirection = 'asc' | 'desc';
+
+export interface SupabaseTransactionsQueryOptions {
+  userId: string;
+  page: number;
+  pageSize: number;
+  accountId?: string;
+  statementId?: string;
+  category?: string;
+  merchant?: string;
+  search?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  startDate?: string;
+  endDate?: string;
+  type?: 'inflow' | 'outflow';
+  sortBy?: SupabaseTransactionSortField;
+  sortDirection?: SupabaseTransactionSortDirection;
+}
+
+export interface SupabaseTransactionsQueryResult {
+  data: SupabaseUserTransactionRecord[];
+  total: number;
+}
+
+export interface SupabaseMovementsStatsResult {
+  count: number;
+  totalAmount: number;
+  inflow: number;
+  outflow: number;
+  averageAmount: number;
 }
 
 export interface ParsedStatementSummary {
@@ -321,6 +356,145 @@ export class SupabaseService {
     }
 
     return (data as SupabaseTransactionRecord[]) ?? [];
+  }
+
+  async queryUserTransactions(
+    options: SupabaseTransactionsQueryOptions,
+  ): Promise<SupabaseTransactionsQueryResult> {
+    const client = this.getClientOrThrow();
+    const sortBy = options.sortBy ?? 'posted_at';
+    const sortDirection = options.sortDirection ?? 'desc';
+    const from = (options.page - 1) * options.pageSize;
+    const to = from + options.pageSize - 1;
+
+    const query = this.applyTransactionFilters(
+      client
+        .from('transactions')
+        .select('*, statement:statements(*, account:accounts(*))', { count: 'exact' }),
+      options,
+    )
+      .order(sortBy, { ascending: sortDirection === 'asc', nullsFirst: false })
+      .range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to query user transactions in Supabase: ${error.message}`);
+      throw error;
+    }
+
+    return {
+      data: (data as SupabaseUserTransactionRecord[]) ?? [],
+      total: typeof count === 'number' ? count : 0,
+    };
+  }
+
+  async getMovementsStats(
+    options: SupabaseTransactionsQueryOptions,
+  ): Promise<SupabaseMovementsStatsResult> {
+    const client = this.getClientOrThrow();
+
+    const { data, error } = await client.rpc('movements_stats', {
+      p_user_id: options.userId,
+      p_account_id: options.accountId ?? null,
+      p_statement_id: options.statementId ?? null,
+      p_category: options.category ?? null,
+      p_merchant: options.merchant ?? null,
+      p_search: options.search ?? null,
+      p_min_amount: options.minAmount ?? null,
+      p_max_amount: options.maxAmount ?? null,
+      p_start_date: options.startDate ?? null,
+      p_end_date: options.endDate ?? null,
+      p_type: options.type ?? null,
+    });
+
+    if (error) {
+      this.logger.error(`Failed to compute movement stats in Supabase: ${error.message}`);
+      throw error;
+    }
+
+    const row = (Array.isArray(data) ? data[0] : null) as
+      | {
+          total_count?: number | string | null;
+          total_amount?: number | string | null;
+          inflow?: number | string | null;
+          outflow?: number | string | null;
+          average_amount?: number | string | null;
+        }
+      | null;
+
+    return {
+      count: row?.total_count !== undefined && row?.total_count !== null ? Number(row.total_count) : 0,
+      totalAmount:
+        row?.total_amount !== undefined && row?.total_amount !== null ? Number(row.total_amount) : 0,
+      inflow: row?.inflow !== undefined && row?.inflow !== null ? Number(row.inflow) : 0,
+      outflow: row?.outflow !== undefined && row?.outflow !== null ? Number(row.outflow) : 0,
+      averageAmount:
+        row?.average_amount !== undefined && row?.average_amount !== null
+          ? Number(row.average_amount)
+          : 0,
+    };
+  }
+
+  private applyTransactionFilters(
+    query: PostgrestFilterBuilder<any, any, any, any, any, any, any>,
+    options: SupabaseTransactionsQueryOptions,
+  ) {
+    const sanitizedSearch = options.search?.replace(/,/g, '\\,');
+
+    query.eq('statement.user_id', options.userId);
+
+    if (options.accountId) {
+      query.eq('statement.account_id', options.accountId);
+    }
+
+    if (options.statementId) {
+      query.eq('statement_id', options.statementId);
+    }
+
+    if (options.category) {
+      query.ilike('category', `%${options.category}%`);
+    }
+
+    if (options.merchant) {
+      query.ilike('merchant', `%${options.merchant}%`);
+    }
+
+    if (sanitizedSearch) {
+      query.or(
+        [
+          `description.ilike.%${sanitizedSearch}%`,
+          `raw_description.ilike.%${sanitizedSearch}%`,
+          `normalized_description.ilike.%${sanitizedSearch}%`,
+          `merchant.ilike.%${sanitizedSearch}%`,
+          `category.ilike.%${sanitizedSearch}%`,
+        ].join(','),
+      );
+    }
+
+    if (options.minAmount !== undefined && options.minAmount !== null) {
+      query.gte('amount', options.minAmount);
+    }
+
+    if (options.maxAmount !== undefined && options.maxAmount !== null) {
+      query.lte('amount', options.maxAmount);
+    }
+
+    if (options.startDate) {
+      query.gte('posted_at', options.startDate);
+    }
+
+    if (options.endDate) {
+      query.lte('posted_at', options.endDate);
+    }
+
+    if (options.type === 'inflow') {
+      query.gte('amount', 0);
+    } else if (options.type === 'outflow') {
+      query.lt('amount', 0);
+    }
+
+    return query;
   }
 
   async listUserTransactions(userId: string): Promise<SupabaseUserTransactionRecord[]> {

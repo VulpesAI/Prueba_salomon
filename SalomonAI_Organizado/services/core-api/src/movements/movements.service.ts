@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { SupabaseService, SupabaseUserTransactionRecord } from '../auth/supabase.service';
+import {
+  SupabaseMovementsStatsResult,
+  SupabaseService,
+  SupabaseTransactionsQueryOptions,
+  SupabaseTransactionSortField,
+  SupabaseUserTransactionRecord,
+} from '../auth/supabase.service';
 import type { MovementsConfig } from '../config/configuration';
 import {
   GetMovementsQueryDto,
@@ -76,18 +82,44 @@ export class MovementsService {
     const resolvedPage = Number(query.page ?? 1);
     const page = Number.isFinite(resolvedPage) && resolvedPage > 0 ? resolvedPage : 1;
 
-    const transactions = await this.supabaseService.listUserTransactions(query.userId);
-    const filtered = this.applyFilters(transactions, query);
-    const sorted = this.sortTransactions(filtered, query.sortBy, query.sortDirection);
+    const sortField: SupabaseTransactionSortField =
+      query.sortBy === MovementSortField.AMOUNT ? 'amount' : 'posted_at';
+    const sortDirection: 'asc' | 'desc' =
+      query.sortDirection === MovementSortDirection.ASC ? 'asc' : 'desc';
+    const typeFilter =
+      query.type === MovementTypeFilter.INFLOW
+        ? 'inflow'
+        : query.type === MovementTypeFilter.OUTFLOW
+        ? 'outflow'
+        : undefined;
 
-    const total = sorted.length;
+    const queryOptions: SupabaseTransactionsQueryOptions = {
+      userId: query.userId,
+      page,
+      pageSize,
+      accountId: query.accountId,
+      statementId: query.statementId,
+      category: query.category,
+      merchant: query.merchant,
+      search: query.search,
+      minAmount: query.minAmount,
+      maxAmount: query.maxAmount,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      type: typeFilter,
+      sortBy: sortField,
+      sortDirection,
+    };
+
+    const [listResult, statsResult] = await Promise.all([
+      this.supabaseService.queryUserTransactions(queryOptions),
+      this.supabaseService.getMovementsStats(queryOptions),
+    ]);
+
+    const total = listResult.total;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const offset = (page - 1) * pageSize;
-    const pageItems = sorted
-      .slice(offset, offset + pageSize)
-      .map((transaction) => this.toContract(transaction));
-
-    const stats = this.computeStats(filtered);
+    const data = listResult.data.map((transaction) => this.toContract(transaction));
+    const stats = this.toStats(statsResult);
 
     return {
       pagination: {
@@ -101,125 +133,19 @@ export class MovementsService {
         page,
         pageSize,
       },
-      data: pageItems,
+      data,
       stats,
     };
   }
 
-  private applyFilters(
-    transactions: SupabaseUserTransactionRecord[],
-    query: GetMovementsQueryDto,
-  ): SupabaseUserTransactionRecord[] {
-    return transactions.filter((transaction) => {
-      if (query.accountId) {
-        const statement = transaction.statement;
-        if (!statement || statement.account_id !== query.accountId) {
-          return false;
-        }
-      }
-
-      if (query.statementId && transaction.statement_id !== query.statementId) {
-        return false;
-      }
-
-      if (query.category) {
-        const normalizedCategory = (transaction.category ?? '').toLowerCase();
-        if (!normalizedCategory.includes(query.category.toLowerCase())) {
-          return false;
-        }
-      }
-
-      if (query.merchant) {
-        const merchant = (transaction.merchant ?? '').toLowerCase();
-        if (!merchant.includes(query.merchant.toLowerCase())) {
-          return false;
-        }
-      }
-
-      if (query.search) {
-        const search = query.search.toLowerCase();
-        const haystack = [
-          transaction.description,
-          transaction.raw_description,
-          transaction.normalized_description,
-          transaction.merchant,
-          transaction.category,
-        ]
-          .filter(Boolean)
-          .map((value) => value!.toString().toLowerCase());
-
-        if (!haystack.some((value) => value.includes(search))) {
-          return false;
-        }
-      }
-
-      if (query.minAmount !== undefined && query.minAmount !== null) {
-        if ((transaction.amount ?? 0) < query.minAmount) {
-          return false;
-        }
-      }
-
-      if (query.maxAmount !== undefined && query.maxAmount !== null) {
-        if ((transaction.amount ?? 0) > query.maxAmount) {
-          return false;
-        }
-      }
-
-      if (query.startDate || query.endDate) {
-        const postedAt = transaction.posted_at ? new Date(transaction.posted_at) : null;
-        if (query.startDate) {
-          const start = new Date(query.startDate);
-          if (postedAt && postedAt < start) {
-            return false;
-          }
-        }
-        if (query.endDate) {
-          const end = new Date(query.endDate);
-          if (postedAt && postedAt > end) {
-            return false;
-          }
-        }
-      }
-
-      if (query.type) {
-        const amount = transaction.amount ?? 0;
-        if (query.type === MovementTypeFilter.INFLOW && amount < 0) {
-          return false;
-        }
-        if (query.type === MovementTypeFilter.OUTFLOW && amount >= 0) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }
-
-  private sortTransactions(
-    transactions: SupabaseUserTransactionRecord[],
-    sortBy?: MovementSortField,
-    direction: MovementSortDirection = MovementSortDirection.DESC,
-  ): SupabaseUserTransactionRecord[] {
-    const sortField = sortBy ?? MovementSortField.POSTED_AT;
-    const factor = direction === MovementSortDirection.ASC ? 1 : -1;
-
-    return [...transactions].sort((a, b) => {
-      if (sortField === MovementSortField.AMOUNT) {
-        const left = a.amount ?? 0;
-        const right = b.amount ?? 0;
-        if (left === right) {
-          return 0;
-        }
-        return left > right ? factor : -factor;
-      }
-
-      const leftDate = a.posted_at ? new Date(a.posted_at).getTime() : 0;
-      const rightDate = b.posted_at ? new Date(b.posted_at).getTime() : 0;
-      if (leftDate === rightDate) {
-        return 0;
-      }
-      return leftDate > rightDate ? factor : -factor;
-    });
+  private toStats(stats: SupabaseMovementsStatsResult): MovementsStatsContract {
+    return {
+      count: stats.count,
+      totalAmount: stats.totalAmount,
+      inflow: stats.inflow,
+      outflow: stats.outflow,
+      averageAmount: stats.averageAmount,
+    };
   }
 
   private toContract(transaction: SupabaseUserTransactionRecord): MovementContract {
@@ -291,31 +217,4 @@ export class MovementsService {
     return parts.join(' | ') || 'Movimiento registrado';
   }
 
-  private computeStats(transactions: SupabaseUserTransactionRecord[]): MovementsStatsContract {
-    if (transactions.length === 0) {
-      return {
-        count: 0,
-        totalAmount: 0,
-        inflow: 0,
-        outflow: 0,
-        averageAmount: 0,
-      };
-    }
-
-    return transactions.reduce<MovementsStatsContract>(
-      (stats, transaction, _, { length }) => {
-        const amount = transaction.amount ?? 0;
-        stats.totalAmount += amount;
-        if (amount >= 0) {
-          stats.inflow += amount;
-        } else {
-          stats.outflow += Math.abs(amount);
-        }
-        stats.count += 1;
-        stats.averageAmount = stats.totalAmount / length;
-        return stats;
-      },
-      { count: 0, totalAmount: 0, inflow: 0, outflow: 0, averageAmount: 0 },
-    );
-  }
 }
