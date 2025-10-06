@@ -33,6 +33,56 @@ Este documento resume los endpoints, modelos de datos, configuración y flujos i
 3. `/chat/stream` detecta el mejor intent, emite un evento JSONL y solicita resolución a `core-api`. Si `core-api` falla se usa `_fallback_resolution` con respuestas estáticas y un resumen financiero precargado.【F:services/conversation-engine/app/main.py†L59-L109】【F:services/conversation-engine/app/core_client.py†L76-L155】
 4. Tras recibir la resolución se envían insights, tokens de la respuesta y el resumen actualizado (vía `core-api`).
 
+### Plan de mejoras con LLM avanzado
+
+**Objetivo.** Habilitar conversaciones abiertas que combinen intents clásicos con respuestas generadas por un LLM (OpenAI GPT-4) enriquecidas con el contexto financiero del usuario. Se prioriza preservar el flujo *streaming* actual y registrar cada interacción para auditoría.
+
+**Componentes involucrados.**
+
+- `conversation-engine`: orquestará la detección de intents, búsqueda semántica y la llamada al LLM.
+- `core-api`: seguirá entregando resúmenes y endpoints financieros; expondrá datos adicionales para vectorización.
+- **Qdrant**: almacenará embeddings de transacciones, resúmenes mensuales y notas del usuario para recuperación semántica.
+- **OpenAI GPT-4**: proveedor gestionado para la generación en lenguaje natural vía API.
+
+**Flujo propuesto.**
+
+1. **Vectorización nocturna** (script ETL o tarea en `recommendation-engine`):
+   - Obtener transacciones recientes, balances y resúmenes desde `core-api`/Supabase.
+   - Generar embeddings con el modelo de `text-embedding-3-large` (o equivalente) y almacenarlos en Qdrant (`financial_context` con `user_id` como *payload*).
+   - Persistir *snapshots* agregados (p. ej., gastos por categoría, metas de ahorro) como documentos sintéticos.
+2. **Atención en línea** (`/chat/stream`):
+   - Detectar intent; si la confianza es baja o el intent admite enriquecimiento, ejecutar búsqueda semántica en Qdrant (`vector + filtros por user_id/fecha`).
+   - Construir *prompt* con: instrucciones de tono, resumen financiero reciente (`core-api`), top-k resultados de Qdrant y el mensaje del usuario.
+   - Invocar GPT-4 con `response_format=json_schema` para controlar la estructura (`tokens`, `insights`, `actions`).
+   - Emitir los tokens mediante SSE manteniendo compatibilidad con el frontend.
+3. **Post-procesamiento y trazabilidad**:
+   - Registrar en Supabase/Qdrant la interacción y el contexto usado.
+   - Enviar métricas (latencia, coste estimado por tokens) a Prometheus.
+
+**Cambios técnicos prioritarios.**
+
+| Área | Acción | Dependencias |
+| --- | --- | --- |
+| Configuración | Añadir variables `OPENAI_API_KEY`, `OPENAI_BASE_URL` (opcional), `LLM_MODEL_ID`, `QDRANT_FINANCIAL_COLLECTION`, `LLM_MAX_TOKENS`. | `secrets.enc.json`, `docker-compose.yml`. |
+| SDK OpenAI | Crear cliente asíncrono en `services/conversation-engine/app/llm_client.py` con *retry/backoff* y soporte de *streaming*. | Librería `openai>=1.0`. |
+| Recuperación | Implementar `FinancialContextRetriever` reutilizando `qdrant-client` (ya usado en `core-api`) para búsquedas filtradas por `user_id`. | Acceso a Qdrant y embeddings actualizados. |
+| Orquestación | Extender `/chat/stream` para combinar intents + respuesta LLM (`resolve_llm_response`). Mantener *fallback* actual cuando la API falle o supere tiempo límite. | Tests E2E, control de latencia. |
+| Observabilidad | Incorporar métricas (`LLM_LATENCY`, `RETRIEVAL_SIZE`) y logs estructurados con IDs de sesión. | Stack Prometheus + Loki. |
+
+**Consideraciones de seguridad y costes.**
+
+- Limitar la información enviada al LLM: no incluir datos sensibles (CLABE, tarjetas completas). Usar máscaras y reglas de *redaction* previas.
+- Gestionar *rate limits* mediante colas o *circuit breakers* (p. ej., redis + ventana móvil por usuario).
+- Calcular y exponer el coste mensual estimado usando métricas de tokens; definir alertas cuando se supere el presupuesto.
+- Mantener *fallback* local con respuestas estáticas para intents críticos si GPT-4 está indisponible.
+
+**Cronograma sugerido.**
+
+1. *Semana 1*: definir esquema de Qdrant (`financial_context`), preparar embeddings históricos y validar rendimiento de búsquedas.
+2. *Semana 2*: implementar cliente GPT-4 + flujo de recuperación en `conversation-engine`; cubrir pruebas unitarias.
+3. *Semana 3*: ejecutar pruebas end-to-end con frontend, medir latencia y costos, endurecer seguridad (masking, auditoría).
+4. *Semana 4*: despliegue gradual en *staging*, activar monitoreo y retroalimentación de usuarios pilotos.
+
 ### Interacciones con `core-api` y otros componentes
 
 - Invoca `POST /api/ai/intents/resolve` y `GET /api/ai/summary/{sessionId}` en `core-api` usando `CORE_API_BASE_URL`.
