@@ -321,6 +321,21 @@ class ConversationDataService:
                     context="Corresponde al 30% del excedente mensual estimado.",
                 )
             )
+        elif intent.name == "limite_credito":
+            insights.append(
+                FinancialInsight(
+                    label="Excedente mensual estimado",
+                    value=f"${surplus:,.0f} CLP",
+                    context="Te da una referencia de capacidad de pago frente a tus productos de crédito.",
+                )
+            )
+            insights.append(
+                FinancialInsight(
+                    label="Gasto mensual registrado",
+                    value=f"${summary.monthly_expenses:,.0f} CLP",
+                    context="Corresponde al total de gastos del último período consolidado.",
+                )
+            )
         else:
             insights.append(
                 FinancialInsight(
@@ -378,6 +393,12 @@ class ConversationDataService:
             suggested = max(0.0, surplus * 0.3)
             fragments.append(
                 "Considera destinar ${:,.0f} CLP (30% de tu excedente) a ahorro periódico.".format(suggested)
+            )
+        elif intent.name == "limite_credito" and summary:
+            fragments.append(
+                "Según tus movimientos, mantienes un excedente mensual aproximado de ${:,.0f} CLP. Úsalo como referencia para controlar el cupo de tus tarjetas y líneas de crédito.".format(
+                    surplus
+                )
             )
         elif summary:
             fragments.append(
@@ -519,6 +540,22 @@ class CoreAPIClient:
                     FinancialInsight(
                         label="Excedente disponible",
                         value=f"${summary.monthly_income - summary.monthly_expenses:,.0f} CLP",
+                    ),
+                ],
+            ),
+            "limite_credito": (
+                "Considera que tu excedente mensual es de ${:,.0f} CLP; úsalo como referencia para no sobrepasar el límite de tus productos de crédito.".format(
+                    summary.monthly_income - summary.monthly_expenses
+                ),
+                [
+                    FinancialInsight(
+                        label="Excedente mensual",
+                        value=f"${summary.monthly_income - summary.monthly_expenses:,.0f} CLP",
+                    ),
+                    FinancialInsight(
+                        label="Balance en cuentas",
+                        value=f"${summary.total_balance:,.0f} CLP",
+                        context="Saldo consolidado en tus cuentas registradas.",
                     ),
                 ],
             ),
