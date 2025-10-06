@@ -2,18 +2,38 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import io
 import logging
 import re
 import tempfile
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
+from xml.etree import ElementTree
 
-import pandas as pd
-from pdfminer.high_level import extract_text as extract_pdf_text
-from PIL import Image
+from typing import TYPE_CHECKING
+
+try:  # pragma: no cover - pandas is an optional dependency
+    import pandas as _pandas  # type: ignore
+except Exception:  # pragma: no cover - fallback when pandas is unavailable
+    _pandas = None  # type: ignore
+
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+    import pandas as pd  # type: ignore
+else:  # pragma: no cover - expose optional dependency at runtime
+    pd = _pandas  # type: ignore
+try:  # pragma: no cover - pdfminer is optional for PDF extraction
+    from pdfminer.high_level import extract_text as extract_pdf_text
+except Exception:  # pragma: no cover - fallback when pdfminer is unavailable
+    extract_pdf_text = None  # type: ignore
+
+try:  # pragma: no cover - Pillow is optional for OCR support
+    from PIL import Image
+except Exception:  # pragma: no cover - fallback when Pillow is unavailable
+    Image = None  # type: ignore
 
 try:  # pragma: no cover - optional dependency when OCR is disabled
     import pytesseract
@@ -92,10 +112,14 @@ class StatementParser:
             return parsed
 
         text = content.decode("utf-8-sig", errors="ignore")
-        try:
-            rows = list(pd.read_csv(io.StringIO(text)).to_dict(orient="records"))
-        except Exception as exc:  # pragma: no cover - delegated to pandas
-            raise StatementParsingError(f"No se pudo leer el CSV: {exc}") from exc
+        if pd is not None:
+            try:
+                dataframe = self._read_csv_with_fallbacks(io.StringIO(text))
+            except Exception as exc:  # pragma: no cover - delegated to pandas
+                raise StatementParsingError(f"No se pudo leer el CSV: {exc}") from exc
+            rows = self._dataframe_to_rows(dataframe)
+        else:
+            rows = self._read_csv_without_pandas(text)
         return self._parse_tabular(rows)
 
     def _parse_excel(self, content: bytes) -> ParsedStatement:
@@ -104,14 +128,23 @@ class StatementParser:
         if parsed:
             return parsed
 
-        try:
-            df = pd.read_excel(buffer)
-        except Exception as exc:  # pragma: no cover - delegated to pandas
-            raise StatementParsingError(f"No se pudo leer el archivo de Excel: {exc}") from exc
-        rows = df.to_dict(orient="records")
+        if pd is not None:
+            try:
+                dataframe = pd.read_excel(buffer)
+            except Exception as exc:  # pragma: no cover - delegated to pandas
+                raise StatementParsingError(f"No se pudo leer el archivo de Excel: {exc}") from exc
+            rows = self._dataframe_to_rows(dataframe)
+        else:
+            try:
+                rows = self._read_xlsx_basic(buffer.getvalue())
+            except Exception as exc:
+                raise StatementParsingError(f"No se pudo leer el archivo de Excel: {exc}") from exc
         return self._parse_tabular(rows)
 
     def _parse_pdf(self, content: bytes) -> ParsedStatement:
+        if extract_pdf_text is None:
+            raise StatementParsingError("Procesamiento de PDF no disponible: pdfminer no está instalado")
+
         try:
             text = extract_pdf_text(io.BytesIO(content))
         except Exception as exc:  # pragma: no cover - delegated to pdfminer
@@ -121,7 +154,7 @@ class StatementParser:
         return self._parse_text_lines(text.splitlines())
 
     def _parse_image(self, content: bytes) -> ParsedStatement:
-        if pytesseract is None:
+        if pytesseract is None or Image is None:
             raise StatementParsingError("OCR no disponible: pytesseract no está instalado")
 
         try:
@@ -251,6 +284,12 @@ class StatementParser:
         if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
             return value
 
+        if re.match(r"^\d{4}-\d{2}-\d{2}T", value):
+            try:
+                return datetime.fromisoformat(value).date().isoformat()
+            except ValueError:
+                return None
+
         if re.match(r"^\d{8}$", value):
             try:
                 return datetime.strptime(value, "%Y%m%d").date().isoformat()
@@ -264,6 +303,9 @@ class StatementParser:
             "%d.%m.%Y",
             "%d %b %Y",
             "%d %B %Y",
+            "%d/%m/%y",
+            "%d-%m-%y",
+            "%m/%d/%y",
         ):
             try:
                 return datetime.strptime(value, fmt).date().isoformat()
@@ -328,8 +370,181 @@ class StatementParser:
 
         return summary
 
+    @staticmethod
+    def _dataframe_to_rows(dataframe: "pd.DataFrame") -> List[dict]:
+        if pd is None:  # pragma: no cover - defensive guard
+            raise StatementParsingError("Procesamiento tabular requiere pandas")
+
+        cleaned = dataframe.dropna(how="all")
+        cleaned = cleaned.where(pd.notnull(cleaned), None)
+        return cleaned.to_dict(orient="records")
+
+    @staticmethod
+    def _read_csv_with_fallbacks(buffer: io.StringIO) -> "pd.DataFrame":
+        if pd is None:  # pragma: no cover - defensive guard
+            raise StatementParsingError("Lectura de CSV con pandas no disponible")
+
+        attempts = (
+            {"sep": None, "engine": "python"},
+            {"sep": ";"},
+            {"sep": ","},
+        )
+        last_error: Exception | None = None
+
+        for options in attempts:
+            buffer.seek(0)
+            try:
+                dataframe = pd.read_csv(buffer, **options)
+            except Exception as exc:  # pragma: no cover - delegated to pandas
+                last_error = exc
+                continue
+
+            if not dataframe.empty and any(col for col in dataframe.columns if not str(col).startswith("Unnamed")):
+                return dataframe
+
+        buffer.seek(0)
+        if last_error:
+            raise last_error
+        return pd.read_csv(buffer)
+
+    @staticmethod
+    def _read_csv_without_pandas(text: str) -> List[dict]:
+        sample = text[:1024]
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+        except csv.Error:
+            dialect = csv.get_dialect("excel")
+
+        buffer = io.StringIO(text)
+        reader = csv.reader(buffer, dialect)
+        try:
+            headers = next(reader)
+        except StopIteration:
+            return []
+
+        normalized_headers = [str(header or "").strip() for header in headers]
+        rows: List[dict] = []
+        for raw_row in reader:
+            row_data: Dict[str, Any] = {}
+            for index, header in enumerate(normalized_headers):
+                if not header:
+                    continue
+                value = raw_row[index] if index < len(raw_row) else None
+                if isinstance(value, str):
+                    value = value.strip()
+                row_data[header] = value
+            if any(value not in (None, "") for value in row_data.values()):
+                rows.append(row_data)
+
+        return rows
+
+    def _read_xlsx_basic(self, payload: bytes) -> List[dict]:
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            sheet_name = self._find_first_sheet_name(archive)
+            if not sheet_name:
+                raise StatementParsingError("El archivo de Excel no contiene hojas")
+
+            sheet_xml = archive.read(sheet_name)
+            shared_strings = self._load_shared_strings(archive)
+
+        namespace = {"ss": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+        root = ElementTree.fromstring(sheet_xml)
+        rows: List[dict] = []
+        headers: List[str] = []
+
+        for row in root.findall("ss:sheetData/ss:row", namespace):
+            cells = {}
+            for cell in row.findall("ss:c", namespace):
+                ref = cell.attrib.get("r", "")
+                column_index = self._column_reference_to_index(ref)
+                value = self._parse_xlsx_cell(cell, shared_strings, namespace)
+                cells[column_index] = value
+
+            if not cells:
+                continue
+
+            max_index = max(cells)
+            row_values = [cells.get(index) for index in range(max_index + 1)]
+
+            if not headers:
+                headers = [str(value or "").strip() for value in row_values]
+                continue
+
+            row_dict: Dict[str, Any] = {}
+            for index, header in enumerate(headers):
+                if not header:
+                    continue
+                row_dict[header] = row_values[index] if index < len(row_values) else None
+
+            if any(value not in (None, "") for value in row_dict.values()):
+                rows.append(row_dict)
+
+        return rows
+
+    @staticmethod
+    def _find_first_sheet_name(archive: zipfile.ZipFile) -> Optional[str]:
+        candidates = sorted(
+            (name for name in archive.namelist() if name.startswith("xl/worksheets/") and name.endswith(".xml"))
+        )
+        return candidates[0] if candidates else None
+
+    @staticmethod
+    def _load_shared_strings(archive: zipfile.ZipFile) -> List[str]:
+        try:
+            raw = archive.read("xl/sharedStrings.xml")
+        except KeyError:
+            return []
+
+        namespace = {"ss": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+        root = ElementTree.fromstring(raw)
+        values: List[str] = []
+        for item in root.findall("ss:si", namespace):
+            text_parts = [element.text or "" for element in item.findall(".//ss:t", namespace)]
+            values.append("".join(text_parts))
+        return values
+
+    @staticmethod
+    def _column_reference_to_index(reference: str) -> int:
+        letters = "".join(char for char in reference if char.isalpha()).upper()
+        index = 0
+        for char in letters:
+            index = index * 26 + (ord(char) - ord("A") + 1)
+        return index - 1
+
+    @staticmethod
+    def _parse_xlsx_cell(cell: ElementTree.Element, shared_strings: List[str], namespace: dict) -> Any:
+        cell_type = cell.attrib.get("t")
+        value_element = cell.find("ss:v", namespace)
+
+        if cell_type == "s" and value_element is not None:
+            try:
+                return shared_strings[int(value_element.text or "0")]
+            except (ValueError, IndexError):
+                return None
+
+        if cell_type == "b" and value_element is not None:
+            return value_element.text == "1"
+
+        if cell_type == "inlineStr":
+            text_element = cell.find("ss:is/ss:t", namespace)
+            return text_element.text if text_element is not None else None
+
+        if value_element is None:
+            return None
+
+        raw = value_element.text
+        if raw is None:
+            return None
+
+        try:
+            if "." in raw or "e" in raw.lower():
+                return float(raw)
+            return int(raw)
+        except ValueError:
+            return raw
+
     def _try_statement_parser(self, content: bytes, *, suffix: str) -> Optional[ParsedStatement]:
-        if StatementWallet is None:
+        if StatementWallet is None or pd is None:
             return None
 
         try:
@@ -346,7 +561,7 @@ class StatementParser:
         transactions: List[dict] = []
         for _, row in dataframe.iterrows():
             created = row.get("created_date")
-            if isinstance(created, pd.Timestamp):
+            if pd is not None and isinstance(created, pd.Timestamp):
                 created_dt = created.to_pydatetime()
             elif isinstance(created, datetime):
                 created_dt = created
