@@ -54,6 +54,43 @@ class RecommendationSettings(BaseSettings):
     enable_supabase_feedback: bool = Field(default=False, alias="ENABLE_SUPABASE_FEEDBACK")
     supabase_url: Optional[str] = Field(default=None, alias="SUPABASE_URL")
     supabase_anon_key: Optional[str] = Field(default=None, alias="SUPABASE_ANON_KEY")
+    enable_qdrant_sync: bool = Field(default=False, validation_alias=AliasChoices("ENABLE_QDRANT_SYNC", "RECOMMENDATION_ENABLE_QDRANT_SYNC"))
+    qdrant_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("QDRANT_URL", "RECOMMENDATION_QDRANT_URL"),
+    )
+    qdrant_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("QDRANT_API_KEY", "RECOMMENDATION_QDRANT_API_KEY"),
+    )
+    qdrant_collection_users: str = Field(
+        default="user_finance_profiles",
+        validation_alias=AliasChoices("QDRANT_COLLECTION_USERS", "RECOMMENDATION_QDRANT_COLLECTION_USERS"),
+    )
+    qdrant_collection_items: str = Field(
+        default="reco_items",
+        validation_alias=AliasChoices("QDRANT_COLLECTION_ITEMS", "RECOMMENDATION_QDRANT_COLLECTION_ITEMS"),
+    )
+    qdrant_timeout: float = Field(
+        default=5.0,
+        validation_alias=AliasChoices("QDRANT_TIMEOUT", "RECOMMENDATION_QDRANT_TIMEOUT"),
+    )
+    openai_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY", "RECOMMENDATION_OPENAI_API_KEY"),
+    )
+    embedding_model: str = Field(
+        default="text-embedding-3-small",
+        validation_alias=AliasChoices("EMBEDDING_MODEL", "RECOMMENDATION_EMBEDDING_MODEL"),
+    )
+    embedding_dim: int = Field(
+        default=1536,
+        validation_alias=AliasChoices("EMBEDDING_DIM", "RECOMMENDATION_EMBEDDING_DIM"),
+    )
+    embedding_version: str = Field(
+        default="v1",
+        validation_alias=AliasChoices("EMBEDDING_VERSION", "RECOMMENDATION_EMBEDDING_VERSION"),
+    )
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
