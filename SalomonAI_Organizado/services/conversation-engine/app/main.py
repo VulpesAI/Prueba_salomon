@@ -142,9 +142,19 @@ async def chat_event_stream(
 ) -> AsyncGenerator[bytes, None]:
     nlu: SpanishNLU = services["nlu"]
     core_client: CoreAPIClient = services["core_client"]
+    data_service: ConversationDataService | None = services.get("data_service")  # type: ignore[assignment]
 
     intents = nlu.detect_intents(request.message)
     best_intent = intents[0]
+
+    if data_service:
+        await data_service.log_intent_detection(
+            request.session_id,
+            query=request.message,
+            detected=best_intent,
+            intents=intents,
+            metadata=request.metadata,
+        )
 
     yield json_event(ChatChunk(type="intent", data={"intent": best_intent.dict()}))
 
@@ -172,6 +182,16 @@ async def chat_event_stream(
         metadata=request.metadata,
     )
     yield json_event(ChatChunk(type="summary", data={"summary": summary.dict()}))
+
+    if data_service:
+        await data_service.log_intent_resolution(
+            request.session_id,
+            query=request.message,
+            resolution=resolution,
+            response_text=assistant_text,
+            summary=summary,
+            metadata=request.metadata,
+        )
 
     yield json_event(ChatChunk(type="done", data={"intent": best_intent.name}))
 
