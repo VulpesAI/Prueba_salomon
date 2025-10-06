@@ -118,7 +118,10 @@ class SupabaseFinancialRepository:
         }
 
     async def _request(
-        self, method: str, resource: str, params: Optional[Dict[str, str]] = None
+        self,
+        method: str,
+        resource: str,
+        params: Optional[Dict[str, str]] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         if not self.enabled:
             return None
@@ -131,6 +134,29 @@ class SupabaseFinancialRepository:
         except httpx.HTTPError as exc:
             logger.warning("Error consultando Supabase (%s %s): %s", method, resource, exc)
             return None
+
+    async def _post(self, resource: str, payload: Dict[str, Any]) -> None:
+        if not self.enabled:
+            return
+        url = f"{self.base_url}/rest/v1/{resource.lstrip('/')}"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    url,
+                    headers={**self._headers(), "Prefer": "return=minimal"},
+                    json=payload,
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as exc:
+            logger.warning("Error escribiendo en Supabase (%s): %s", resource, exc)
+
+    async def log_conversation_event(self, entry: Dict[str, Any]) -> None:
+        if not entry:
+            return
+        payload = {key: value for key, value in entry.items() if value is not None}
+        if not payload:
+            return
+        await self._post("conversation_logs", payload)
 
     async def fetch_latest_statement(self, user_id: str) -> Optional[Dict[str, Any]]:
         params = {
@@ -228,6 +254,81 @@ class ConversationDataService:
     ) -> None:
         self._supabase = supabase_repo
         self._qdrant = qdrant_repo
+
+    @staticmethod
+    def _serialize(value: Any) -> Any:
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, list):
+            return [ConversationDataService._serialize(item) for item in value]
+        if isinstance(value, dict):
+            return {key: ConversationDataService._serialize(val) for key, val in value.items()}
+        if hasattr(value, "dict"):
+            return ConversationDataService._serialize(value.dict())
+        return value
+
+    async def _log_event(self, session_id: str, event_type: str, **fields: Any) -> None:
+        if not self._supabase or not self._supabase.enabled:
+            return
+        payload: Dict[str, Any] = {"session_id": session_id, "event_type": event_type}
+        for key, value in fields.items():
+            if value is None:
+                continue
+            if key == "metadata" and isinstance(value, dict):
+                serialized = self._serialize(value)
+                if serialized:
+                    payload[key] = serialized
+            else:
+                payload[key] = value
+        await self._supabase.log_conversation_event(payload)
+
+    async def log_intent_detection(
+        self,
+        session_id: str,
+        *,
+        query: str,
+        detected: IntentCandidate,
+        intents: List[IntentCandidate],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        await self._log_event(
+            session_id,
+            "intent_detected",
+            user_query=query,
+            detected_intent=normalize_intent_name(detected.name),
+            intent_confidence=detected.confidence,
+            metadata={
+                "query": query,
+                "requestMetadata": metadata or {},
+                "intents": [intent.dict() for intent in intents],
+            },
+        )
+
+    async def log_intent_resolution(
+        self,
+        session_id: str,
+        *,
+        query: str,
+        resolution: IntentResolution,
+        response_text: str,
+        summary: Optional[FinancialSummary],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        event_metadata: Dict[str, Any] = {
+            "resolution": resolution.dict(),
+            "requestMetadata": metadata or {},
+        }
+        if summary:
+            event_metadata["summary"] = summary.dict()
+        await self._log_event(
+            session_id,
+            "response_sent",
+            user_query=query,
+            detected_intent=normalize_intent_name(resolution.intent.name),
+            intent_confidence=resolution.intent.confidence,
+            response_text=response_text,
+            metadata=event_metadata,
+        )
 
     async def fetch_summary(self, session_id: str) -> Optional[FinancialSummary]:
         if not self._supabase or not self._supabase.enabled:
