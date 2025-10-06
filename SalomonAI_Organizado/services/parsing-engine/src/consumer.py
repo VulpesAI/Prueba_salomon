@@ -30,6 +30,12 @@ STATEMENT_PROCESSING_DURATION = Histogram(
     "Duración del procesamiento de cartolas en el parsing-engine",
     buckets=(0.5, 1, 2, 5, 10, 30, 60, 120, 300),
 )
+STATEMENT_TRANSACTIONS_EXTRACTED = Histogram(
+    "parsing_engine_transactions_extracted",
+    "Distribución de transacciones extraídas por cartola procesada",
+    buckets=(0, 1, 5, 10, 20, 50, 100, 200, 500, 1000),
+    labelnames=("status",),
+)
 STATEMENT_DOCUMENT_BYTES = Histogram(
     "parsing_engine_document_bytes",
     "Tamaño (en bytes) de los documentos procesados",
@@ -225,10 +231,21 @@ class ParsingEngine:
             checksum = self._fallback_checksum(message)
 
         duration = time.perf_counter() - start_time
+        transactions = len(parsed.transactions) if parsed else 0
         STATEMENT_PROCESSING_DURATION.observe(duration)
         STATEMENTS_PROCESSED.labels(status=status).inc()
+        STATEMENT_TRANSACTIONS_EXTRACTED.labels(status=status).observe(transactions)
         if status == "failed" and reason:
             STATEMENT_FAILURES.labels(reason=reason).inc()
+
+        LOGGER.info(
+            "Resumen de cartola %s: estado=%s, duracion=%.3fs, transacciones=%d, errores=%d",
+            message.statement_id,
+            status,
+            duration,
+            transactions,
+            0 if status == "completed" else 1,
+        )
 
         return build_result_payload(
             statement_id=message.statement_id,
