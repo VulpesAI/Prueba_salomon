@@ -34,6 +34,12 @@
   --icon-primary: 227.73 73.33% 11.76%;
   --icon-secondary: 215.29 19.32% 34.51%;
 
+  /* Colores de gráficos */
+  --chart-1: 209 90% 50%;
+  --chart-2: 142 70% 45%;
+  --chart-3: 0 82% 60%;
+  --chart-4: 47 95% 55%;
+
   /* Escala de marca */
   --primary: 209 100% 47.06%;
   --primary-foreground: 228 100% 98.04%;
@@ -61,6 +67,12 @@
   --text-muted: 215 20.22% 65.1%;
   --icon-primary: 210 20% 98.04%;
   --icon-secondary: 214.29 31.82% 91.37%;
+
+  /* Colores de gráficos */
+  --chart-1: 207 88% 62%;
+  --chart-2: 150 70% 52%;
+  --chart-3: 0 75% 64%;
+  --chart-4: 45 90% 62%;
 
   --primary: 209 100% 47.06%;
   --primary-foreground: 228 100% 98.04%;
