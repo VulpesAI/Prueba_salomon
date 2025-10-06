@@ -45,7 +45,7 @@ Cada tarea incluye un llamado a la acción para que pueda iniciarse directamente
 
 ## 7. Métricas, cumplimiento y seguridad
 
-- [ ] Instrumentar servicios clave con Prometheus/Grafana y publicar métricas de parsing, recomendaciones y voz. — [Iniciar tarea](#)
-- [ ] Redactar lineamientos de privacidad y cumplimiento normativo chileno (anonimización, retención de datos). — [Iniciar tarea](#)
-- [ ] Crear checklists de seguridad para despliegues (rotación de claves, monitoreo, planes de pruebas). — [Iniciar tarea](#)
+- [x] Instrumentar servicios clave con Prometheus/Grafana y publicar métricas de parsing, recomendaciones y voz (ver `docs/operations/monitoring-stack.md`).
+- [x] Redactar lineamientos de privacidad y cumplimiento normativo chileno (anonimización, retención de datos) en `docs/compliance/chile-privacy-guidelines.md`.
+- [x] Crear checklists de seguridad para despliegues (rotación de claves, monitoreo, planes de pruebas) en `docs/operations/security-deployment-checklists.md`.
 

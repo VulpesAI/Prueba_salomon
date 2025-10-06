@@ -14,3 +14,4 @@ pdfminer.six==20231228
 Pillow==10.4.0
 pytesseract==0.3.13
 statement-parser==0.0.15
+prometheus-client==0.20.0
