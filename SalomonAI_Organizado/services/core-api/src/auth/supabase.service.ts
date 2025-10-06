@@ -190,6 +190,17 @@ export interface SupabaseForecastResultUpsert {
   points: SupabaseForecastPointRecord[];
 }
 
+export interface SupabaseForecastResultRecord {
+  id: string;
+  userId: string;
+  generatedAt: string;
+  horizonDays: number;
+  historyDays: number;
+  modelType: string;
+  metadata: Record<string, unknown> | null;
+  points: SupabaseForecastPointRecord[];
+}
+
 @Injectable()
 export class SupabaseService {
   private readonly logger = new Logger(SupabaseService.name);
@@ -632,6 +643,59 @@ export class SupabaseService {
       );
       throw error;
     }
+  }
+
+  async getLatestForecastResult(userId: string): Promise<SupabaseForecastResultRecord | null> {
+    const client = this.getClientOrThrow();
+
+    const { data, error } = await client
+      .from('forecast_results')
+      .select(
+        'id, user_id, generated_at, horizon_days, history_days, model_type, metadata, forecast_points',
+      )
+      .eq('user_id', userId)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Failed to fetch latest forecast result for user ${userId}: ${error.message}`,
+      );
+      throw error;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    const row = data as {
+      id: string;
+      user_id: string;
+      generated_at: string;
+      horizon_days?: number | string | null;
+      history_days?: number | string | null;
+      model_type: string;
+      metadata: Record<string, unknown> | null;
+      forecast_points: SupabaseForecastPointRecord[] | null;
+    };
+
+    return {
+      id: row.id,
+      userId: row.user_id,
+      generatedAt: row.generated_at,
+      horizonDays:
+        row.horizon_days !== undefined && row.horizon_days !== null
+          ? Number(row.horizon_days)
+          : 0,
+      historyDays:
+        row.history_days !== undefined && row.history_days !== null
+          ? Number(row.history_days)
+          : 0,
+      modelType: row.model_type,
+      metadata: row.metadata ?? null,
+      points: Array.isArray(row.forecast_points) ? row.forecast_points : [],
+    } satisfies SupabaseForecastResultRecord;
   }
 
   private toBuffer(data: Buffer | Uint8Array | ArrayBuffer): Buffer {
