@@ -28,6 +28,11 @@ class VoiceGatewaySettings(BaseSettings):
     max_audio_seconds: int = Field(default=120, alias="VOICE_MAX_AUDIO_SECONDS")
     max_audio_bytes: int | None = Field(default=None, alias="VOICE_MAX_AUDIO_BYTES")
     tts_provider: str = Field(default="mock", alias="VOICE_TTS_PROVIDER")
+    tts_default_voice_env: str | None = Field(default=None, alias="VOICE_TTS_DEFAULT_VOICE")
+    tts_default_format_env: str | None = Field(default=None, alias="VOICE_TTS_DEFAULT_FORMAT")
+    tts_default_language_env: str | None = Field(default=None, alias="VOICE_TTS_DEFAULT_LANG")
+    tts_default_speed: float = Field(default=1.0, alias="VOICE_TTS_SPEED")
+    tts_max_chars: int = Field(default=1000, alias="VOICE_TTS_MAX_CHARS")
     openai_api_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("OPENAI_API_KEY", "VOICE_OPENAI_API_KEY"),
@@ -81,6 +86,11 @@ class VoiceGatewaySettings(BaseSettings):
             return value
         return [item.strip() for item in value.split(",") if item.strip()]
 
+    @field_validator("tts_default_speed")
+    @classmethod
+    def validate_speed(cls, value: float) -> float:
+        return value if value > 0 else 1.0
+
     @property
     def allowed_mime_set(self) -> Set[str]:
         return {item.lower() for item in self.allowed_mime}
@@ -95,6 +105,18 @@ class VoiceGatewaySettings(BaseSettings):
             return self.max_audio_bytes
         # Aproximación conservadora (~256kbps)
         return int(self.max_audio_seconds * 32_000)
+
+    @property
+    def resolved_tts_voice(self) -> str:
+        return (self.tts_default_voice_env or self.openai_tts_voice or "alloy").strip()
+
+    @property
+    def resolved_tts_format(self) -> str:
+        return (self.tts_default_format_env or self.openai_tts_format or "mp3").strip() or "mp3"
+
+    @property
+    def resolved_tts_language(self) -> str:
+        return (self.tts_default_language_env or "es-CL").strip() or "es-CL"
 
 
 @lru_cache()

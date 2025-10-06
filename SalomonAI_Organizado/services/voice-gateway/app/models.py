@@ -24,15 +24,18 @@ class VoiceTranscriptionResponse(BaseModel):
 
 class VoiceSynthesisRequest(BaseModel):
     text: str
-    voice: str = "es-CL-Standard-A"
-    language: str = "es-CL"
+    voice: Optional[str] = None
+    format: Optional[str] = None
+    language: Optional[str] = None
+    speed: Optional[float] = None
     session_id: Optional[str] = None
 
 
 class VoiceSynthesisResponse(BaseModel):
     audio_base64: str
-    format: str = "audio/wav"
+    mime: str = "audio/wav"
     provider: str = "mock"
+    duration_ms: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
