@@ -46,6 +46,10 @@ class RecommendationSettings(BaseSettings):
     db_name: Optional[str] = Field(default=None, alias="DB_NAME")
     db_schema: Optional[str] = Field(default="public", alias="DB_SCHEMA")
     db_sslmode: Optional[str] = Field(default=None, alias="DB_SSLMODE")
+    recs_max_items: int = Field(default=20, alias="RECS_MAX_ITEMS")
+    recs_min_score: float = Field(default=0.3, alias="RECS_MIN_SCORE")
+    features_default_window: str = Field(default="30d", alias="FEATURES_DEFAULT_WINDOW")
+    pipeline_required_origin: str = Field(default="core_api", alias="PIPELINE_REQUIRED_ORIGIN")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
