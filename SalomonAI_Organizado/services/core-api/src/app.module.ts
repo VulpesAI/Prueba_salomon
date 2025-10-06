@@ -11,6 +11,7 @@ import { MovementsModule } from './movements/movements.module';
 import { BelvoModule } from './belvo/belvo.module';
 import { ResultsConnectorModule } from './connectors/results/results-connector.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
     BelvoModule,
     ResultsConnectorModule,
     RecommendationsModule,
+    AiModule,
   ],
 })
 export class AppModule {}

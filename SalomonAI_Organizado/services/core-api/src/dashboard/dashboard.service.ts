@@ -10,6 +10,11 @@ import {
 import type { DashboardConfig, DemoConfig, ForecastingConfig } from '../config/configuration';
 import { DashboardResumenQueryDto } from './dto/dashboard-resumen-query.dto';
 import { DashboardGranularity, DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
+import { DashboardProjectionQueryDto } from './dto/dashboard-projection-query.dto';
+import { DashboardRecommendationsQueryDto } from './dto/dashboard-recommendations-query.dto';
+import { DashboardRecommendationFeedbackDto } from './dto/dashboard-recommendation-feedback.dto';
+import { DashboardForecastingGatewayService } from './forecasting-gateway.service';
+import { DashboardRecommendationsGatewayService } from './recommendations-gateway.service';
 
 export interface DashboardTotals {
   inflow: number;
@@ -131,7 +136,27 @@ export class DashboardService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly forecastingGateway: DashboardForecastingGatewayService,
+    private readonly recommendationsGateway: DashboardRecommendationsGatewayService,
   ) {}
+
+  async getProjection(query: DashboardProjectionQueryDto) {
+    return this.forecastingGateway.fetchForecast(query.userId, {
+      horizonDays: query.horizonDays,
+      model: query.model,
+      refresh: query.refresh,
+    });
+  }
+
+  async getRecommendations(query: DashboardRecommendationsQueryDto) {
+    return this.recommendationsGateway.getRecommendations(query.userId, {
+      refresh: query.refresh,
+    });
+  }
+
+  async submitRecommendationFeedback(payload: DashboardRecommendationFeedbackDto) {
+    return this.recommendationsGateway.submitFeedback(payload);
+  }
 
   async getResumen(query: DashboardResumenQueryDto): Promise<DashboardResumenResponse> {
     const dashboardConfig = this.configService.get<DashboardConfig>('dashboard', { infer: true });
