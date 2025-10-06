@@ -27,12 +27,38 @@ interface ThemeProviderState {
 const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
   undefined
 );
+
+const STORAGE_THEMES: Theme[] = ['dark', 'light'];
+
+const sanitizeStoredTheme = (
+  storedTheme: string | null,
+  fallback: Theme,
+  storageKey: string
+): Theme => {
+  if (storedTheme && STORAGE_THEMES.includes(storedTheme as Theme)) {
+    return storedTheme as Theme;
+  }
+
+  if (storedTheme === 'system') {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(storageKey, fallback);
+    }
+  }
+
+  return fallback;
 const initialState: ThemeProviderState = {
   theme: 'dark',
   setTheme: () => null,
 };
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+const applyThemeToRoot = (nextTheme: Theme) => {
+  if (typeof window === 'undefined') return;
+
+  const root = window.document.documentElement;
+  root.classList.remove('light', 'dark');
+  root.classList.add(nextTheme);
+  root.style.colorScheme = nextTheme;
+};
 
 export function ThemeProvider({
   children,
@@ -40,6 +66,28 @@ export function ThemeProvider({
   storageKey = 'salomonai-theme',
   ...props
 }: ThemeProviderProps) {
+  const [theme, setThemeState] = useState<Theme>(defaultTheme);
+
+  useIsomorphicLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const storedTheme = window.localStorage.getItem(storageKey);
+    const initialTheme = sanitizeStoredTheme(
+      storedTheme,
+      defaultTheme,
+      storageKey
+    );
+
+    applyThemeToRoot(initialTheme);
+    setThemeState(initialTheme);
+  }, [defaultTheme, storageKey]);
+
+  const setTheme = useCallback(
+    (newTheme: Theme) => {
+      if (typeof window === 'undefined') return;
+
+      window.localStorage.setItem(storageKey, newTheme);
+      applyThemeToRoot(newTheme);
   const getInitialTheme = useCallback(
     () => {
       if (typeof window === 'undefined') {
