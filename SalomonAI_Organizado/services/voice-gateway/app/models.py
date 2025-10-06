@@ -1,23 +1,24 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
 
-class VoiceTranscriptionRequest(BaseModel):
-    audio_base64: str
-    language: str = "es-CL"
-    session_id: Optional[str] = None
-    metadata: Dict[str, str] = Field(default_factory=dict)
+class VoiceTranscriptionPayload(BaseModel):
+    audio_base64: Optional[str] = None
+    mime: Optional[str] = None
+    language: Optional[str] = None
+    response_format: Optional[str] = None
 
 
 class VoiceTranscriptionResponse(BaseModel):
-    transcript: str
-    confidence: float = 0.0
-    language: str = "es-CL"
+    text: str
+    language: str = "es"
     provider: str = "mock"
+    duration_sec: float = 0.0
+    raw: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

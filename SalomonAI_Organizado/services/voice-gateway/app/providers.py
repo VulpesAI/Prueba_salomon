@@ -4,11 +4,13 @@ import asyncio
 import base64
 import io
 import logging
+import time
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import Dict
+from typing import Any, Dict, TypedDict
 
-from openai import AsyncOpenAI
+from fastapi import HTTPException
+from openai import AsyncOpenAI, OpenAI
 
 from .settings import get_settings
 
@@ -34,30 +36,180 @@ _SILENCE_WAV_BASE64 = (
 )
 
 
-class BaseSTTClient(ABC):
+class TranscriptionResult(TypedDict, total=False):
+    text: str
+    language: str
+    duration_sec: float
+    provider: str
+    raw: Dict[str, Any]
+
+
+class STTProvider(ABC):
+    name = "base"
+    supports_streaming = False
+
     @abstractmethod
-    async def transcribe(self, audio_base64: str, language: str = "es-CL") -> Dict[str, str]:
+    def transcribe(
+        self,
+        audio_bytes: bytes,
+        mime: str,
+        language: str = "es",
+        response_format: str = "text",
+    ) -> TranscriptionResult:
         raise NotImplementedError
 
-    async def transcribe_stream(self, _: bytes) -> Dict[str, str]:
-        return {"text": ""}
+    async def transcribe_stream(self, _: bytes) -> Dict[str, Any]:
+        """Placeholder streaming implementation for future realtime support."""
+        return {"text": "", "final": False}
+
+
+class MockSttProvider(STTProvider):
+    name = "mock"
+
+    def transcribe(
+        self,
+        audio_bytes: bytes,
+        mime: str,
+        language: str = "es",
+        response_format: str = "text",
+    ) -> TranscriptionResult:
+        _ = (audio_bytes, mime, response_format)
+        return TranscriptionResult(
+            text="Transcripción simulada",
+            language=language,
+            duration_sec=0.0,
+            provider=self.name,
+        )
+
+    async def transcribe_stream(self, _: bytes) -> Dict[str, Any]:
+        await asyncio.sleep(0.05)
+        return {"text": "fragmento", "final": False}
+
+
+class OpenAISttProvider(STTProvider):
+    name = "openai"
+
+    def __init__(self) -> None:
+        if not settings.resolved_openai_api_key:
+            raise ValueError("OPENAI_API_KEY es obligatorio para usar el proveedor OpenAI")
+        timeout_seconds = max(settings.openai_timeout_ms / 1000, 1)
+        self._client = OpenAI(api_key=settings.resolved_openai_api_key, timeout=timeout_seconds)
+        self._model = settings.openai_stt_model
+
+    def transcribe(
+        self,
+        audio_bytes: bytes,
+        mime: str,
+        language: str = "es",
+        response_format: str = "text",
+    ) -> TranscriptionResult:
+        started = time.perf_counter()
+        response_format = (response_format or settings.openai_stt_response_format).lower()
+        response_format = "verbose_json" if response_format == "verbose_json" else "text"
+
+        file_obj = io.BytesIO(audio_bytes)
+        ext = mime.split("/")[-1] if "/" in mime else "wav"
+        file_obj.name = f"audio.{ext}"
+
+        try:
+            response = self._client.audio.transcriptions.create(
+                model=self._model,
+                file=file_obj,
+                language=language,
+                response_format=response_format,
+                temperature=0,
+            )
+        except Exception as exc:  # pragma: no cover - errores del SDK
+            logger.exception("Error de OpenAI STT: %s", exc)
+            raise
+
+        raw_payload: Dict[str, Any] = {}
+        if response_format == "verbose_json":
+            if hasattr(response, "model_dump"):
+                raw_payload = response.model_dump()
+            elif hasattr(response, "to_dict"):
+                raw_payload = response.to_dict()  # type: ignore[attr-defined]
+            elif isinstance(response, dict):
+                raw_payload = response
+
+        text = getattr(response, "text", None)
+        if text is None and isinstance(response, dict):
+            text = response.get("text")
+        if text is None:
+            text = ""
+
+        duration = round(time.perf_counter() - started, 4)
+        result = TranscriptionResult(
+            text=text,
+            language=language,
+            duration_sec=duration,
+            provider=self.name,
+        )
+        if raw_payload:
+            result["raw"] = raw_payload
+        return result
+
+
+class GoogleSttProvider(STTProvider):
+    name = "google"
+
+    def transcribe(
+        self,
+        audio_bytes: bytes,
+        mime: str,
+        language: str = "es",
+        response_format: str = "text",
+    ) -> TranscriptionResult:  # pragma: no cover - stub
+        _ = (audio_bytes, mime, language, response_format)
+        raise HTTPException(status_code=503, detail="google_stt_not_configured")
+
+
+class AzureSttProvider(STTProvider):
+    name = "azure"
+
+    def transcribe(
+        self,
+        audio_bytes: bytes,
+        mime: str,
+        language: str = "es",
+        response_format: str = "text",
+    ) -> TranscriptionResult:  # pragma: no cover - stub
+        _ = (audio_bytes, mime, language, response_format)
+        raise HTTPException(status_code=503, detail="azure_stt_not_configured")
+
+
+class VoskSttProvider(STTProvider):
+    name = "vosk"
+
+    def transcribe(
+        self,
+        audio_bytes: bytes,
+        mime: str,
+        language: str = "es",
+        response_format: str = "text",
+    ) -> TranscriptionResult:  # pragma: no cover - stub
+        _ = (audio_bytes, mime, language, response_format)
+        raise HTTPException(status_code=503, detail="vosk_stt_not_configured")
+
+
+class CoquiSttProvider(STTProvider):
+    name = "coqui"
+
+    def transcribe(
+        self,
+        audio_bytes: bytes,
+        mime: str,
+        language: str = "es",
+        response_format: str = "text",
+    ) -> TranscriptionResult:  # pragma: no cover - stub
+        _ = (audio_bytes, mime, language, response_format)
+        raise HTTPException(status_code=503, detail="coqui_stt_not_configured")
 
 
 class BaseTTSClient(ABC):
     @abstractmethod
     async def synthesize(self, text: str, language: str = "es-CL", voice: str | None = None) -> Dict[str, str]:
         raise NotImplementedError
-
-
-class MockSTTClient(BaseSTTClient):
-    async def transcribe(self, audio_base64: str, language: str = "es-CL") -> Dict[str, str]:
-        _ = audio_base64
-        await asyncio.sleep(0.1)
-        return {"text": "Transcripción simulada", "confidence": 0.55, "language": language}
-
-    async def transcribe_stream(self, _: bytes) -> Dict[str, str]:
-        await asyncio.sleep(0.05)
-        return {"text": "fragmento", "final": False}
 
 
 class MockTTSClient(BaseTTSClient):
@@ -67,64 +219,11 @@ class MockTTSClient(BaseTTSClient):
         return {"audio_base64": _SILENCE_WAV_BASE64, "format": "audio/wav"}
 
 
-class OpenAISTTClient(BaseSTTClient):
-    def __init__(self) -> None:
-        if not settings.openai_api_key:
-            raise ValueError("VOICE_OPENAI_API_KEY es obligatorio para usar el proveedor OpenAI")
-        self._client = AsyncOpenAI(api_key=settings.openai_api_key)
-        self._model = settings.openai_stt_model
-
-    async def transcribe(self, audio_base64: str, language: str = "es-CL") -> Dict[str, str]:
-        try:
-            audio_bytes = base64.b64decode(audio_base64)
-        except (ValueError, TypeError) as exc:  # pragma: no cover - validación defensiva
-            raise ValueError("Audio inválido, se esperaba base64") from exc
-
-        audio_file = io.BytesIO(audio_bytes)
-        audio_file.name = "audio.wav"
-
-        try:
-            response = await self._client.audio.transcriptions.create(
-                model=self._model,
-                file=audio_file,
-                language=language,
-                response_format="verbose_json",
-            )
-        except Exception as exc:  # pragma: no cover - errores del SDK
-            logger.error("Error de OpenAI STT: %s", exc)
-            raise
-
-        text = getattr(response, "text", "")
-        detected_language = getattr(response, "language", language)
-
-        confidence = 0.0
-        segments = getattr(response, "segments", None)
-        if isinstance(segments, list) and segments:
-            confidences = [segment.get("confidence") for segment in segments if isinstance(segment, dict)]
-            confidences = [float(c) for c in confidences if c is not None]
-            if confidences:
-                confidence = sum(confidences) / len(confidences)
-
-        return {"text": text, "confidence": confidence, "language": detected_language}
-
-    async def transcribe_stream(self, audio_chunk: bytes) -> Dict[str, str]:
-        if not audio_chunk:
-            return {"text": "", "final": False}
-        try:
-            raw_audio = base64.b64decode(audio_chunk, validate=False)
-        except Exception:
-            raw_audio = audio_chunk
-        chunk_base64 = base64.b64encode(raw_audio).decode("utf-8")
-        result = await self.transcribe(chunk_base64)
-        result["final"] = False
-        return result
-
-
 class OpenAITTSClient(BaseTTSClient):
     def __init__(self) -> None:
-        if not settings.openai_api_key:
-            raise ValueError("VOICE_OPENAI_API_KEY es obligatorio para usar el proveedor OpenAI")
-        self._client = AsyncOpenAI(api_key=settings.openai_api_key)
+        if not settings.resolved_openai_api_key:
+            raise ValueError("OPENAI_API_KEY es obligatorio para usar el proveedor OpenAI")
+        self._client = AsyncOpenAI(api_key=settings.resolved_openai_api_key)
         self._model = settings.openai_tts_model
 
     async def synthesize(self, text: str, language: str = "es-CL", voice: str | None = None) -> Dict[str, str]:
@@ -150,14 +249,21 @@ class OpenAITTSClient(BaseTTSClient):
 
 
 @lru_cache()
-def get_stt_client() -> BaseSTTClient:
+def get_stt_provider() -> STTProvider:
     provider = settings.stt_provider.lower()
-    if provider == "mock":
-        return MockSTTClient()
     if provider == "openai":
-        return OpenAISTTClient()
-    logger.warning("STT provider '%s' no implementado, usando Mock", provider)
-    return MockSTTClient()
+        return OpenAISttProvider()
+    if provider == "google":
+        return GoogleSttProvider()
+    if provider == "azure":
+        return AzureSttProvider()
+    if provider == "vosk":
+        return VoskSttProvider()
+    if provider == "coqui":
+        return CoquiSttProvider()
+    if provider != "mock":
+        logger.warning("STT provider '%s' no implementado, usando Mock", provider)
+    return MockSttProvider()
 
 
 @lru_cache()

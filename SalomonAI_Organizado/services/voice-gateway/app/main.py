@@ -1,26 +1,38 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import json
 import logging
 import time
 from typing import Dict, Optional
 
-from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.concurrency import run_in_threadpool
 
 from .models import (
     VoiceStreamEvent,
     VoiceSynthesisRequest,
     VoiceSynthesisResponse,
-    VoiceTranscriptionRequest,
+    VoiceTranscriptionPayload,
     VoiceTranscriptionResponse,
 )
 from prometheus_client import Counter, Gauge, Histogram
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from .providers import BaseSTTClient, BaseTTSClient, get_stt_client, get_tts_client
+from .providers import BaseTTSClient, STTProvider, get_stt_provider, get_tts_client
 from .settings import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -97,7 +109,7 @@ metrics_instrumentator.instrument(
 
 
 async def get_clients() -> Dict[str, object]:
-    return {"stt": get_stt_client(), "tts": get_tts_client()}
+    return {"stt": get_stt_provider(), "tts": get_tts_client()}
 
 
 @app.get("/health")
@@ -107,21 +119,105 @@ async def health() -> Dict[str, str]:
 
 @app.post("/voice/transcriptions", response_model=VoiceTranscriptionResponse)
 async def transcribe(
-    payload: VoiceTranscriptionRequest,
+    request: Request,
+    file: UploadFile | None = File(default=None),
     clients: Dict[str, object] = Depends(get_clients),
 ) -> VoiceTranscriptionResponse:
-    stt: BaseSTTClient = clients["stt"]
-    provider_name = type(stt).__name__
+    stt: STTProvider = clients["stt"]  # type: ignore[assignment]
+    provider_name = getattr(stt, "name", stt.__class__.__name__)
+
+    language = settings.default_language
+    response_format = settings.openai_stt_response_format
+    mime = "audio/m4a"
+    audio_bytes = b""
+    audio_base64: Optional[str] = None
+
+    if file is not None:
+        audio_bytes = await file.read()
+        mime = (file.content_type or mime).lower()
+        form = await request.form()
+        language = form.get("language", language)  # type: ignore[arg-type]
+        response_format = form.get("response_format", response_format)  # type: ignore[arg-type]
+        mime = (form.get("mime", mime) or mime).lower()  # type: ignore[arg-type]
+        if form.get("audio_base64") and not audio_bytes:
+            audio_base64 = str(form.get("audio_base64"))
+    else:
+        data = {}
+        if request.headers.get("content-type", "").startswith("application/json"):
+            try:
+                data = await request.json()
+            except json.JSONDecodeError as exc:  # pragma: no cover - protección
+                raise HTTPException(status_code=400, detail="invalid_json_body") from exc
+        if data:
+            body = VoiceTranscriptionPayload.model_validate(data)
+            audio_base64 = body.audio_base64
+            if body.mime:
+                mime = body.mime.lower()
+            if body.language:
+                language = body.language
+            if body.response_format:
+                response_format = body.response_format
+
+    if audio_base64 and not audio_bytes:
+        try:
+            audio_bytes = base64.b64decode(audio_base64)
+        except (ValueError, binascii.Error) as exc:
+            raise HTTPException(status_code=400, detail="invalid_audio_base64") from exc
+
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="audio_required")
+
+    if mime.lower() not in settings.allowed_mime_set:
+        raise HTTPException(status_code=400, detail="mime_not_allowed")
+
+    if len(audio_bytes) > settings.max_request_bytes:
+        raise HTTPException(status_code=413, detail="audio_too_large")
+
+    language = language or settings.default_language
+    response_format = response_format or settings.openai_stt_response_format
+
     start_time = time.perf_counter()
-    result = await stt.transcribe(payload.audio_base64, language=payload.language)
+    try:
+        result = await run_in_threadpool(
+            stt.transcribe,
+            audio_bytes,
+            mime,
+            language,
+            response_format,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - errores del proveedor
+        logger.exception("Error al transcribir audio con %s: %s", provider_name, exc)
+        raise HTTPException(status_code=502, detail="stt_failed") from exc
+
     duration = time.perf_counter() - start_time
-    TRANSCRIPTIONS_TOTAL.labels(provider=provider_name).inc()
-    TRANSCRIPTION_LATENCY.labels(provider=provider_name).observe(duration)
+    provider_label = result.get("provider", provider_name)
+    result.setdefault("duration_sec", round(duration, 4))
+    result.setdefault("language", language)
+    result.setdefault("text", "")
+
+    TRANSCRIPTIONS_TOTAL.labels(provider=provider_label).inc()
+    TRANSCRIPTION_LATENCY.labels(provider=provider_label).observe(duration)
+
+    response_raw = result.get("raw") or None
+    logger.info(
+        "Transcripción procesada",
+        extra={
+            "provider": provider_label,
+            "mime": mime,
+            "size_kb": round(len(audio_bytes) / 1024, 2),
+            "language": language,
+            "response_format": response_format,
+        },
+    )
+
     return VoiceTranscriptionResponse(
-        transcript=result.get("text", ""),
-        confidence=float(result.get("confidence", 0.0)),
-        language=result.get("language", payload.language),
-        provider=type(stt).__name__,
+        text=result.get("text", ""),
+        language=result.get("language", language),
+        provider=provider_label,
+        duration_sec=float(result.get("duration_sec", duration)),
+        raw=response_raw,
     )
 
 
@@ -147,8 +243,8 @@ async def synthesize(
 @app.websocket("/voice/stream")
 async def voice_stream(websocket: WebSocket, language: Optional[str] = "es-CL"):
     await websocket.accept()
-    stt = get_stt_client()
-    provider_name = type(stt).__name__
+    stt = get_stt_provider()
+    provider_name = getattr(stt, "name", type(stt).__name__)
     session_start = time.perf_counter()
     session_result = "completed"
     STREAM_ACTIVE.inc()
@@ -159,7 +255,7 @@ async def voice_stream(websocket: WebSocket, language: Optional[str] = "es-CL"):
             data = VoiceStreamEvent.parse_obj(json.loads(message))
             if data.event == "start":
                 await websocket.send_json({"type": "status", "status": "listening"})
-                if isinstance(stt, BaseSTTClient):
+                if not getattr(stt, "supports_streaming", False):
                     await websocket.send_json({
                         "type": "transcript",
                         "text": "Inicia tu mensaje cuando quieras",

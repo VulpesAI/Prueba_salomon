@@ -282,17 +282,17 @@ curl -X POST http://localhost:8002/recommendations/feedback \
 
 ### Modelos Pydantic
 
-- `VoiceTranscriptionRequest/Response`, `VoiceSynthesisRequest/Response` y `VoiceStreamEvent` estructuran las operaciones de voz.【F:services/voice-gateway/app/models.py†L9-L39】
+- `VoiceTranscriptionPayload/Response`, `VoiceSynthesisRequest/Response` y `VoiceStreamEvent` estructuran las operaciones de voz.【F:services/voice-gateway/app/models.py†L9-L39】
 
 ### Configuración y dependencias
 
-- Variables: `VOICE_STT_PROVIDER`, `VOICE_TTS_PROVIDER` (actualmente solo `mock`).【F:services/voice-gateway/app/providers.py†L63-L78】
-- Dependencias: `fastapi`, `WebSocket`, clientes STT/TTS implementados en `providers` (pueden reemplazarse por proveedores reales; se usan *mocks* con audio silencioso).【F:services/voice-gateway/app/providers.py†L1-L78】
+- Variables: `VOICE_STT_PROVIDER`, `VOICE_TTS_PROVIDER`; `get_stt_provider` selecciona OpenAI por defecto y expone stubs para Google/Azure/Vosk/Coqui.【F:services/voice-gateway/app/providers.py†L251-L277】
+- Dependencias: `fastapi`, SDK de OpenAI y proveedores STT/TTS definidos en `providers` (Mock de silencio, Whisper real, stubs adicionales).【F:services/voice-gateway/app/providers.py†L1-L248】
 
 ### Flujo WebSocket/REST
 
 - REST:
-  - `/voice/transcriptions` invoca `BaseSTTClient.transcribe` y devuelve texto, confianza y proveedor.【F:services/voice-gateway/app/main.py†L33-L47】
+  - `/voice/transcriptions` normaliza audio (JSON o multipart) y delega en `STTProvider.transcribe`, retornando texto, idioma, proveedor y duración.【F:services/voice-gateway/app/main.py†L120-L221】
   - `/voice/speech` invoca `BaseTTSClient.synthesize` y retorna audio codificado.【F:services/voice-gateway/app/main.py†L49-L61】
 - WebSocket (`/voice/stream`):
   1. Acepta la conexión, responde estado `ready`.
@@ -302,7 +302,7 @@ curl -X POST http://localhost:8002/recommendations/feedback \
 ### Interacciones
 
 - Actualmente no invoca `core-api` directamente; se espera que clientes consuman la transcripción y luego llamen a `conversation-engine`/`core-api`.
-- Puede integrarse con proveedores externos de STT/TTS reemplazando `MockSTTClient`/`MockTTSClient`.
+- Puede integrarse con proveedores externos de STT/TTS reemplazando `MockSttProvider`/`MockTTSClient`.
 
 ### Ejemplos de uso
 
