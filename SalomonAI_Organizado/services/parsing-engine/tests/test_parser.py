@@ -9,7 +9,9 @@ SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from parser import ParsedStatement, StatementParser
+import hashlib
+
+from parser import ParsedStatement, StatementParser, build_result_payload
 
 
 def _build_excel_bytes(rows: list[dict]) -> bytes:
@@ -163,3 +165,66 @@ def test_parse_excel_generates_transactions():
     assert amounts == [-50250.23, 800000.0]
     assert parsed.transactions[0]["description"] == "Pago servicios"
     assert parsed.transactions[1]["postedAt"] == "2024-02-12"
+
+
+def test_build_result_payload_formats_normalized_message():
+    parsed = ParsedStatement(
+        transactions=[
+            {
+                "postedAt": "2024-01-15",
+                "description": "Compra supermercado",
+                "rawDescription": "Compra supermercado",
+                "normalizedDescription": "Compra supermercado",
+                "amount": -20300.5,
+                "currency": "CLP",
+            }
+        ],
+        summary={
+            "totalCredit": 0.0,
+            "totalDebit": 20300.5,
+            "transactionCount": 1,
+            "openingBalance": None,
+            "closingBalance": None,
+            "periodStart": "2024-01-15",
+            "periodEnd": "2024-01-15",
+            "statementDate": None,
+        },
+    )
+
+    checksum = "abc123"
+    payload = build_result_payload(
+        statement_id="stmt-1",
+        user_id="user-1",
+        parsed=parsed,
+        status="completed",
+        error=None,
+        checksum=checksum,
+    )
+
+    assert payload["event"] == "parsed_statement"
+    assert payload["statementId"] == "stmt-1"
+    assert payload["userId"] == "user-1"
+    assert payload["status"] == "completed"
+    assert payload["processedAt"].endswith("Z")
+    assert payload["summary"]["checksum"] == checksum
+
+    expected_id = hashlib.sha1("stmt-1-0".encode("utf-8")).hexdigest()[:32]
+    assert payload["transactions"][0]["id"] == expected_id
+    assert payload["transactions"][0]["externalId"] == expected_id
+    assert payload["transactions"][0]["description"] == "Compra supermercado"
+
+
+def test_build_result_payload_handles_failed_status():
+    payload = build_result_payload(
+        statement_id="stmt-2",
+        user_id="user-2",
+        parsed=None,
+        status="failed",
+        error="Parsing error",
+        checksum="zzz",
+    )
+
+    assert payload["status"] == "failed"
+    assert payload["summary"] == {}
+    assert payload["transactions"] == []
+    assert payload["error"] == "Parsing error"

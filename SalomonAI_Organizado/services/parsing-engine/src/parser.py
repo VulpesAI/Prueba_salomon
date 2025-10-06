@@ -11,7 +11,7 @@ import tempfile
 import unicodedata
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 from xml.etree import ElementTree
 
@@ -749,8 +749,10 @@ def build_result_payload(
         "statementId": statement_id,
         "userId": user_id,
         "status": status,
-        "processedAt": datetime.utcnow().isoformat() + "Z",
+        "processedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "checksum": checksum,
+        "summary": {},
+        "transactions": [],
     }
 
     if error:
