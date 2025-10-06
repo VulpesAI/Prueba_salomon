@@ -16,12 +16,15 @@ from .core_client import (
     QdrantInsightRepository,
     SupabaseFinancialRepository,
 )
+from .llm_service import ConversationalLLMService, LLMServiceError
 from .models import (
     ChatChunk,
     ChatRequest,
     ErrorResponse,
     FinancialSummary,
     IntentDetectionResponse,
+    LLMAnswer,
+    LLMQuestionRequest,
 )
 from .nlu import SpanishNLU
 from .settings import get_settings
@@ -58,9 +61,11 @@ def lifespan(app: FastAPI):
         timeout=settings.request_timeout_seconds,
         data_service=data_service,
     )
+    llm_service = ConversationalLLMService(settings=settings, data_service=data_service)
     app.state.nlu = nlu
     app.state.core_client = core_client
     app.state.data_service = data_service
+    app.state.llm_service = llm_service
     app.state.settings = settings
     yield
 
@@ -70,6 +75,7 @@ def get_services(app: FastAPI = Depends()) -> Dict[str, object]:
         "nlu": app.state.nlu,
         "core_client": app.state.core_client,
         "data_service": getattr(app.state, "data_service", None),
+        "llm_service": getattr(app.state, "llm_service", None),
     }
 
 
@@ -112,6 +118,22 @@ async def detect_intents(request: ChatRequest, services=Depends(get_services)) -
     nlu: SpanishNLU = services["nlu"]
     intents = nlu.detect_intents(request.message)
     return IntentDetectionResponse(session_id=request.session_id, query=request.message, intents=intents)
+
+
+@app.post("/chat/llm", response_model=LLMAnswer)
+async def chat_with_llm(request: LLMQuestionRequest, services=Depends(get_services)) -> LLMAnswer:
+    llm_service: ConversationalLLMService | None = services.get("llm_service")  # type: ignore[assignment]
+    if not llm_service or not llm_service.enabled:
+        raise HTTPException(status_code=503, detail="El servicio conversacional avanzado no está disponible.")
+    try:
+        return await llm_service.answer_question(
+            session_id=request.session_id,
+            question=request.question,
+            locale=request.locale,
+            metadata=request.metadata,
+        )
+    except LLMServiceError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 async def chat_event_stream(

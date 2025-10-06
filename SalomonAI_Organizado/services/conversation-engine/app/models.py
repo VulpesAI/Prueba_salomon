@@ -52,6 +52,14 @@ class ChatRequest(_DictMixin):
 
 
 @dataclass
+class LLMQuestionRequest(_DictMixin):
+    session_id: str
+    question: str
+    locale: str = "es-CL"
+    metadata: Dict[str, str] | None = None
+
+
+@dataclass
 class FinancialInsight(_DictMixin):
     label: str
     value: str
@@ -77,6 +85,14 @@ class FinancialSummary(_DictMixin):
 
 
 @dataclass
+class FinancialContextSnippet(_DictMixin):
+    title: Optional[str]
+    content: str
+    score: float
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class ErrorResponse(_DictMixin):
     detail: str
 
@@ -93,3 +109,13 @@ class IntentDetectionResponse(_DictMixin):
 class ChatChunk(_DictMixin):
     type: str
     data: Dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
+class LLMAnswer(_DictMixin):
+    session_id: str
+    question: str
+    answer: str
+    context: List[FinancialContextSnippet] = field(default_factory=list)
+    summary: Optional[FinancialSummary] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)

@@ -22,6 +22,25 @@ class ConversationSettings(BaseSettings):
     qdrant_collection: str = Field(default="financial_insights", alias="QDRANT_COLLECTION")
     qdrant_result_limit: int = Field(default=5, alias="CONVERSATION_ENGINE_QDRANT_RESULT_LIMIT")
     qdrant_score_threshold: float = Field(default=0.6, alias="CONVERSATION_ENGINE_QDRANT_SCORE_THRESHOLD")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
+    openai_base_url: Optional[str] = Field(default=None, alias="OPENAI_BASE_URL")
+    openai_model: str = Field(default="gpt-4o-mini", alias="CONVERSATION_ENGINE_OPENAI_MODEL")
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small", alias="CONVERSATION_ENGINE_OPENAI_EMBEDDING_MODEL"
+    )
+    openai_timeout_seconds: float = Field(default=20.0, alias="CONVERSATION_ENGINE_OPENAI_TIMEOUT_SECONDS")
+    llm_system_prompt: str = Field(
+        default=(
+            "Eres SalomonAI, un asesor financiero virtual que utiliza el contexto entregado para resolver "
+            "preguntas. Responde siempre en español, con tono profesional y empático. "
+            "Si no existe información suficiente, explica la limitación y orienta al usuario sobre los "
+            "siguientes pasos." 
+        ),
+        alias="CONVERSATION_ENGINE_LLM_SYSTEM_PROMPT",
+    )
+    llm_temperature: float = Field(default=0.2, alias="CONVERSATION_ENGINE_LLM_TEMPERATURE")
+    llm_max_tokens: int = Field(default=600, alias="CONVERSATION_ENGINE_LLM_MAX_TOKENS")
+    llm_max_context_items: int = Field(default=5, alias="CONVERSATION_ENGINE_LLM_CONTEXT_ITEMS")
     allowed_origins: List[str] = Field(default_factory=lambda: ["*"], alias="CONVERSATION_ENGINE_ALLOWED_ORIGINS")
     request_timeout_seconds: float = Field(default=10.0, alias="CONVERSATION_ENGINE_CORE_TIMEOUT_SECONDS")
 
