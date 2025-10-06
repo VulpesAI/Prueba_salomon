@@ -19,33 +19,47 @@ from .models import IntentCandidate
 logger = logging.getLogger(__name__)
 
 _INTENT_DEFINITIONS: Dict[str, Dict[str, List[str] | str]] = {
-    "consulta_balance": {
+    "saldo_actual": {
         "keywords": [
-            "balance",
             "saldo",
             "saldo actual",
+            "balance",
             "dinero disponible",
             "cuánto tengo",
+            "cuanto tengo",
             "cuanto dinero",
-            "disponible en cuenta",
             "total en mi cuenta",
+            "disponible en cuenta",
         ],
         "description": "Consulta sobre balance general",
     },
-    "gastos_categoria": {
+    "gasto_mes": {
         "keywords": [
             "gasto",
             "gastos",
+            "gasto mensual",
             "categoría",
             "categoria",
             "gastos por categoría",
             "gastos por categoria",
-            "rubro",
-            "rubros",
             "distribución de gastos",
             "mayor gasto",
+            "en qué gasto",
         ],
         "description": "Detalle de gastos por categoría",
+    },
+    "proyeccion_flujo": {
+        "keywords": [
+            "proyección",
+            "proyeccion",
+            "flujo",
+            "flujo de caja",
+            "cashflow",
+            "proyección de gastos",
+            "proyeccion de gastos",
+            "proyección de ingresos",
+        ],
+        "description": "Proyección de flujo de caja",
     },
     "plan_ahorro": {
         "keywords": [

@@ -23,8 +23,9 @@ def spanish_nlu() -> SpanishNLU:
 @pytest.mark.parametrize(
     "query,expected_intent",
     [
-        ("¿Cuál es mi saldo actual en la cuenta?", "consulta_balance"),
-        ("Muéstrame mis gastos por categoría este mes", "gastos_categoria"),
+        ("¿Cuál es mi saldo actual en la cuenta?", "saldo_actual"),
+        ("Muéstrame mis gastos por categoría este mes", "gasto_mes"),
+        ("Proyéctame el flujo de caja del próximo mes", "proyeccion_flujo"),
         ("Necesito un plan para ahorrar para mis vacaciones", "plan_ahorro"),
         ("¿Cuál es mi límite disponible en la tarjeta de crédito?", "limite_credito"),
     ],

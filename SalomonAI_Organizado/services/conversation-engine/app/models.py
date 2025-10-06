@@ -1,27 +1,36 @@
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional
-
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
 
 
-class ChatMessage(BaseModel):
+class _DictMixin:
+    """Mixin sencillo para ofrecer compatibilidad con la interfaz de Pydantic."""
+
+    def dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ChatMessage(_DictMixin):
     role: str
     content: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=datetime.utcnow)
     intent: Optional[str] = None
     metadata: Dict[str, str] | None = None
 
 
-class IntentCandidate(BaseModel):
+@dataclass
+class IntentCandidate(_DictMixin):
     name: str
     confidence: float
-    entities: Dict[str, str] = Field(default_factory=dict)
+    entities: Dict[str, str] = field(default_factory=dict)
     description: Optional[str] = None
 
 
-class ChatRequest(BaseModel):
+@dataclass
+class ChatRequest(_DictMixin):
     session_id: str
     message: str
     locale: str = "es-CL"
@@ -29,39 +38,45 @@ class ChatRequest(BaseModel):
     conversation_state: Dict[str, str] | None = None
 
 
-class FinancialInsight(BaseModel):
+@dataclass
+class FinancialInsight(_DictMixin):
     label: str
     value: str
     context: Optional[str] = None
 
 
-class IntentResolution(BaseModel):
+@dataclass
+class IntentResolution(_DictMixin):
     intent: IntentCandidate
     response_text: str
-    insights: List[FinancialInsight] = Field(default_factory=list)
-    data: Dict[str, object] = Field(default_factory=dict)
+    insights: List[FinancialInsight] = field(default_factory=list)
+    data: Dict[str, object] = field(default_factory=dict)
 
 
-class FinancialSummary(BaseModel):
+@dataclass
+class FinancialSummary(_DictMixin):
     total_balance: float
     monthly_income: float
     monthly_expenses: float
     expense_breakdown: Dict[str, float]
     recent_transactions: List[Dict[str, object]]
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = field(default_factory=datetime.utcnow)
 
 
-class ErrorResponse(BaseModel):
+@dataclass
+class ErrorResponse(_DictMixin):
     detail: str
 
 
-class IntentDetectionResponse(BaseModel):
+@dataclass
+class IntentDetectionResponse(_DictMixin):
     session_id: str
     query: str
     intents: List[IntentCandidate]
-    detected_at: datetime = Field(default_factory=datetime.utcnow)
+    detected_at: datetime = field(default_factory=datetime.utcnow)
 
 
-class ChatChunk(BaseModel):
+@dataclass
+class ChatChunk(_DictMixin):
     type: str
-    data: Dict[str, object] = Field(default_factory=dict)
+    data: Dict[str, object] = field(default_factory=dict)
