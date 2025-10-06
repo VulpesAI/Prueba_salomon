@@ -170,7 +170,7 @@ export default (): CoreConfiguration => {
       globalPrefix: process.env.GLOBAL_PREFIX ?? 'api/v1',
     },
     auth: {
-      jwtSecret: process.env.JWT_SECRET ?? '',
+      jwtSecret: process.env.SUPABASE_JWT_SECRET ?? process.env.JWT_SECRET ?? '',
       jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1h',
     },
     supabase: {

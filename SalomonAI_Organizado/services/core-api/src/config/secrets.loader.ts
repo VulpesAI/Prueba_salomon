@@ -69,6 +69,7 @@ export const injectSecretsIntoEnv = (): void => {
     const supabaseSecrets = SECRETS.supabase();
 
     setEnvIfMissing('JWT_SECRET', jwtSecrets.secret);
+    setEnvIfMissing('SUPABASE_JWT_SECRET', jwtSecrets.secret);
     setEnvIfMissing('JWT_REFRESH_SECRET', jwtSecrets.refreshSecret);
 
     setEnvIfMissing('FIREBASE_PROJECT_ID', firebaseSecrets.projectId);

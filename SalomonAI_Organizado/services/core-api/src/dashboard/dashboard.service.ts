@@ -404,7 +404,10 @@ export class DashboardService {
   private computeAccountBalances(
     statements: SupabaseStatementRecord[],
   ): DashboardAccountBalanceSnapshot[] {
-    const groups = new Map<string, { snapshot: DashboardAccountBalanceSnapshot; sortKey: number }>();
+    const groups = new Map<
+      string,
+      { snapshot: DashboardAccountBalanceSnapshot; sortKey: number }
+    >();
 
     for (const statement of statements) {
       const accountId = statement.account_id;
@@ -526,10 +529,11 @@ export class DashboardService {
           this.normalizeHorizonDays(sanitizedPoints.length) ??
           sanitizedPoints.length;
 
-        const limitedPoints = sanitizedPoints.slice(0, Math.max(1, Math.min(horizonToUse, sanitizedPoints.length)));
-        const total = this.roundAmount(
-          limitedPoints.reduce((sum, point) => sum + point.amount, 0),
+        const limitedPoints = sanitizedPoints.slice(
+          0,
+          Math.max(1, Math.min(horizonToUse, sanitizedPoints.length)),
         );
+        const total = this.roundAmount(limitedPoints.reduce((sum, point) => sum + point.amount, 0));
         const averageDaily = this.roundAmount(total / limitedPoints.length);
 
         const metadata: Record<string, unknown> = {

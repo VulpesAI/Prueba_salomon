@@ -8,12 +8,14 @@ import {
   Post,
   Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Express } from 'express';
 
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CreateStatementDto } from './dto/create-statement.dto';
 import { GetStatementsQueryDto } from './dto/get-statements-query.dto';
 import {
@@ -22,6 +24,7 @@ import {
 } from './dto/get-statement-transactions.dto';
 import { StatementsService } from './statements.service';
 
+@UseGuards(SupabaseAuthGuard)
 @Controller('statements')
 export class StatementsController {
   constructor(private readonly statementsService: StatementsService) {}
