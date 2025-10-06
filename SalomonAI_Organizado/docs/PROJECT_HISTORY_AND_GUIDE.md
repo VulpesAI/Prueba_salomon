@@ -91,7 +91,7 @@
 2. **Conexión bancaria**: el usuario abre widget Belvo → el core crea registro de `BankConnection` → jobs asíncronos traen cuentas y transacciones → `parsing-engine` categoriza → se persisten resultados.
 3. **Analítica**: el dashboard consulta endpoints agregados → el core ejecuta vistas/materialized views alimentadas por jobs nocturnos.
 4. **Conversación**: el frontend establece WebSocket con `conversation-engine` → se consulta `recommendation-engine` y `financial-movements` → las respuestas se registran para auditoría.
-5. **Forecasting**: jobs programados generan pronósticos y alimentan `financial_forecasts` → el frontend los expone en paneles específicos.
+5. **Forecasting**: jobs programados generan pronósticos y alimentan `forecast_results` → el frontend los expone en paneles específicos.
 6. **Observabilidad**: cada servicio envía métricas a Prometheus, logs estructurados a SIEM y eventos críticos a la cola de incidentes.
 
 ### Blueprint de reconstrucción (nuevo repositorio)
@@ -274,7 +274,7 @@ Ver [Anexo A](#anexo-a-variables-de-entorno-y-configuraciones-clave) para detall
 - `accounts`: cuentas bancarias sincronizadas.
 - `financial_movements`: transacciones categorizadas.
 - `movement_metadata`: enriquecimiento adicional (embeddings, etiquetas ML).
-- `financial_forecasts`: resultados de forecasting por periodo.
+- `forecast_results`: resultados de forecasting por periodo.
 - `notifications`: alertas enviadas al usuario.
 
 ### Contratos clave (REST)
@@ -296,7 +296,7 @@ Ver [Anexo A](#anexo-a-variables-de-entorno-y-configuraciones-clave) para detall
 - `parsing-engine`
   - Job Queue: `{ movement_id, raw_description, amount, metadata }` → actualización en `financial_movements`.
 - `forecasting-engine`
-  - Scheduler: `{ account_id, historical_movements }` → `financial_forecasts`.
+  - Scheduler: `{ account_id, historical_movements }` → `forecast_results`.
 
 Todos los contratos deben documentarse en OpenAPI/AsyncAPI y versionarse.
 

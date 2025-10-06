@@ -133,6 +133,7 @@ export class AiService {
       horizonDays: this.extractNumber(dto.parameters?.horizonDays ?? dto.parameters?.horizon),
       model: this.extractModel(dto.parameters?.model),
       refresh: this.extractBoolean(dto.parameters?.refresh),
+      forecastType: 'cashflow_projection',
     });
 
     return {

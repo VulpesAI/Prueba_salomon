@@ -52,6 +52,11 @@ export class DashboardForecastingGatewayService {
       url.searchParams.set('refresh', 'true');
     }
 
+    const forecastType = this.normalizeForecastType(options.forecastType ?? null);
+    if (forecastType) {
+      url.searchParams.set('forecast_type', forecastType);
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -121,5 +126,18 @@ export class DashboardForecastingGatewayService {
     return (FORECASTING_MODELS.find((entry) => entry === normalized) ?? null) as
       | ForecastingResponseDto['modelType']
       | null;
+  }
+
+  private normalizeForecastType(type: string | null): string | null {
+    if (!type) {
+      return null;
+    }
+
+    const trimmed = type.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    return trimmed.slice(0, 128);
   }
 }

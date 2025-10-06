@@ -17,6 +17,9 @@ Microservicio responsable de generar proyecciones financieras para los usuarios 
 | `FORECASTING_DEFAULT_MODEL` | Modelo preferido (`auto`, `arima`, `prophet`) | `auto` |
 | `FORECASTING_DEFAULT_HORIZON_DAYS` | Horizonte de proyección en días | `30` |
 | `FORECASTING_MINIMUM_HISTORY_DAYS` | Días mínimos de historia para usar Prophet | `30` |
+| `SUPABASE_URL` / `FORECASTING_SUPABASE_URL` | URL del proyecto Supabase para almacenar resultados | — |
+| `SUPABASE_KEY` / `FORECASTING_SUPABASE_KEY` | Clave service role de Supabase utilizada por el microservicio | — |
+| `FORECASTING_FORECAST_TABLE_NAME` | Nombre de la tabla donde se guardan los pronósticos | `forecast_results` |
 
 ## Uso local
 
@@ -25,7 +28,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8003
 ```
 
-### Endpoint principal
+### Endpoints principales
 
 ```http
 GET /forecasts/{user_id}?horizon=30&model=auto
@@ -53,3 +56,19 @@ Respuesta:
 ```
 
 Si Prophet no está disponible, el motor utiliza automáticamente ARIMA o una proyección heurística como respaldo.
+
+Para almacenar resultados generados desde orquestadores externos, expone además:
+
+```http
+POST /forecast/save
+Content-Type: application/json
+
+{
+  "user_id": "<uuid-del-usuario>",
+  "forecast_type": "cashflow_projection",
+  "forecast_data": { ...payload devuelto por GET /forecasts... },
+  "calculated_at": "2025-02-10T12:00:00Z"
+}
+```
+
+El servicio persiste los datos en Supabase usando `supabase-py`, garantizando trazabilidad y disponibilidad inmediata para el dashboard.

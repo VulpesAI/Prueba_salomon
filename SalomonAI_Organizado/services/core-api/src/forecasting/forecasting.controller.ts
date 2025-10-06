@@ -26,6 +26,7 @@ export class ForecastingController {
       horizonDays: query.horizonDays,
       model: query.model,
       refresh: query.refresh,
+      forecastType: query.type,
     });
 
     if (!response) {
