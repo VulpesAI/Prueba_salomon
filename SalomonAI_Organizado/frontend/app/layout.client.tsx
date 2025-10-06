@@ -12,9 +12,9 @@ export default function RootLayoutClient({
   fonts: { inter: { className: string } }
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className="dark">
       <body className={cn(fonts.inter.className, 'bg-background')}>
-        <ThemeProvider defaultTheme="system">
+        <ThemeProvider defaultTheme="dark">
           {children}
         </ThemeProvider>
       </body>

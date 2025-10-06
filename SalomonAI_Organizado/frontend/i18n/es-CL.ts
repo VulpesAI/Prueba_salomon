@@ -395,6 +395,11 @@ export const esCL = {
             timezone: "Define el corte diario de tus reportes.",
           },
           toggles: {
+            theme: {
+              label: "Modo claro",
+              description:
+                "Activa un fondo luminoso con paneles blancos. Desactívalo para volver al modo oscuro predeterminado.",
+            },
             weeklyDigest: {
               label: "Resumen semanal",
               description: "Recibe un correo los lunes con tus principales movimientos.",
@@ -458,6 +463,7 @@ export const esCL = {
         language: "Español (Chile)",
         currency: "CLP",
         timezone: "America/Santiago",
+        theme: "dark",
         weeklyDigest: true,
         goalReminders: true,
         integrations: {

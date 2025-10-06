@@ -34,6 +34,7 @@ import {
 import { Button } from "@/components/ui/button"
 
 import { esCL } from "@/i18n/es-CL"
+import { useTheme } from "@/lib/theme-provider"
 
 const profileSchema = z.object({
   fullName: z
@@ -51,6 +52,7 @@ const preferencesSchema = z.object({
   language: z.string().min(2, esCL.settings.profile.validation.language),
   currency: z.string().min(1, esCL.settings.profile.validation.currency),
   timezone: z.string().min(2, esCL.settings.profile.validation.timezone),
+  theme: z.enum(["dark", "light"]),
   weeklyDigest: z.boolean(),
   goalReminders: z.boolean(),
 })
@@ -74,6 +76,7 @@ export default function SettingsProfilePage() {
   const [connectedIntegrations, setConnectedIntegrations] = React.useState<
     Record<string, boolean>
   >({ ...defaults.integrations })
+  const { theme, setTheme } = useTheme()
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -90,10 +93,20 @@ export default function SettingsProfilePage() {
       language: defaults.language,
       currency: defaults.currency,
       timezone: defaults.timezone,
+      theme: defaults.theme,
       weeklyDigest: defaults.weeklyDigest,
       goalReminders: defaults.goalReminders,
     },
   })
+
+  const resolvedTheme = theme ?? "dark"
+
+  React.useEffect(() => {
+    const currentTheme = resolvedTheme as PreferencesFormValues["theme"]
+    if (preferencesForm.getValues("theme") !== currentTheme) {
+      preferencesForm.setValue("theme", currentTheme, { shouldDirty: false })
+    }
+  }, [preferencesForm, resolvedTheme])
 
   const handleProfileSubmit = async (values: ProfileFormValues) => {
     setProfileStatus("idle")
@@ -113,6 +126,7 @@ export default function SettingsProfilePage() {
     try {
       // TODO: Conectar con el endpoint real para guardar preferencias.
       await new Promise((resolve) => setTimeout(resolve, 400))
+      setTheme(values.theme)
       preferencesForm.reset(values)
       setPreferencesStatus("success")
     } catch (error) {
@@ -290,6 +304,33 @@ export default function SettingsProfilePage() {
                   )}
                 />
                 <div className="space-y-4">
+                  <FormField
+                    control={preferencesForm.control}
+                    name="theme"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">
+                            {preferencesCopy.toggles.theme.label}
+                          </FormLabel>
+                          <FormDescription>
+                            {preferencesCopy.toggles.theme.description}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value === "light"}
+                            onCheckedChange={(checked) => {
+                              const newTheme = checked ? "light" : "dark"
+                              field.onChange(newTheme)
+                              setTheme(newTheme)
+                            }}
+                            aria-label={preferencesCopy.toggles.theme.label}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={preferencesForm.control}
                     name="weeklyDigest"
