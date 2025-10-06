@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Type, TypeVar
+
+
+T = TypeVar("T", bound="_DictMixin")
 
 
 class _DictMixin:
@@ -10,6 +13,16 @@ class _DictMixin:
 
     def dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+    @classmethod
+    def parse_obj(cls: Type[T], obj: Any) -> T:
+        """Permite construir las entidades a partir de diccionarios estilo Pydantic."""
+
+        if isinstance(obj, cls):
+            return obj
+        if not isinstance(obj, dict):  # pragma: no cover - validación defensiva
+            raise TypeError(f"{cls.__name__}.parse_obj espera un diccionario")
+        return cls(**obj)
 
 
 @dataclass
