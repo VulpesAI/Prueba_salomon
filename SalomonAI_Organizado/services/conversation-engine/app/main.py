@@ -88,9 +88,22 @@ async def health() -> Dict[str, str]:
 
 
 @app.get("/context/summary", response_model=FinancialSummary)
-async def get_summary(session_id: str, services=Depends(get_services)) -> FinancialSummary:
+async def get_summary(
+    session_id: str,
+    account_id: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    services=Depends(get_services),
+) -> FinancialSummary:
     core_client: CoreAPIClient = services["core_client"]
-    return await core_client.fetch_financial_summary(session_id)
+    metadata: Dict[str, str] = {}
+    if account_id:
+        metadata["accountId"] = account_id
+    if start_date:
+        metadata["startDate"] = start_date
+    if end_date:
+        metadata["endDate"] = end_date
+    return await core_client.fetch_financial_summary(session_id, metadata=metadata or None)
 
 
 @app.post("/intents/detect", response_model=IntentDetectionResponse)
@@ -131,7 +144,10 @@ async def chat_event_stream(
     if resolution.data:
         yield json_event(ChatChunk(type="metadata", data={"data": resolution.data}))
 
-    summary = await core_client.fetch_financial_summary(request.session_id)
+    summary = await core_client.fetch_financial_summary(
+        request.session_id,
+        metadata=request.metadata,
+    )
     yield json_event(ChatChunk(type="summary", data={"summary": summary.dict()}))
 
     yield json_event(ChatChunk(type="done", data={"intent": best_intent.name}))

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from collections import defaultdict
 from decimal import Decimal
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import httpx
 from qdrant_client import AsyncQdrantClient
@@ -33,6 +34,48 @@ _FALLBACK_SUMMARY = FinancialSummary(
         {"description": "Farmacia Ahumada", "amount": -45_000, "category": "Salud"},
     ],
 )
+
+_INTENT_ALIASES: Dict[str, Set[str]] = {
+    "saldo_actual": {"saldo_actual", "consulta_balance", "balance.current"},
+    "gasto_mes": {"gasto_mes", "gastos_categoria", "spending.current_month"},
+    "proyeccion_flujo": {"proyeccion_flujo", "forecast.cashflow"},
+    "plan_ahorro": {"plan_ahorro"},
+    "limite_credito": {"limite_credito"},
+}
+
+
+def normalize_intent_name(name: str) -> str:
+    for canonical, aliases in _INTENT_ALIASES.items():
+        if name in aliases:
+            return canonical
+    return name
+
+
+def _currency_code(currency: Optional[str]) -> str:
+    if not currency:
+        return "CLP"
+    return str(currency).upper()
+
+
+def _format_currency(amount: float, currency: Optional[str] = None) -> str:
+    code = _currency_code(currency)
+    formatted = f"{abs(amount):,.0f}".replace(",", ".")
+    sign = "-" if amount < 0 else ""
+    if code == "CLP":
+        return f"{sign}${formatted} {code}"
+    return f"{sign}{code} ${formatted}"
+
+
+def _parse_datetime(value: Any) -> Optional[datetime]:
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            cleaned = value.replace("Z", "+00:00")
+            return datetime.fromisoformat(cleaned)
+        except ValueError:
+            return None
+    return None
 
 
 def _to_float(value: Any) -> float:
@@ -202,13 +245,18 @@ class ConversationDataService:
         query_text: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Optional[IntentResolution]:
+        canonical_intent = normalize_intent_name(intent.name)
         summary = await self.fetch_summary(session_id)
         qdrant_payloads: List[Dict[str, Any]] = []
         if self._qdrant and self._qdrant.enabled:
-            qdrant_payloads = await self._qdrant.fetch_related(session_id, intent.name, query_text=query_text)
+            qdrant_payloads = await self._qdrant.fetch_related(
+                session_id,
+                canonical_intent,
+                query_text=query_text,
+            )
 
         insights: List[FinancialInsight] = []
-        data: Dict[str, Any] = {"metadata": metadata or {}}
+        data: Dict[str, Any] = {"metadata": metadata or {}, "intent": canonical_intent}
 
         if summary:
             data["summary"] = summary.dict()
@@ -284,8 +332,9 @@ class ConversationDataService:
     def _summary_insights(self, intent: IntentCandidate, summary: FinancialSummary) -> List[FinancialInsight]:
         insights: List[FinancialInsight] = []
         surplus = summary.monthly_income - summary.monthly_expenses
+        canonical_intent = normalize_intent_name(intent.name)
 
-        if intent.name == "consulta_balance":
+        if canonical_intent == "saldo_actual":
             insights.append(
                 FinancialInsight(
                     label="Balance total",
@@ -300,7 +349,7 @@ class ConversationDataService:
                     context="Ingresos menos gastos registrados en el último estado disponible.",
                 )
             )
-        elif intent.name == "gastos_categoria":
+        elif canonical_intent == "gasto_mes":
             if summary.expense_breakdown:
                 top_categories = sorted(
                     summary.expense_breakdown.items(), key=lambda item: item[1], reverse=True
@@ -312,7 +361,7 @@ class ConversationDataService:
                             value=f"${amount:,.0f} CLP",
                         )
                     )
-        elif intent.name == "plan_ahorro":
+        elif canonical_intent == "plan_ahorro":
             suggested_saving = max(0.0, surplus * 0.3)
             insights.append(
                 FinancialInsight(
@@ -321,7 +370,7 @@ class ConversationDataService:
                     context="Corresponde al 30% del excedente mensual estimado.",
                 )
             )
-        elif intent.name == "limite_credito":
+        elif canonical_intent == "limite_credito":
             insights.append(
                 FinancialInsight(
                     label="Excedente mensual estimado",
@@ -334,6 +383,14 @@ class ConversationDataService:
                     label="Gasto mensual registrado",
                     value=f"${summary.monthly_expenses:,.0f} CLP",
                     context="Corresponde al total de gastos del último período consolidado.",
+                )
+            )
+        elif canonical_intent == "proyeccion_flujo":
+            insights.append(
+                FinancialInsight(
+                    label="Excedente mensual histórico",
+                    value=f"${surplus:,.0f} CLP",
+                    context="Se utiliza como base para proyectar el flujo de caja futuro.",
                 )
             )
         else:
@@ -377,26 +434,33 @@ class ConversationDataService:
         surplus = 0.0
         if summary:
             surplus = summary.monthly_income - summary.monthly_expenses
+        canonical_intent = normalize_intent_name(intent.name)
 
-        if intent.name == "consulta_balance" and summary:
+        if canonical_intent == "saldo_actual" and summary:
             fragments.append(
                 "Tu balance disponible es de ${:,.0f} CLP. En el último ciclo registraste ${:,.0f} de ingresos y ${:,.0f} de gastos.".format(
                     summary.total_balance, summary.monthly_income, summary.monthly_expenses
                 )
             )
-        elif intent.name == "gastos_categoria" and summary and summary.expense_breakdown:
+        elif canonical_intent == "gasto_mes" and summary and summary.expense_breakdown:
             category, amount = max(summary.expense_breakdown.items(), key=lambda item: item[1])
             fragments.append(
                 "En tu cartola más reciente, {} concentra ${:,.0f} CLP del gasto total.".format(category, amount)
             )
-        elif intent.name == "plan_ahorro" and summary:
+        elif canonical_intent == "plan_ahorro" and summary:
             suggested = max(0.0, surplus * 0.3)
             fragments.append(
                 "Considera destinar ${:,.0f} CLP (30% de tu excedente) a ahorro periódico.".format(suggested)
             )
-        elif intent.name == "limite_credito" and summary:
+        elif canonical_intent == "limite_credito" and summary:
             fragments.append(
                 "Según tus movimientos, mantienes un excedente mensual aproximado de ${:,.0f} CLP. Úsalo como referencia para controlar el cupo de tus tarjetas y líneas de crédito.".format(
+                    surplus
+                )
+            )
+        elif canonical_intent == "proyeccion_flujo" and summary:
+            fragments.append(
+                "Tu flujo histórico deja un excedente aproximado de ${:,.0f} CLP, útil como base para proyectar los próximos movimientos.".format(
                     surplus
                 )
             )
@@ -448,6 +512,271 @@ class CoreAPIClient:
             logger.warning("Error communicating with core-api: %s", exc)
             return None
 
+    def _build_parameters(
+        self,
+        metadata: Optional[Dict[str, Any]],
+        entities: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {}
+
+        def merge(source: Optional[Dict[str, Any]]) -> None:
+            if not source:
+                return
+            for key, value in source.items():
+                if value is None:
+                    continue
+                key_str = str(key).strip()
+                if not key_str:
+                    continue
+                if isinstance(value, (str, int, float, bool)):
+                    params[key_str] = value
+                else:
+                    params[key_str] = str(value)
+
+        merge(metadata)
+        merge(entities)
+        return params
+
+    def _build_core_resolution(
+        self,
+        intent: IntentCandidate,
+        canonical_intent: str,
+        payload: Dict[str, Any],
+    ) -> Tuple[str, List[FinancialInsight]]:
+        if canonical_intent == "saldo_actual":
+            return self._build_balance_resolution(payload)
+        if canonical_intent == "gasto_mes":
+            return self._build_spending_resolution(payload)
+        if canonical_intent == "proyeccion_flujo":
+            return self._build_forecast_resolution(payload)
+
+        message = payload.get("message")
+        if isinstance(message, str) and message.strip():
+            return message, []
+        return (
+            "Estoy analizando tu información financiera registrada para entregarte una recomendación contextualizada.",
+            [],
+        )
+
+    def _build_balance_resolution(self, payload: Dict[str, Any]) -> Tuple[str, List[FinancialInsight]]:
+        saldo = payload.get("saldoActual") if isinstance(payload.get("saldoActual"), dict) else {}
+        currency = saldo.get("currency") or payload.get("currency")
+        total = _to_float(saldo.get("total"))
+        accounts = saldo.get("accounts") if isinstance(saldo.get("accounts"), list) else []
+        categoria = (
+            payload.get("categoriaPrincipal")
+            if isinstance(payload.get("categoriaPrincipal"), dict)
+            else None
+        )
+
+        fragments: List[str] = []
+        insights: List[FinancialInsight] = []
+
+        if total:
+            fragments.append(f"Tu saldo consolidado es de {_format_currency(total, currency)}.")
+            insights.append(
+                FinancialInsight(label="Saldo consolidado", value=_format_currency(total, currency))
+            )
+
+        account_insights = 0
+        for account in accounts:
+            balance = _to_float(account.get("balance"))
+            if balance == 0:
+                continue
+            name = str(
+                account.get("name")
+                or account.get("institution")
+                or account.get("accountId")
+                or "Cuenta"
+            )
+            account_currency = account.get("currency") or currency
+            insights.append(
+                FinancialInsight(
+                    label=f"Saldo en {name}",
+                    value=_format_currency(balance, account_currency),
+                    context=account.get("institution") or None,
+                )
+            )
+            account_insights += 1
+            if account_insights >= 3:
+                break
+
+        if categoria:
+            category_name = str(
+                categoria.get("category") or categoria.get("name") or "Categoría principal"
+            )
+            amount = _to_float(categoria.get("total"))
+            if amount:
+                fragments.append(
+                    f"El mayor gasto reciente es en {category_name} con {_format_currency(amount, currency)}."
+                )
+                percentage = _to_float(categoria.get("percentage"))
+                context = (
+                    f"Equivale al {percentage:.1f}% del gasto del período."
+                    if percentage
+                    else None
+                )
+                insights.append(
+                    FinancialInsight(
+                        label="Categoría principal",
+                        value=f"{category_name}: {_format_currency(amount, currency)}",
+                        context=context,
+                    )
+                )
+
+        if not fragments:
+            fragments.append(
+                "Estoy analizando tu saldo consolidado con la información más reciente registrada."
+            )
+
+        return " ".join(fragments), insights
+
+    def _build_spending_resolution(self, payload: Dict[str, Any]) -> Tuple[str, List[FinancialInsight]]:
+        currency = payload.get("currency")
+        gastos = _to_float(payload.get("gastos"))
+        ingresos = _to_float(payload.get("ingresos"))
+        neto = _to_float(payload.get("neto"))
+        categories = (
+            payload.get("categorias")
+            if isinstance(payload.get("categorias"), list)
+            else []
+        )
+
+        fragments: List[str] = []
+        insights: List[FinancialInsight] = []
+
+        if gastos:
+            fragments.append(
+                f"En el período analizado has gastado {_format_currency(gastos, currency)}."
+            )
+            insights.append(
+                FinancialInsight(
+                    label="Gasto del período",
+                    value=_format_currency(gastos, currency),
+                )
+            )
+
+        sorted_categories: List[Tuple[str, float, Dict[str, Any]]] = []
+        for item in categories:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("category") or item.get("name") or "Sin categoría")
+            amount = _to_float(item.get("total"))
+            sorted_categories.append((name, amount, item))
+
+        sorted_categories.sort(key=lambda entry: entry[1], reverse=True)
+
+        if sorted_categories:
+            top_name, top_amount, _ = sorted_categories[0]
+            if top_amount:
+                fragments.append(
+                    f"La categoría con mayor gasto es {top_name} con {_format_currency(top_amount, currency)}."
+                )
+
+        for name, amount, item in sorted_categories[:3]:
+            if amount <= 0:
+                continue
+            percentage = _to_float(item.get("percentage"))
+            context = (
+                f"{percentage:.1f}% del gasto del período."
+                if percentage
+                else None
+            )
+            insights.append(
+                FinancialInsight(
+                    label=f"Gasto en {name}",
+                    value=_format_currency(amount, currency),
+                    context=context,
+                )
+            )
+
+        if ingresos:
+            insights.append(
+                FinancialInsight(
+                    label="Ingresos del período",
+                    value=_format_currency(ingresos, currency),
+                )
+            )
+
+        if neto:
+            fragments.append(
+                f"El flujo neto acumulado es {_format_currency(neto, currency)}."
+            )
+            insights.append(
+                FinancialInsight(
+                    label="Flujo neto",
+                    value=_format_currency(neto, currency),
+                )
+            )
+
+        if not fragments:
+            fragments.append("No se registran gastos en el período consultado.")
+
+        return " ".join(fragments), insights
+
+    def _build_forecast_resolution(self, payload: Dict[str, Any]) -> Tuple[str, List[FinancialInsight]]:
+        horizon = payload.get("horizonDays")
+        model = payload.get("modelType")
+        points_payload = payload.get("points") if isinstance(payload.get("points"), list) else []
+
+        points: List[Tuple[datetime, float]] = []
+        for entry in points_payload:
+            if not isinstance(entry, dict):
+                continue
+            date = _parse_datetime(entry.get("date"))
+            amount = _to_float(entry.get("amount"))
+            if date:
+                points.append((date, amount))
+
+        points.sort(key=lambda item: item[0])
+
+        fragments: List[str] = []
+        insights: List[FinancialInsight] = []
+
+        if horizon:
+            insights.append(
+                FinancialInsight(
+                    label="Horizonte de proyección",
+                    value=f"{int(horizon)} días",
+                )
+            )
+
+        if model:
+            insights.append(
+                FinancialInsight(
+                    label="Modelo utilizado",
+                    value=str(model),
+                    context=str(payload.get("source") or "forecasting-engine"),
+                )
+            )
+
+        if points:
+            start_date, start_amount = points[0]
+            end_date, end_amount = points[-1]
+            fragments.append(
+                "La proyección estima un flujo de {} hacia el {}.".format(
+                    _format_currency(end_amount), end_date.strftime("%d-%m-%Y")
+                )
+            )
+            delta = end_amount - start_amount
+            if delta:
+                tendencia = "un incremento" if delta >= 0 else "una disminución"
+                fragments.append(
+                    f"Esto representa {tendencia} de {_format_currency(abs(delta))} respecto al inicio del período."
+                )
+            insights.append(
+                FinancialInsight(
+                    label="Flujo proyectado al cierre",
+                    value=_format_currency(end_amount),
+                    context=f"Proyección al {end_date.strftime('%d-%m-%Y')}",
+                )
+            )
+        else:
+            fragments.append(
+                "No fue posible calcular la proyección con los datos actuales, se utilizará la tendencia histórica."
+            )
+
+        return " ".join(fragments), insights
     async def resolve_intent(
         self,
         intent: IntentCandidate,
@@ -455,31 +784,37 @@ class CoreAPIClient:
         query_text: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> IntentResolution:
-        payload = {
-            "intent": intent.name,
-            "confidence": intent.confidence,
-            "entities": intent.entities,
+        canonical_intent = normalize_intent_name(intent.name)
+        parameters = self._build_parameters(metadata, intent.entities)
+        payload: Dict[str, Any] = {
+            "intent": canonical_intent,
+            "userId": session_id,
             "sessionId": session_id,
-            "metadata": metadata or {},
         }
+        if parameters:
+            payload["parameters"] = parameters
         data = await self._request("POST", "/api/ai/intents/resolve", json=payload)
 
         if data:
-            response_text = data.get("response") or data.get("message") or ""
-            insight_items = [
-                FinancialInsight(
-                    label=item.get("label", ""),
-                    value=str(item.get("value", "")),
-                    context=item.get("context"),
+            status = data.get("status")
+            payload_data = data.get("data")
+            if status == "resolved" and isinstance(payload_data, dict):
+                response_text, insights = self._build_core_resolution(intent, canonical_intent, payload_data)
+                return IntentResolution(
+                    intent=intent,
+                    response_text=response_text,
+                    insights=insights,
+                    data=payload_data,
                 )
-                for item in data.get("insights", [])
-            ]
-            return IntentResolution(
-                intent=intent,
-                response_text=response_text,
-                insights=insight_items,
-                data=data.get("data", {}),
-            )
+
+            message = data.get("message") or data.get("response")
+            if message:
+                return IntentResolution(
+                    intent=intent,
+                    response_text=str(message),
+                    insights=[],
+                    data=payload_data if isinstance(payload_data, dict) else {},
+                )
 
         if self._data_service:
             resolution = await self._data_service.resolve_intent(
@@ -493,10 +828,28 @@ class CoreAPIClient:
 
         return self._fallback_resolution(intent)
 
-    async def fetch_financial_summary(self, session_id: str) -> FinancialSummary:
-        data = await self._request("GET", f"/api/ai/summary/{session_id}")
+    async def fetch_financial_summary(
+        self,
+        session_id: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> FinancialSummary:
+        params: Dict[str, Any] = {"userId": session_id}
+        if metadata:
+            account_id = metadata.get("accountId") or metadata.get("account_id")
+            if account_id:
+                params["accountId"] = account_id
+            start_date = metadata.get("startDate") or metadata.get("start_date")
+            end_date = metadata.get("endDate") or metadata.get("end_date")
+            if start_date:
+                params["startDate"] = start_date
+            if end_date:
+                params["endDate"] = end_date
+
+        data = await self._request("GET", f"/api/ai/summary/{session_id}", params=params)
         if data:
-            return FinancialSummary.parse_obj(data)
+            summary = self._build_summary_from_core(data)
+            if summary:
+                return summary
 
         if self._data_service:
             summary = await self._data_service.fetch_summary(session_id)
@@ -505,11 +858,64 @@ class CoreAPIClient:
 
         return _FALLBACK_SUMMARY
 
+    def _build_summary_from_core(self, payload: Dict[str, Any]) -> Optional[FinancialSummary]:
+        saldo = payload.get("saldoActual") if isinstance(payload.get("saldoActual"), dict) else {}
+        total_balance = _to_float(saldo.get("total"))
+        monthly_income = _to_float(payload.get("ingresos"))
+        monthly_expenses = _to_float(payload.get("gastos"))
+
+        breakdown: Dict[str, float] = {}
+
+        gastos_periodo = (
+            payload.get("gastosDelPeriodo")
+            if isinstance(payload.get("gastosDelPeriodo"), dict)
+            else None
+        )
+        if gastos_periodo and isinstance(gastos_periodo.get("categories"), list):
+            for entry in gastos_periodo["categories"]:
+                if not isinstance(entry, dict):
+                    continue
+                name = str(entry.get("category") or entry.get("name") or "Sin categoría")
+                amount = _to_float(entry.get("total"))
+                if amount:
+                    breakdown[name] = amount
+
+        categoria_principal = (
+            payload.get("categoriaPrincipal")
+            if isinstance(payload.get("categoriaPrincipal"), dict)
+            else None
+        )
+        if categoria_principal:
+            name = str(
+                categoria_principal.get("category")
+                or categoria_principal.get("name")
+                or "Categoría principal"
+            )
+            amount = _to_float(categoria_principal.get("total"))
+            if amount and name not in breakdown:
+                breakdown[name] = amount
+
+        generated_at = _parse_datetime(payload.get("generatedAt")) or datetime.utcnow()
+
+        return FinancialSummary(
+            total_balance=total_balance,
+            monthly_income=monthly_income,
+            monthly_expenses=monthly_expenses,
+            expense_breakdown=breakdown,
+            recent_transactions=[],
+            generated_at=generated_at,
+        )
+
     def _fallback_resolution(self, intent: IntentCandidate) -> IntentResolution:
         logger.debug("Using fallback resolution for intent: %s", intent.name)
         summary = _FALLBACK_SUMMARY
+        canonical_intent = normalize_intent_name(intent.name)
+        top_category: Tuple[str, float] | None = None
+        if summary.expense_breakdown:
+            top_category = max(summary.expense_breakdown.items(), key=lambda item: item[1])
+
         response_map = {
-            "consulta_balance": (
+            "saldo_actual": (
                 "Tu balance actual es de ${:,.0f} CLP. Dispones de un excedente mensual de ${:,.0f}.".format(
                     summary.total_balance, summary.monthly_income - summary.monthly_expenses
                 ),
@@ -525,12 +931,15 @@ class CoreAPIClient:
                     ),
                 ],
             ),
-            "gastos_categoria": (
-                "Durante este mes, alimentación representa el 28% de tus gastos totales.",
+            "gasto_mes": (
+                "Durante este mes, {} representa el {:.0f}% de tus gastos totales.".format(
+                    top_category[0] if top_category else "alimentación",
+                    (top_category[1] / summary.monthly_expenses * 100) if (top_category and summary.monthly_expenses) else 28,
+                ),
                 [
                     FinancialInsight(
-                        label="Gasto en alimentación",
-                        value=f"${summary.expense_breakdown['Alimentación']:,.0f} CLP",
+                        label=f"Gasto en {top_category[0]}" if top_category else "Gasto principal",
+                        value=f"${(top_category[1] if top_category else summary.monthly_expenses * 0.28):,.0f} CLP",
                     ),
                 ],
             ),
@@ -559,10 +968,21 @@ class CoreAPIClient:
                     ),
                 ],
             ),
+            "proyeccion_flujo": (
+                "Tu flujo histórico deja un excedente aproximado de ${:,.0f} CLP. Utiliza este dato como referencia mientras generamos una proyección actualizada.".format(
+                    summary.monthly_income - summary.monthly_expenses
+                ),
+                [
+                    FinancialInsight(
+                        label="Excedente mensual",
+                        value=f"${summary.monthly_income - summary.monthly_expenses:,.0f} CLP",
+                    ),
+                ],
+            ),
         }
 
         response_text, insights = response_map.get(
-            intent.name,
+            canonical_intent,
             (
                 "Estoy analizando tus finanzas para ofrecerte una recomendación personalizada.",
                 [
