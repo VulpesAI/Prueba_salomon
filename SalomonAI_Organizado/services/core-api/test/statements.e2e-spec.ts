@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { randomUUID } from 'crypto';
+import { promises as fsPromises } from 'fs';
+import { join } from 'path';
 
 import { AppModule } from '../src/app.module';
 import { setupGlobalPrefix } from '../src/config/app.config';
@@ -149,8 +151,12 @@ describe('StatementsController (e2e)', () => {
   let app: INestApplication;
   let supabaseMock: InMemorySupabaseService;
   let producerMock: InMemoryParsingEngineProducer;
+  const uploadRoot = process.env.STATEMENTS_UPLOAD_DIR ?? join(process.cwd(), 'tmp', 'uploads');
 
   beforeAll(async () => {
+    await fsPromises.rm(uploadRoot, { recursive: true, force: true });
+    await fsPromises.mkdir(uploadRoot, { recursive: true });
+
     supabaseMock = new InMemorySupabaseService();
     producerMock = new InMemoryParsingEngineProducer();
 
@@ -189,11 +195,16 @@ describe('StatementsController (e2e)', () => {
     const statement = uploadResponse.body.statement;
     expect(statement.account.name).toBe('Cuenta Corriente');
     expect(statement.storagePath).toContain('statement.pdf');
+    expect(statement.status).toBe('pendiente');
 
     const statementId: string = statement.id;
 
     expect(producerMock.events).toHaveLength(1);
-    expect(producerMock.events[0]).toMatchObject({ statementId, userId });
+    const expectedFilePath = join(uploadRoot, userId, statementId, 'statement.pdf');
+    const fileStats = await fsPromises.stat(expectedFilePath);
+
+    expect(fileStats.isFile()).toBe(true);
+    expect(producerMock.events[0]).toMatchObject({ statementId, userId, filePath: expectedFilePath });
 
     const listResponse = await request(app.getHttpServer())
       .get('/api/v1/statements')

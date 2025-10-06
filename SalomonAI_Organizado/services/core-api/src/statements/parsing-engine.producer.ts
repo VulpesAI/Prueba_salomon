@@ -8,7 +8,7 @@ import { PARSING_ENGINE_CLIENT, PARSING_ENGINE_EVENT } from './statements.consta
 export interface StatementQueuedEvent {
   statementId: string;
   userId: string;
-  storagePath: string;
+  filePath: string;
 }
 
 @Injectable()
