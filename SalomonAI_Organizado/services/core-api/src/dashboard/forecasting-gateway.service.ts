@@ -9,39 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import { fetch } from 'undici';
 
 import type { ForecastingConfig } from '../config/configuration';
+import type {
+  ForecastingEngineResponse,
+  ForecastingPointDto,
+  ForecastingRequestOptions,
+  ForecastingResponseDto,
+} from '../forecasting/forecasting.types';
 import { FORECASTING_MODELS } from './dto/dashboard-projection-query.dto';
-
-export interface ForecastingPointDto {
-  date: string;
-  amount: number;
-}
-
-export interface ForecastingResponseDto {
-  userId: string;
-  modelType: 'auto' | 'arima' | 'prophet';
-  horizonDays: number;
-  generatedAt: string;
-  historyDays: number;
-  points: ForecastingPointDto[];
-  metadata: Record<string, unknown> | null;
-  source: 'forecasting-engine';
-}
-
-interface ForecastingEngineResponse {
-  user_id: string;
-  model_type: 'auto' | 'arima' | 'prophet';
-  horizon_days: number;
-  generated_at: string;
-  history_days: number;
-  forecasts: Array<{ date: string; amount: number }>;
-  metadata: Record<string, unknown> | null;
-}
-
-interface ForecastingRequestOptions {
-  horizonDays?: number;
-  model?: string;
-  refresh?: boolean;
-}
 
 @Injectable()
 export class DashboardForecastingGatewayService {
