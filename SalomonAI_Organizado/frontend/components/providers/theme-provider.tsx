@@ -24,6 +24,9 @@ interface ThemeProviderState {
   setTheme: (theme: Theme) => void;
 }
 
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
+  undefined
+);
 const initialState: ThemeProviderState = {
   theme: 'dark',
   setTheme: () => null,
@@ -52,6 +55,14 @@ export function ThemeProvider({
       if (storedTheme === 'system') {
         window.localStorage.setItem(storageKey, defaultTheme);
       }
+
+      return defaultTheme;
+    },
+    [defaultTheme, storageKey]
+  );
+
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+
 
       return defaultTheme;
     },
