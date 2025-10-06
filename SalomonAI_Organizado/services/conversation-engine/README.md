@@ -10,6 +10,13 @@ Servicio FastAPI que gestiona el flujo conversacional de SalomonAI.
 - Endpoint `/context/summary` para dashboards del frontend.
 - Preparado para despliegue vía Docker.
 
+### Intents soportados en el MVP
+
+- `consulta_balance`: preguntas sobre saldo disponible o balance consolidado.
+- `gastos_categoria`: detalle de gastos agrupados por categoría o rubro.
+- `plan_ahorro`: dudas sobre metas u objetivos de ahorro.
+- `limite_credito`: consultas sobre cupos o límites de tarjetas y líneas de crédito.
+
 ## Desarrollo local
 
 ```bash
