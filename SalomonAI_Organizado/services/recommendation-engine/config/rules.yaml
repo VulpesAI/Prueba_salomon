@@ -1,0 +1,144 @@
+rules:
+  - rule_key: budget_10pct
+    enabled: true
+    windows: ["90d", "30d"]
+    description: "Alert when savings rate is below 10% and expenses exceed income."
+    tags: ["budgeting"]
+    preconditions:
+      min_days_history: 45
+      min_tx_per_window: 12
+      exclude_categories_essential: true
+      require_features: ["savings_rate", "total_income", "total_expenses"]
+    triggers:
+      savings_rate_lt: 0.10
+      expenses_gte_income: true
+    evidence:
+      require_features: ["savings_rate", "top_overspend_category", "top_overspend_share_pct", "net_cashflow"]
+    action:
+      title: "Aumenta tu ahorro mensual"
+      message_template: "Tu ahorro está bajo el 10%. Reasigna gasto de {top_overspend_category} a un aporte automático."
+      category: "budgeting"
+      explanation: "Baja tasa de ahorro y gastos sobre ingresos."
+      actions:
+        - type: "education"
+          label: "Guía para presupuesto base"
+          url: "https://salomon.ai/recursos/presupuesto-base"
+    priority: 2
+    base_score: 0.82
+    max_repeats_per_month: 2
+    fallback:
+      title: "Arma un presupuesto base"
+      message: "Antes de recortar esenciales, arma un presupuesto que priorice vivienda, salud y servicios básicos."
+      priority: 5
+      score: 0.6
+  - rule_key: dining_balance
+    enabled: true
+    windows: ["30d"]
+    tags: ["spending"]
+    preconditions:
+      min_tx_per_window: 12
+      exclude_categories_essential: true
+    triggers:
+      category_share_gt:
+        category: "restaurantes"
+        threshold: 0.25
+    evidence:
+      require_features: ["category_share_pct", "net_cashflow"]
+    action:
+      title: "Equilibra tu gasto en restaurantes"
+      message_template: "Destinas {category_share_pct:.0f}% a restaurantes. Define un tope semanal y planifica comidas en casa."
+      category: "spending"
+      explanation: "Sobreexposición a gastos en restaurantes."
+      actions:
+        - type: "limit"
+          label: "Planifica tu gasto variable"
+          url: "https://salomon.ai/recursos/gasto-restaurantes"
+    priority: 3
+    base_score: 0.75
+    max_repeats_per_month: 1
+    fallback:
+      title: "Revisa tu gasto variable"
+      message: "Compara tus gastos discrecionales con el promedio mensual y prioriza metas de ahorro."
+      priority: 5
+      score: 0.55
+  - rule_key: rent_guardrail
+    enabled: true
+    windows: ["30d", "90d"]
+    tags: ["cashflow"]
+    preconditions:
+      min_tx_per_window: 12
+    triggers:
+      recurring_category: "arriendo"
+      net_cashflow_lt:
+        value: 0
+        window: "30d"
+    evidence:
+      require_features: ["net_cashflow", "recurring_category"]
+    action:
+      title: "Protege tu pago de arriendo"
+      message_template: "Tu flujo 30d es negativo y tienes arriendo recurrente. Reserva un fondo y activa recordatorios."
+      category: "cashflow"
+      explanation: "Flujo negativo con gasto esencial recurrente."
+      actions:
+        - type: "reminder"
+          label: "Activa recordatorios de arriendo"
+          url: "https://salomon.ai/recursos/arriendo"
+    priority: 2
+    base_score: 0.72
+    max_repeats_per_month: 1
+    fallback:
+      title: "Planifica gastos esenciales"
+      message: "Revisa tu presupuesto esencial y separa un monto fijo para vivienda y servicios básicos."
+      priority: 4
+      score: 0.6
+  - rule_key: services_efficiency
+    enabled: true
+    windows: ["30d", "90d"]
+    tags: ["recurring"]
+    preconditions:
+      min_tx_per_window: 12
+    triggers:
+      recurring_category: "servicios"
+    evidence:
+      require_features: ["recurring_category"]
+    action:
+      title: "Optimiza tus servicios mensuales"
+      message_template: "Detectamos pagos recurrentes de servicios básicos. Configura pagos automáticos y compara proveedores."
+      category: "recurring"
+      explanation: "Pagos recurrentes de servicios detectados."
+      actions:
+        - type: "automation"
+          label: "Automatiza tus cuentas"
+          url: "https://salomon.ai/recursos/servicios"
+    priority: 3
+    base_score: 0.68
+    max_repeats_per_month: 1
+  - rule_key: consolidation_watch
+    enabled: true
+    windows: ["90d"]
+    tags: ["cashflow"]
+    preconditions:
+      min_days_history: 60
+    triggers:
+      net_cashflow_lt:
+        value: 0
+        window: "90d"
+    evidence:
+      require_features: ["net_cashflow"]
+    action:
+      title: "Revisa tu flujo acumulado"
+      message_template: "En 90 días tu flujo neto es negativo ({net_cashflow:.2f}). Monitorea gastos variables y prioriza ahorro."
+      category: "cashflow"
+      explanation: "Flujo neto negativo en ventana larga."
+      actions:
+        - type: "coaching"
+          label: "Agenda asesoría"
+          url: "https://salomon.ai/recursos/consolidacion"
+    priority: 4
+    base_score: 0.7
+    max_repeats_per_month: 1
+    fallback:
+      title: "Construye tu plan base"
+      message: "Si tu flujo es volátil, arma un plan de gastos mínimos y fija alertas de sobreconsumo."
+      priority: 5
+      score: 0.55

@@ -4,10 +4,12 @@ import binascii
 import hashlib
 import json
 import logging
+import threading
 import time
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from statistics import pstdev
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Protocol, Sequence, Set, Tuple
 from uuid import UUID, uuid4
@@ -25,6 +27,7 @@ else:
     AsyncPGPool = Any
 import httpx
 import numpy as np
+import yaml
 from fastapi import Body, FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -281,6 +284,8 @@ class RecommendationRecord:
     valid_from: datetime = field(default_factory=utcnow)
     valid_to: Optional[datetime] = None
     payload: Dict[str, Any] = field(default_factory=dict)
+    rule_key: Optional[str] = None
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -317,6 +322,706 @@ class WindowedUserFeatures:
     volatility_expense: float
     updated_at: datetime
 
+
+class SafeFormatDict(dict):
+    """Formato seguro que mantiene los marcadores ausentes."""
+
+    def __missing__(self, key: str) -> str:  # pragma: no cover - fallback simple
+        return "{" + key + "}"
+
+
+ESSENTIAL_CATEGORIES: Set[str] = {
+    "arriendo",
+    "alquiler",
+    "rent",
+    "renta",
+    "servicios",
+    "servicios básicos",
+    "electricidad",
+    "luz",
+    "agua",
+    "gas",
+    "educación",
+    "educacion",
+    "colegio",
+    "salud",
+    "medico",
+    "médico",
+    "medicina",
+    "farmacia",
+}
+
+
+@dataclass
+class RuleFallback:
+    title: str
+    message: str
+    priority: int = 5
+    score: float = 0.55
+    category: str = "education"
+    explanation: str = "Recomendación educativa por guardrail"
+
+
+@dataclass
+class RuleActionTemplate:
+    title: str
+    message_template: str
+    category: str
+    explanation: str
+    actions: List[Dict[str, Any]] = field(default_factory=list)
+    language: str = "es-CL"
+
+    def render(self, context: Mapping[str, Any]) -> Tuple[str, str, List[Dict[str, Any]]]:
+        formatter = SafeFormatDict(context)
+        title = self.title.format_map(formatter)
+        message = self.message_template.format_map(formatter)
+        rendered_actions: List[Dict[str, Any]] = []
+        for action in self.actions:
+            if not isinstance(action, dict):
+                continue
+            action_formatter = SafeFormatDict({**context, **action})
+            rendered_actions.append(
+                {
+                    "type": str(action.get("type") or "education"),
+                    "label": str(action.get("label") or "Ver detalle").format_map(action_formatter),
+                    "url": action.get("url"),
+                }
+            )
+        return title, message, rendered_actions
+
+
+@dataclass
+class RuleDefinition:
+    rule_key: str
+    enabled: bool
+    windows: Tuple[str, ...]
+    preconditions: Dict[str, Any]
+    triggers: Dict[str, Any]
+    evidence_config: Dict[str, Any]
+    action: RuleActionTemplate
+    priority: int
+    base_score: float
+    max_repeats_per_month: int
+    tags: Tuple[str, ...] = ()
+    policy: Optional[str] = None
+    fallback: Optional[RuleFallback] = None
+    description: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, Any]) -> "RuleDefinition":
+        rule_key = str(raw.get("rule_key") or raw.get("key") or "").strip()
+        if not rule_key:
+            raise ValueError("rule_key is required")
+        enabled = bool(raw.get("enabled", True))
+        windows_raw = raw.get("windows")
+        if isinstance(windows_raw, str):
+            windows = (windows_raw.lower(),)
+        elif isinstance(windows_raw, Iterable):
+            windows = tuple(str(item).lower() for item in windows_raw if str(item).strip())
+        else:
+            windows = ()
+        preconditions = dict(raw.get("preconditions") or {})
+        triggers = dict(raw.get("triggers") or {})
+        evidence_config = dict(raw.get("evidence") or {})
+        action_raw = raw.get("action") or {}
+        title = str(action_raw.get("title") or raw.get("title") or rule_key.replace("_", " ").title())
+        message_template = str(action_raw.get("message_template") or action_raw.get("message") or "")
+        if not message_template:
+            raise ValueError(f"Rule {rule_key} requires an action message_template")
+        category = str(action_raw.get("category") or raw.get("category") or "general")
+        explanation = str(action_raw.get("explanation") or raw.get("explanation") or "Regla dinámica")
+        actions_field = action_raw.get("actions") or []
+        actions: List[Dict[str, Any]] = []
+        if isinstance(actions_field, Mapping):
+            actions = [dict(actions_field)]
+        elif isinstance(actions_field, Iterable):
+            actions = [dict(item) for item in actions_field if isinstance(item, Mapping)]
+        action = RuleActionTemplate(
+            title=title,
+            message_template=message_template,
+            category=category,
+            explanation=explanation,
+            actions=actions,
+            language=str(action_raw.get("language") or "es-CL"),
+        )
+        priority = int(raw.get("priority", 5))
+        base_score = float(raw.get("base_score", raw.get("score", 0.7)))
+        max_repeats_per_month = int(raw.get("max_repeats_per_month", raw.get("max_repeats", 0)))
+        tags_field = raw.get("tags")
+        if isinstance(tags_field, str):
+            tags = (tags_field.lower(),)
+        elif isinstance(tags_field, Iterable):
+            tags = tuple(str(tag).lower() for tag in tags_field if str(tag).strip())
+        else:
+            tags = ()
+        policy = str(raw.get("policy") or "").strip() or None
+        fallback_raw = raw.get("fallback")
+        fallback: Optional[RuleFallback]
+        if isinstance(fallback_raw, Mapping):
+            fallback = RuleFallback(
+                title=str(fallback_raw.get("title") or "Paso educativo"),
+                message=str(
+                    fallback_raw.get("message")
+                    or "Revisa tu presupuesto base y asegura el pago de categorías esenciales."
+                ),
+                priority=int(fallback_raw.get("priority", 5)),
+                score=float(fallback_raw.get("score", 0.55)),
+                category=str(fallback_raw.get("category") or "education"),
+                explanation=str(
+                    fallback_raw.get("explanation")
+                    or "Guardrail activado: se ofrece contenido educativo"
+                ),
+            )
+        else:
+            fallback = None
+        description = raw.get("description")
+        return cls(
+            rule_key=rule_key,
+            enabled=enabled,
+            windows=windows,
+            preconditions=preconditions,
+            triggers=triggers,
+            evidence_config=evidence_config,
+            action=action,
+            priority=priority,
+            base_score=base_score,
+            max_repeats_per_month=max_repeats_per_month,
+            tags=tags,
+            policy=policy,
+            fallback=fallback,
+            description=str(description) if description is not None else None,
+        )
+
+    def applies_to_window(self, window: Optional[str]) -> bool:
+        if not self.windows:
+            return True
+        if not window:
+            return False
+        return window.lower() in self.windows
+
+
+@dataclass
+class RuleTraceEntry:
+    rule: str
+    passed_preconditions: bool
+    triggered: bool
+    reason: Optional[str] = None
+    score: Optional[float] = None
+    emitted: bool = False
+    guardrail: Optional[str] = None
+    evidence: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class RuleMetrics:
+    positive: int = 0
+    total: int = 0
+    satisfaction_total: float = 0.0
+    satisfaction_count: int = 0
+    last_updated: datetime = field(default_factory=utcnow)
+
+    @property
+    def accept_rate(self) -> Optional[float]:
+        if self.total <= 0:
+            return None
+        return self.positive / self.total
+
+
+class RuleMetricsTracker:
+    def __init__(self, min_accept: float, score_mode: str) -> None:
+        self._min_accept = min_accept
+        self._score_mode = score_mode
+        self._metrics: Dict[str, RuleMetrics] = {}
+        self._lock = threading.Lock()
+
+    def _is_positive(self, score: Optional[int]) -> Optional[bool]:
+        if score is None:
+            return None
+        if self._score_mode == "five_star":
+            return score >= 4
+        return score > 0
+
+    def record_feedback(self, rule_key: Optional[str], score: Optional[int], satisfaction: Optional[float] = None) -> None:
+        if not rule_key:
+            return
+        with self._lock:
+            metrics = self._metrics.setdefault(rule_key, RuleMetrics())
+            metrics.total += 1
+            positive = self._is_positive(score)
+            if positive:
+                metrics.positive += 1
+            if satisfaction is not None:
+                metrics.satisfaction_total += satisfaction
+                metrics.satisfaction_count += 1
+            metrics.last_updated = utcnow()
+
+    def snapshot(self) -> Dict[str, Dict[str, Any]]:
+        with self._lock:
+            return {
+                key: {
+                    "accept_rate": metrics.accept_rate,
+                    "total": metrics.total,
+                    "positive": metrics.positive,
+                }
+                for key, metrics in self._metrics.items()
+            }
+
+    def adjust_priority(self, rule_key: str, base_priority: int) -> int:
+        with self._lock:
+            metrics = self._metrics.get(rule_key)
+            if not metrics or metrics.total < 5:
+                return base_priority
+            accept_rate = metrics.accept_rate
+            if accept_rate is not None and accept_rate < self._min_accept:
+                return min(base_priority + 1, 10)
+            if accept_rate is not None and accept_rate > 0.8:
+                return max(base_priority - 1, 1)
+            return base_priority
+
+    def adjust_score(self, rule_key: str, score: float) -> float:
+        with self._lock:
+            metrics = self._metrics.get(rule_key)
+            if not metrics or metrics.total < 5:
+                return score
+            accept_rate = metrics.accept_rate
+            if accept_rate is None:
+                return score
+            if accept_rate < self._min_accept:
+                return max(score * 0.85, 0.2)
+            if accept_rate > 0.85:
+                return min(score + 0.05, 1.0)
+            return score
+
+
+class RuleConfigLoader:
+    def __init__(self, path: str, *, hot_reload: bool = False) -> None:
+        base_path = Path(path)
+        if not base_path.is_absolute():
+            base_path = (Path(__file__).resolve().parent / base_path).resolve()
+        self._path = base_path
+        self._hot_reload = hot_reload
+        self._lock = threading.Lock()
+        self._rules: List[RuleDefinition] = []
+        self._last_mtime: float = 0.0
+        self._load_rules()
+
+    def _load_rules(self) -> None:
+        rules: List[RuleDefinition] = []
+        try:
+            if not self._path.exists():
+                logger.warning("rules_config_missing", extra={"path": str(self._path)})
+            else:
+                with self._path.open("r", encoding="utf-8") as handle:
+                    payload = yaml.safe_load(handle) or []
+                if isinstance(payload, Mapping):
+                    entries = payload.get("rules") or payload.get("items") or []
+                else:
+                    entries = payload
+                if not isinstance(entries, Iterable):
+                    entries = []
+                for entry in entries:
+                    if not isinstance(entry, Mapping):
+                        continue
+                    try:
+                        rules.append(RuleDefinition.from_dict(entry))
+                    except Exception as exc:  # pragma: no cover - config errors should not break service
+                        logger.warning("rules_config_invalid_entry", extra={"error": str(exc), "entry": entry})
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("rules_config_load_failed", extra={"error": str(exc), "path": str(self._path)})
+            rules = []
+        with self._lock:
+            self._rules = rules
+            try:
+                self._last_mtime = self._path.stat().st_mtime
+            except OSError:
+                self._last_mtime = 0.0
+
+    def _maybe_reload(self) -> None:
+        if not self._hot_reload:
+            return
+        try:
+            mtime = self._path.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        if mtime and mtime != self._last_mtime:
+            self._load_rules()
+
+    def load(self, policy: Optional[str] = None) -> List[RuleDefinition]:
+        self._maybe_reload()
+        with self._lock:
+            rules = list(self._rules)
+        if policy:
+            return [rule for rule in rules if rule.policy in {None, policy}]
+        return rules
+
+
+class RecommendationRuleEngine:
+    def __init__(
+        self,
+        settings: "RecommendationSettings",
+        loader: RuleConfigLoader,
+        metrics: RuleMetricsTracker,
+    ) -> None:
+        self.settings = settings
+        self.loader = loader
+        self.metrics = metrics
+        self.essential_categories = {item.lower() for item in ESSENTIAL_CATEGORIES}
+        self._history: Dict[Tuple[str, str], List[datetime]] = defaultdict(list)
+        self._lock = threading.Lock()
+
+    def _window_to_days(self, window: Optional[str]) -> Optional[int]:
+        if not window:
+            return None
+        window = window.lower()
+        if window.endswith("d"):
+            try:
+                return int(window[:-1])
+            except ValueError:
+                return None
+        if window == "month":
+            return 30
+        return None
+
+    def _net_cashflow(self, features: UserFeatures, windows: Mapping[str, WindowedUserFeatures], window: Optional[str]) -> float:
+        if window:
+            snapshot = windows.get(window)
+            if snapshot:
+                return float(snapshot.net_cashflow)
+        return float(features.net_cash_flow)
+
+    def _category_share(
+        self,
+        features: UserFeatures,
+        windows: Mapping[str, WindowedUserFeatures],
+        category: str,
+        window: Optional[str],
+    ) -> float:
+        category_key = category.lower()
+        if window:
+            snapshot = windows.get(window)
+            if snapshot:
+                share = snapshot.category_shares.get(category_key)
+                if share is not None:
+                    try:
+                        return float(share)
+                    except (TypeError, ValueError):
+                        return 0.0
+        share = features.category_shares.get(category_key)
+        if share is None:
+            return 0.0
+        try:
+            return float(share)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _top_non_essential_category(self, features: UserFeatures) -> Tuple[Optional[str], float]:
+        sorted_items = sorted(
+            ((key, value) for key, value in features.category_shares.items()),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+        for category, share in sorted_items:
+            normalized = str(category).lower()
+            if normalized in self.essential_categories:
+                continue
+            try:
+                return str(category), float(share)
+            except (TypeError, ValueError):
+                continue
+        return None, 0.0
+
+    def _check_preconditions(
+        self,
+        rule: RuleDefinition,
+        features: UserFeatures,
+        windows: Mapping[str, WindowedUserFeatures],
+    ) -> Tuple[bool, Optional[str], Dict[str, Any]]:
+        context: Dict[str, Any] = {}
+        target_window = features.window.lower() if features.window else None
+        if rule.windows and target_window and target_window not in rule.windows:
+            # Permitir reglas de 30d cuando solo hay 90d si el contexto existe
+            if not any(window in windows for window in rule.windows):
+                return False, "window_mismatch", context
+        min_days = max(
+            int(rule.preconditions.get("min_days_history", 0) or 0),
+            int(self.settings.min_days_history),
+        )
+        available_days = self._window_to_days(features.window) or 0
+        if available_days and available_days < min_days:
+            return False, "insufficient_history", context
+        min_tx = max(
+            int(rule.preconditions.get("min_tx_per_window", 0) or 0),
+            int(self.settings.min_tx_per_window),
+        )
+        if features.transaction_count < min_tx:
+            return False, "insufficient_transactions", context
+        required_features = rule.preconditions.get("require_features") or []
+        if isinstance(required_features, Iterable):
+            for feature_name in required_features:
+                attr = getattr(features, feature_name, None)
+                if attr in {None, 0}:
+                    return False, f"missing_feature:{feature_name}", context
+        return True, None, context
+
+    def _check_guardrails(
+        self,
+        rule: RuleDefinition,
+        features: UserFeatures,
+        context: Dict[str, Any],
+    ) -> Tuple[bool, Optional[str]]:
+        if self.settings.investing_guardrail and any(tag in {"investing", "investment"} for tag in rule.tags):
+            return False, "investing_guardrail"
+        if rule.preconditions.get("exclude_categories_essential"):
+            category = context.get("top_overspend_category")
+            if category and str(category).lower() in self.essential_categories:
+                return False, "essential_category"
+        return True, None
+
+    def _evaluate_triggers(
+        self,
+        rule: RuleDefinition,
+        features: UserFeatures,
+        windows: Mapping[str, WindowedUserFeatures],
+    ) -> Tuple[bool, Dict[str, Any], Optional[str]]:
+        context: Dict[str, Any] = {}
+        triggers = rule.triggers
+        if not triggers:
+            return True, context, None
+
+        if "savings_rate_lt" in triggers:
+            try:
+                threshold = float(triggers["savings_rate_lt"])
+            except (TypeError, ValueError):
+                threshold = 0.0
+            context["savings_rate"] = features.savings_rate
+            context["savings_threshold"] = threshold
+            if not (features.savings_rate < threshold):
+                return False, context, "savings_rate"
+
+        if triggers.get("expenses_gte_income"):
+            if not (features.total_expenses >= features.total_income > 0):
+                return False, context, "expenses_vs_income"
+
+        if "category_share_gt" in triggers:
+            raw = triggers["category_share_gt"]
+            if isinstance(raw, Mapping):
+                category = str(raw.get("category") or raw.get("name") or "")
+                window = str(raw.get("window") or "").lower() or None
+                threshold = float(raw.get("threshold") or raw.get("value") or 0.0)
+            else:
+                category = str(raw)
+                window = None
+                threshold = 0.0
+            if not category:
+                return False, context, "invalid_category"
+            share = self._category_share(features, windows, category, window)
+            context["category"] = category
+            context["category_share"] = share
+            context["category_share_threshold"] = threshold
+            if not (share > threshold):
+                return False, context, "category_share"
+            context["category_share_pct"] = round(share * 100, 1)
+
+        if "recurring_category" in triggers:
+            category = str(triggers["recurring_category"]).lower()
+            recurring = bool(features.recurring_flags.get(category))
+            if not recurring:
+                recurring = any(
+                    snapshot.recurring_flags.get(category)
+                    for snapshot in windows.values()
+                    if isinstance(snapshot.recurring_flags, Mapping)
+                )
+            context["recurring_category"] = category
+            if not recurring:
+                return False, context, "recurring"
+
+        if "net_cashflow_lt" in triggers:
+            raw = triggers["net_cashflow_lt"]
+            if isinstance(raw, Mapping):
+                threshold = float(raw.get("value") or raw.get("threshold") or 0.0)
+                window = str(raw.get("window") or "").lower() or None
+            else:
+                threshold = float(raw or 0.0)
+                window = None
+            net_cashflow = self._net_cashflow(features, windows, window)
+            context["net_cashflow"] = net_cashflow
+            context["net_cashflow_threshold"] = threshold
+            if not (net_cashflow < threshold):
+                return False, context, "net_cashflow"
+
+        if rule.preconditions.get("exclude_categories_essential") and "top_overspend_category" not in context:
+            category, share = self._top_non_essential_category(features)
+            if category:
+                context["top_overspend_category"] = category
+                context["top_overspend_share"] = share
+                context["top_overspend_share_pct"] = round(share * 100, 1)
+
+        return True, context, None
+
+    def _compute_score(self, rule: RuleDefinition, context: Mapping[str, Any]) -> float:
+        score = max(min(rule.base_score, 1.0), 0.0)
+        if "savings_threshold" in context and context.get("savings_threshold"):
+            threshold = float(context["savings_threshold"])
+            actual = float(context.get("savings_rate", 0.0))
+            if threshold > 0:
+                severity = max(min((threshold - actual) / threshold, 1.0), 0.0)
+                score = max(score, self.settings.min_confidence + severity * 0.4)
+        if "category_share_threshold" in context and context.get("category_share_threshold"):
+            threshold = float(context["category_share_threshold"])
+            share = float(context.get("category_share", 0.0))
+            if threshold > 0:
+                severity = max(min((share - threshold) / threshold, 1.0), 0.0)
+                score = max(score, self.settings.min_confidence + severity * 0.3)
+        if "net_cashflow_threshold" in context:
+            threshold = float(context["net_cashflow_threshold"])
+            value = float(context.get("net_cashflow", 0.0))
+            if threshold < 0:
+                severity = max(min((threshold - value) / abs(threshold), 1.0), 0.0)
+                score = max(score, self.settings.min_confidence + severity * 0.3)
+        return max(min(score, 1.0), 0.0)
+
+    def _build_evidence(self, rule: RuleDefinition, context: Mapping[str, Any]) -> Dict[str, Any]:
+        evidence: Dict[str, Any] = {}
+        required = rule.evidence_config.get("require_features") or []
+        if isinstance(required, Iterable):
+            for name in required:
+                value = context.get(name)
+                if value is None:
+                    continue
+                evidence[name] = value
+        if "category_share_pct" in context:
+            evidence.setdefault("category_share_pct", context["category_share_pct"])
+        if "top_overspend_category" in context:
+            evidence.setdefault("top_overspend_category", context["top_overspend_category"])
+            evidence.setdefault("top_overspend_share_pct", context.get("top_overspend_share_pct"))
+        if "net_cashflow" in context:
+            evidence.setdefault("net_cashflow", round(float(context["net_cashflow"]), 2))
+        if "savings_rate" in context:
+            evidence.setdefault("savings_rate", round(float(context["savings_rate"]), 3))
+        return evidence
+
+    def _exceeded_max_repeats(self, user_id: str, rule: RuleDefinition, now: datetime) -> bool:
+        if rule.max_repeats_per_month <= 0:
+            return False
+        key = (user_id, rule.rule_key)
+        cutoff = now - timedelta(days=30)
+        with self._lock:
+            history = self._history.get(key, [])
+            history = [item for item in history if item >= cutoff]
+            self._history[key] = history
+            if len(history) >= rule.max_repeats_per_month:
+                return True
+        return False
+
+    def _register_emission(self, user_id: str, rule: RuleDefinition, timestamp: datetime) -> None:
+        if rule.max_repeats_per_month <= 0:
+            return
+        key = (user_id, rule.rule_key)
+        with self._lock:
+            self._history.setdefault(key, []).append(timestamp)
+
+    def evaluate(
+        self,
+        features: UserFeatures,
+        windows: Mapping[str, WindowedUserFeatures],
+        *,
+        policy: Optional[str] = None,
+        now: Optional[datetime] = None,
+    ) -> Tuple[List[RecommendationRecord], List[RuleTraceEntry]]:
+        now = now or utcnow()
+        results: List[RecommendationRecord] = []
+        traces: List[RuleTraceEntry] = []
+        rules = self.loader.load(policy)
+        for rule in rules:
+            if not rule.enabled:
+                continue
+            pre_ok, pre_reason, pre_context = self._check_preconditions(rule, features, windows)
+            trace = RuleTraceEntry(rule=rule.rule_key, passed_preconditions=pre_ok, triggered=False)
+            if not pre_ok:
+                trace.reason = pre_reason
+                traces.append(trace)
+                continue
+            triggered, trigger_context, trigger_reason = self._evaluate_triggers(rule, features, windows)
+            trace.triggered = triggered
+            context = {**pre_context, **trigger_context}
+            if not triggered:
+                trace.reason = trigger_reason
+                traces.append(trace)
+                continue
+            guard_ok, guard_reason = self._check_guardrails(rule, features, context)
+            trace.guardrail = guard_reason
+            if not guard_ok:
+                if rule.fallback:
+                    fallback_record = RecommendationRecord(
+                        id=str(uuid4()),
+                        user_id=features.user_id,
+                        title=rule.fallback.title,
+                        description=rule.fallback.message,
+                        score=max(rule.fallback.score, self.settings.min_confidence),
+                        category=rule.fallback.category,
+                        explanation=rule.fallback.explanation,
+                        generated_at=now,
+                        source="rules",
+                        priority=rule.fallback.priority,
+                        payload={
+                            "rule_key": f"{rule.rule_key}:fallback",
+                            "actions": [],
+                            "evidence": {},
+                            "guardrail": guard_reason,
+                        },
+                        rule_key=f"{rule.rule_key}:fallback",
+                        evidence={},
+                    )
+                    results.append(fallback_record)
+                    trace.reason = guard_reason
+                    trace.emitted = True
+                else:
+                    trace.reason = guard_reason
+                traces.append(trace)
+                continue
+            score = self._compute_score(rule, context)
+            score = self.metrics.adjust_score(rule.rule_key, score)
+            if score < self.settings.min_confidence:
+                trace.reason = "low_confidence"
+                trace.score = score
+                traces.append(trace)
+                continue
+            if self._exceeded_max_repeats(features.user_id, rule, now):
+                trace.reason = "max_repeats"
+                trace.score = score
+                traces.append(trace)
+                continue
+            title, message, actions = rule.action.render(context)
+            evidence = self._build_evidence(rule, context)
+            priority = self.metrics.adjust_priority(rule.rule_key, rule.priority)
+            payload = {
+                "rule_key": rule.rule_key,
+                "actions": actions,
+                "evidence": evidence,
+                "policy": rule.policy,
+            }
+            record = RecommendationRecord(
+                id=str(uuid4()),
+                user_id=features.user_id,
+                title=title,
+                description=message,
+                score=score,
+                category=rule.action.category,
+                explanation=rule.action.explanation,
+                generated_at=now,
+                priority=priority,
+                payload=payload,
+                rule_key=rule.rule_key,
+                evidence=evidence,
+            )
+            results.append(record)
+            trace.emitted = True
+            trace.score = score
+            trace.evidence = evidence
+            traces.append(trace)
+            self._register_emission(features.user_id, rule, now)
+        ranked = sorted(results, key=lambda item: (item.priority, -item.score))
+        return ranked, traces
 
 @dataclass
 class ClusterTrainingResult:
@@ -1500,6 +2205,10 @@ class RecommendationOutputRepository:
                     payload.setdefault("generated_at", record.generated_at.isoformat())
                     if record.cluster is not None:
                         payload.setdefault("cluster_id", record.cluster)
+                    if record.rule_key:
+                        payload.setdefault("rule_key", record.rule_key)
+                    if record.evidence:
+                        payload.setdefault("evidence", record.evidence)
                     await connection.execute(
                         query,
                         uuid4(),
@@ -2174,6 +2883,22 @@ class RecommendationModelManager:
         self.last_trained_at: Optional[datetime] = None
         self.model_version: Optional[str] = None
         self.last_silhouette: Optional[float] = None
+        self.rule_metrics = RuleMetricsTracker(settings.rule_min_accept, settings.feedback_score_mode)
+        self.rule_loader = RuleConfigLoader(settings.rules_config_path, hot_reload=settings.rules_hot_reload)
+        self.rule_engine = RecommendationRuleEngine(settings, self.rule_loader, self.rule_metrics)
+        self._user_windows: Dict[str, Dict[str, WindowedUserFeatures]] = defaultdict(dict)
+        self._decision_traces: Dict[str, List[RuleTraceEntry]] = {}
+
+    def update_window_features(self, snapshots: Sequence[WindowedUserFeatures]) -> None:
+        for snapshot in snapshots:
+            window_label = snapshot.window.lower()
+            self._user_windows.setdefault(snapshot.user_id, {})[window_label] = snapshot
+
+    def get_window_features(self, user_id: str) -> Dict[str, WindowedUserFeatures]:
+        return dict(self._user_windows.get(user_id, {}))
+
+    def last_trace(self, user_id: str) -> List[RuleTraceEntry]:
+        return list(self._decision_traces.get(user_id, []))
 
     def train(
         self,
@@ -2289,185 +3014,129 @@ class RecommendationModelManager:
             }
         return result
 
-    def generate_recommendations(self, features: UserFeatures) -> List[RecommendationRecord]:
+    def evaluate(
+        self,
+        features: UserFeatures,
+        *,
+        policy: Optional[str] = None,
+        include_cluster: bool = True,
+    ) -> Tuple[List[RecommendationRecord], List[RuleTraceEntry]]:
         now = utcnow()
-        cluster_id = self.user_labels.get(features.user_id)
-        recommendations: Dict[str, RecommendationRecord] = {}
+        windows = self.get_window_features(features.user_id)
+        rule_records, trace_entries = self.rule_engine.evaluate(features, windows, policy=policy, now=now)
+        combined = list(rule_records)
 
-        if features.savings_rate < 0.1 and features.total_expenses >= features.total_income:
-            self._add_recommendation(
-                recommendations,
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Activa un presupuesto base",
-                    description="Tu tasa de ahorro es muy baja y tus gastos superan tus ingresos. Configura alertas y un presupuesto base.",
-                    score=0.9,
-                    category="budgeting",
-                    explanation="savings_rate<10% y gastos >= ingresos",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="rules",
-                    priority=1,
-                    payload={"type": "low_savings"},
-                ),
-            )
+        if include_cluster:
+            cluster_id = self.user_labels.get(features.user_id)
+            cluster_records, cluster_traces = self._cluster_recommendations(features, cluster_id, now)
+            combined.extend(cluster_records)
+            trace_entries.extend(cluster_traces)
 
-        if features.recurring_flags.get("arriendo"):
-            self._add_recommendation(
-                recommendations,
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Planifica tu pago de arriendo",
-                    description="Detectamos gastos recurrentes de arriendo. Programa recordatorios y crea un fondo de emergencia.",
-                    score=0.8,
-                    category="recurring",
-                    explanation="recurring_flags.arriendo activo",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="rules",
-                    priority=2,
-                    payload={"type": "rent_recurring"},
-                ),
-            )
+        combined = sorted(combined, key=lambda item: (item.priority, -item.score))
+        limited = combined[: settings.max_recs_per_run]
+        self._decision_traces[features.user_id] = trace_entries
+        return limited, trace_entries
 
-        if features.recurring_flags.get("servicios"):
-            self._add_recommendation(
-                recommendations,
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Optimiza tus servicios mensuales",
-                    description="Revisa tus servicios básicos y automatiza pagos para evitar recargos.",
-                    score=0.7,
-                    category="recurring",
-                    explanation="Pagos recurrentes de servicios identificados.",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="rules",
-                    priority=3,
-                    payload={"type": "services_recurring"},
-                ),
-            )
-
-        if features.category_shares.get("restaurantes", 0.0) > 0.25:
-            self._add_recommendation(
-                recommendations,
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Reduce gastos en restaurantes",
-                    description="Más del 25% de tus gastos se concentran en restaurantes. Define un tope y refuerza tu educación financiera.",
-                    score=0.75,
-                    category="spending",
-                    explanation="category_shares.restaurantes > 25%",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="rules",
-                    priority=2,
-                    payload={"type": "dining_cap"},
-                ),
-            )
-
-        if cluster_id is not None:
-            for record in self._cluster_recommendations(features, cluster_id, now):
-                self._add_recommendation(recommendations, record)
-
-        if not recommendations:
-            self._add_recommendation(
-                recommendations,
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Sigue así",
-                    description="Tus métricas financieras se mantienen saludables. Continúa con tu plan actual.",
-                    score=0.5,
-                    category="insight",
-                    explanation="Sin alertas significativas.",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="rules",
-                    priority=5,
-                    payload={"type": "healthy"},
-                ),
-            )
-
-        return sorted(recommendations.values(), key=lambda item: (item.priority, -item.score))
+    def generate_recommendations(
+        self, features: UserFeatures, *, policy: Optional[str] = None
+    ) -> List[RecommendationRecord]:
+        records, _ = self.evaluate(features, policy=policy)
+        return records
 
     def _cluster_recommendations(
         self,
         features: UserFeatures,
-        cluster_id: int,
+        cluster_id: Optional[int],
         now: datetime,
-    ) -> List[RecommendationRecord]:
+    ) -> Tuple[List[RecommendationRecord], List[RuleTraceEntry]]:
+        if cluster_id is None:
+            return [], []
         profile = self.cluster_profiles.get(cluster_id, {})
         recs: List[RecommendationRecord] = []
+        traces: List[RuleTraceEntry] = []
+
+        def _append(record: RecommendationRecord, rule_suffix: str, evidence: Dict[str, Any]) -> None:
+            record.rule_key = f"cluster_{rule_suffix}"
+            record.evidence = evidence
+            record.payload.setdefault("rule_key", record.rule_key)
+            record.payload.setdefault("evidence", evidence)
+            recs.append(record)
+            traces.append(
+                RuleTraceEntry(
+                    rule=record.rule_key,
+                    passed_preconditions=True,
+                    triggered=True,
+                    reason=None,
+                    score=record.score,
+                    emitted=True,
+                    evidence=evidence,
+                )
+            )
 
         if profile.get("savings_rate", 0.0) < 0.15:
-            recs.append(
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Refuerza tu fondo de emergencia",
-                    description="Otros usuarios de tu clúster tienen baja tasa de ahorro. Considera automatizar un ahorro mensual.",
-                    score=0.82,
-                    category="cluster",
-                    explanation="Cluster con bajo savings_rate promedio.",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="cluster",
-                    priority=3,
-                    payload={"type": "cluster_low_savings", "cluster_id": cluster_id},
-                )
+            evidence = {
+                "cluster_id": cluster_id,
+                "cluster_savings_rate": round(float(profile.get("savings_rate", 0.0)), 3),
+                "user_savings_rate": round(float(features.savings_rate), 3),
+            }
+            record = RecommendationRecord(
+                id=str(uuid4()),
+                user_id=features.user_id,
+                title="Refuerza tu fondo de emergencia",
+                description="Usuarios similares ahorran poco. Automatiza un aporte mensual y protege tu liquidez.",
+                score=max(0.82, settings.min_confidence),
+                category="cluster",
+                explanation="Cluster con baja tasa de ahorro promedio.",
+                generated_at=now,
+                cluster=cluster_id,
+                source="cluster",
+                priority=3,
+                payload={"type": "cluster_low_savings", "cluster_id": cluster_id},
             )
+            _append(record, "low_savings", evidence)
 
         if profile.get("expense_total", 0.0) > profile.get("income_total", 0.0):
-            recs.append(
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Ajusta tu flujo de caja",
-                    description="Tu clúster muestra gastos superiores a ingresos. Activa alertas y evalúa consolidar deudas.",
-                    score=0.78,
-                    category="cluster",
-                    explanation="Cluster con gastos promedio mayores que ingresos.",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="cluster",
-                    priority=4,
-                    payload={"type": "cluster_high_expense", "cluster_id": cluster_id},
-                )
+            evidence = {
+                "cluster_id": cluster_id,
+                "cluster_expense_total": round(float(profile.get("expense_total", 0.0)), 2),
+                "cluster_income_total": round(float(profile.get("income_total", 0.0)), 2),
+            }
+            record = RecommendationRecord(
+                id=str(uuid4()),
+                user_id=features.user_id,
+                title="Ajusta tu flujo de caja",
+                description="El promedio de tu clúster gasta por sobre sus ingresos. Evalúa consolidar deudas y activar alertas.",
+                score=max(0.78, settings.min_confidence),
+                category="cluster",
+                explanation="Cluster con gastos mayores a ingresos.",
+                generated_at=now,
+                cluster=cluster_id,
+                source="cluster",
+                priority=4,
+                payload={"type": "cluster_high_expense", "cluster_id": cluster_id},
             )
+            _append(record, "high_expense", evidence)
 
         if not recs:
-            recs.append(
-                RecommendationRecord(
-                    id=str(uuid4()),
-                    user_id=features.user_id,
-                    title="Plan financiero recomendado",
-                    description=f"Eres parte del clúster #{cluster_id}. Revisa nuestra plantilla sugerida para tu perfil.",
-                    score=0.6,
-                    category="cluster",
-                    explanation="Sugerencia basada en pertenencia al clúster.",
-                    generated_at=now,
-                    cluster=cluster_id,
-                    source="cluster",
-                    priority=5,
-                    payload={"type": "cluster_template", "cluster_id": cluster_id},
-                )
+            evidence = {"cluster_id": cluster_id}
+            record = RecommendationRecord(
+                id=str(uuid4()),
+                user_id=features.user_id,
+                title="Plan financiero recomendado",
+                description=f"Eres parte del clúster #{cluster_id}. Revisa la guía sugerida para tu perfil.",
+                score=max(0.6, settings.min_confidence),
+                category="cluster",
+                explanation="Sugerencia basada en pertenencia al clúster.",
+                generated_at=now,
+                cluster=cluster_id,
+                source="cluster",
+                priority=5,
+                payload={"type": "cluster_template", "cluster_id": cluster_id},
             )
+            _append(record, "template", evidence)
 
-        return recs
+        return recs, traces
 
-    def _add_recommendation(
-        self,
-        collection: Dict[str, RecommendationRecord],
-        record: RecommendationRecord,
-    ) -> None:
-        existing = collection.get(record.title)
-        if existing is None or record.priority < existing.priority:
-            collection[record.title] = record
 
 
 
@@ -2883,6 +3552,7 @@ class RecommendationPipeline:
             )
             await self.feature_repository.bulk_upsert(window_features)
             await self.store.bulk_upsert(user_features)
+            self.model_manager.update_window_features(window_features)
 
             FEATURES_UPDATED.inc(len(window_features))
             USERS_TRACKED.set(len(user_features))
@@ -3306,6 +3976,38 @@ def _build_item_from_persisted(
     )
 
 
+def _build_item_from_record(
+    record: RecommendationRecord,
+    *,
+    include_cluster: bool,
+    cluster_info: Optional[Dict[str, Any]],
+) -> Optional[PersonalizedRecommendationItem]:
+    payload = dict(record.payload or {})
+    payload.setdefault("title", record.title)
+    payload.setdefault("message", record.description)
+    payload.setdefault("description", record.description)
+    payload.setdefault("score", record.score)
+    payload.setdefault("category", record.category)
+    payload.setdefault("explanation", record.explanation)
+    payload.setdefault("actions", payload.get("actions") or [])
+    payload.setdefault("evidence", record.evidence)
+    persisted_like = {
+        "id": record.id,
+        "source": record.source,
+        "cluster_id": record.cluster,
+        "priority": record.priority,
+        "valid_from": record.valid_from,
+        "valid_to": record.valid_to,
+        "created_at": record.generated_at,
+        "payload": payload,
+    }
+    return _build_item_from_persisted(
+        persisted_like,
+        include_cluster=include_cluster,
+        cluster_info=cluster_info,
+    )
+
+
 def _generate_rule_recommendations(
     *,
     user_id: str,
@@ -3319,7 +4021,8 @@ def _generate_rule_recommendations(
     feature_map: Dict[str, Dict[str, Any]] = {}
     for snapshot in features:
         window_label = str(snapshot.get("window") or "").lower()
-        feature_map[window_label] = snapshot
+        if window_label:
+            feature_map[window_label] = snapshot
 
     default_window = settings.features_default_window.lower()
     base_feature = feature_map.get(default_window)
@@ -3329,183 +4032,121 @@ def _generate_rule_recommendations(
     if base_feature is None:
         return []
 
-    window_30 = feature_map.get("30d") or base_feature
-    window_90 = feature_map.get("90d") or feature_map.get("90days")
+    def _to_float(value: Any, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _to_datetime(value: Any) -> datetime:
+        if isinstance(value, datetime):
+            return ensure_utc(value)
+        if isinstance(value, str):
+            try:
+                return ensure_utc(datetime.fromisoformat(value.replace("Z", "+00:00")))
+            except ValueError:
+                return utcnow()
+        return utcnow()
+
+    updated_at = _to_datetime(base_feature.get("updated_at") or utcnow())
+    last_tx = base_feature.get("last_transaction_at") or base_feature.get("last_transaction")
+    last_transaction_at = _to_datetime(last_tx) if last_tx else None
+    category_totals = dict(base_feature.get("category_totals") or {})
+    category_shares_raw = dict(base_feature.get("category_shares") or {})
+    category_shares = {str(k).lower(): _to_float(v) for k, v in category_shares_raw.items()}
+    recurring_flags_raw = base_feature.get("recurring_flags") or {}
+    recurring_flags = {str(k).lower(): bool(v) for k, v in recurring_flags_raw.items() if isinstance(k, str)}
+
+    user_features = UserFeatures(
+        user_id=user_id,
+        total_income=_to_float(base_feature.get("income_total")),
+        total_expenses=_to_float(base_feature.get("expense_total")),
+        net_cash_flow=_to_float(base_feature.get("net_cashflow")),
+        average_transaction=_to_float(base_feature.get("average_transaction")),
+        discretionary_ratio=_to_float(base_feature.get("discretionary_ratio")),
+        essential_ratio=_to_float(base_feature.get("essential_ratio")),
+        savings_rate=_to_float(base_feature.get("savings_rate")),
+        top_category=str(base_feature.get("top_category") or "") or None,
+        category_totals=category_totals,
+        category_shares=category_shares,
+        merchant_diversity=int(base_feature.get("merchant_diversity") or 0),
+        recurring_flags=recurring_flags,
+        volatility_expense=_to_float(base_feature.get("volatility_expense")),
+        transaction_count=int(base_feature.get("transaction_count") or 0),
+        last_transaction_at=last_transaction_at,
+        updated_at=updated_at,
+        window=str(base_feature.get("window") or default_window),
+        run_id=str(base_feature.get("run_id") or "") or None,
+    )
+
+    windows_map: Dict[str, WindowedUserFeatures] = {}
+    for snapshot in features:
+        label = str(snapshot.get("window") or "").lower()
+        if not label:
+            continue
+        snapshot_updated = _to_datetime(snapshot.get("updated_at") or updated_at)
+        as_of_value = snapshot.get("as_of_date") or snapshot.get("asOfDate")
+        if isinstance(as_of_value, date):
+            as_of_dt = as_of_value
+        elif isinstance(as_of_value, str):
+            try:
+                as_of_dt = datetime.fromisoformat(as_of_value.replace("Z", "+00:00")).date()
+            except ValueError:
+                as_of_dt = as_of_date
+        else:
+            as_of_dt = as_of_date
+        window_entry = WindowedUserFeatures(
+            id=str(snapshot.get("id") or uuid4()),
+            run_id=str(snapshot.get("run_id") or uuid4()),
+            user_id=user_id,
+            as_of_date=as_of_dt,
+            window=label,
+            income_total=_to_float(snapshot.get("income_total")),
+            expense_total=_to_float(snapshot.get("expense_total")),
+            net_cashflow=_to_float(snapshot.get("net_cashflow")),
+            savings_rate=_to_float(snapshot.get("savings_rate")),
+            top_category=str(snapshot.get("top_category") or "") or None,
+            category_shares={
+                str(k).lower(): _to_float(v) for k, v in (snapshot.get("category_shares") or {}).items()
+            },
+            merchant_diversity=int(snapshot.get("merchant_diversity") or 0),
+            recurring_flags={
+                str(k).lower(): bool(v) for k, v in (snapshot.get("recurring_flags") or {}).items()
+            },
+            volatility_expense=_to_float(snapshot.get("volatility_expense")),
+            updated_at=snapshot_updated,
+        )
+        windows_map[label] = window_entry
 
     now = utcnow()
-    recommendations: Dict[str, PersonalizedRecommendationItem] = {}
+    rule_records, trace_entries = model_manager.rule_engine.evaluate(
+        user_features, windows_map, policy=None, now=now
+    )
 
-    def add_rule(
-        rule_key: str,
-        *,
-        title: str,
-        message: str,
-        priority: int,
-        score: float,
-        evidence: Dict[str, Any],
-        actions: List[RecommendationAction],
-    ) -> None:
-        if score < settings.recs_min_score:
-            return
-        identifier = _rule_identifier(user_id, rule_key, as_of_date)
-        cluster_id = cluster_info.get("cluster_id") if include_cluster and cluster_info else None
-        model_version = cluster_info.get("model_version") if include_cluster and cluster_info else None
-        item = PersonalizedRecommendationItem(
-            id=identifier,
-            source="rules",
-            cluster_id=cluster_id,
-            model_version=model_version,
-            title=title,
-            message=message,
-            actions=list(actions),
-            evidence=evidence,
-            priority=priority,
-            score=score,
-            valid_from=as_of_date,
-            valid_to=as_of_date + timedelta(days=30),
-            created_at=now,
+    combined_records = list(rule_records)
+    if include_cluster and cluster_info:
+        cluster_id = cluster_info.get("cluster_id")
+        cluster_records, cluster_traces = model_manager._cluster_recommendations(
+            user_features,
+            cluster_id if isinstance(cluster_id, int) else None,
+            now,
         )
-        existing = recommendations.get(rule_key)
-        if existing is None or (priority < existing.priority or score > existing.score):
-            recommendations[rule_key] = item
+        combined_records.extend(cluster_records)
+        trace_entries.extend(cluster_traces)
 
-    income_total = float(base_feature.get("income_total") or 0.0)
-    expense_total = float(base_feature.get("expense_total") or 0.0)
-    savings_rate = float(base_feature.get("savings_rate") or 0.0)
-
-    net_cashflow_30d = float(window_30.get("net_cashflow") or 0.0)
-    category_shares = window_30.get("category_shares") or {}
-    if not isinstance(category_shares, dict):
-        category_shares = {}
-    recurring_flags = window_30.get("recurring_flags") or {}
-    if not isinstance(recurring_flags, dict):
-        recurring_flags = {}
-
-    restaurants_share = 0.0
-    for key in ("restaurantes", "restaurant", "dining"):
-        if key in category_shares:
-            try:
-                restaurants_share = float(category_shares[key])
-                break
-            except (TypeError, ValueError):  # pragma: no cover - defensive
-                continue
-
-    if savings_rate < 0.1 and income_total > 0:
-        actions = [
-            RecommendationAction(
-                type="education",
-                label="Cómo armar presupuesto base" if lang.startswith("es") else "Build a basic budget",
-                url="https://salomon.ai/recursos/presupuesto-base",
-            )
-        ]
-        evidence = {
-            "savings_rate": round(savings_rate, 4),
-            "income_total": round(income_total, 2),
-            "expense_total": round(expense_total, 2),
-            "net_cashflow_30d": round(net_cashflow_30d, 2),
-        }
-        message = (
-            "Ahorra al menos 10% de tus ingresos mensuales. Ajusta tu presupuesto y automatiza un aporte." if lang.startswith("es")
-            else "Grow your monthly savings to at least 10% by adjusting your baseline budget."
-        )
-        add_rule(
-            "low_savings",
-            title="Aumenta tu ahorro mensual" if lang.startswith("es") else "Increase your monthly savings",
-            message=message,
-            priority=2,
-            score=0.8,
-            evidence=evidence,
-            actions=actions,
-        )
-
-    if restaurants_share > 0.25:
-        actions = [
-            RecommendationAction(
-                type="limit",
-                label="Define un tope semanal" if lang.startswith("es") else "Set a weekly cap",
-                url="https://salomon.ai/recursos/gasto-restaurantes",
-            )
-        ]
-        evidence = {
-            "category_shares": {"restaurantes": round(restaurants_share, 4)},
-            "net_cashflow_30d": round(net_cashflow_30d, 2),
-        }
-        message = (
-            "Tus gastos en restaurantes superan el 25% del total. Define un tope y planifica comidas en casa." if lang.startswith("es")
-            else "Restaurant spending exceeds 25% of your expenses. Set a cap and plan more meals at home."
-        )
-        add_rule(
-            "dining_cap",
-            title="Reduce tus gastos en restaurantes" if lang.startswith("es") else "Reduce restaurant spending",
-            message=message,
-            priority=3,
-            score=0.75,
-            evidence=evidence,
-            actions=actions,
-        )
-
-    has_rent = bool(recurring_flags.get("arriendo") or recurring_flags.get("rent"))
-    late_payment_risk = net_cashflow_30d < 0
-    if has_rent and late_payment_risk:
-        actions = [
-            RecommendationAction(
-                type="reminder",
-                label="Activa recordatorios de arriendo" if lang.startswith("es") else "Set rent reminders",
-                url="https://salomon.ai/recursos/arriendo",
-            )
-        ]
-        evidence = {
-            "recurring_flags": {"arriendo": True},
-            "net_cashflow_30d": round(net_cashflow_30d, 2),
-        }
-        message = (
-            "Tu flujo de caja es negativo y tienes arriendo recurrente. Activa recordatorios y reserva un fondo de emergencia."
-            if lang.startswith("es")
-            else "Cash flow is negative and rent is recurring. Schedule reminders and build an emergency buffer."
-        )
-        add_rule(
-            "rent_buffer",
-            title="Protege tu pago de arriendo" if lang.startswith("es") else "Protect your rent payment",
-            message=message,
-            priority=2,
-            score=0.72,
-            evidence=evidence,
-            actions=actions,
-        )
-
-    net_cashflow_90d = 0.0
-    if window_90:
-        try:
-            net_cashflow_90d = float(window_90.get("net_cashflow") or 0.0)
-        except (TypeError, ValueError):
-            net_cashflow_90d = 0.0
-    if window_90 and net_cashflow_90d < 0:
-        actions = [
-            RecommendationAction(
-                type="coaching",
-                label="Agenda asesoría" if lang.startswith("es") else "Book a coaching session",
-                url="https://salomon.ai/recursos/consolidacion",
-            )
-        ]
-        evidence = {"net_cashflow_90d": round(net_cashflow_90d, 2)}
-        message = (
-            "Registra gastos variables y activa alertas para revertir el flujo negativo en 90 días." if lang.startswith("es")
-            else "Track discretionary spending and set alerts to reverse the negative 90-day cash flow."
-        )
-        add_rule(
-            "consolidation_plan",
-            title="Planifica un plan de consolidación" if lang.startswith("es") else "Plan a consolidation strategy",
-            message=message,
-            priority=4,
-            score=0.7,
-            evidence=evidence,
-            actions=actions,
-        )
-
-    ordered = sorted(recommendations.values(), key=lambda item: (item.priority, -item.score))
+    combined_records = sorted(combined_records, key=lambda item: (item.priority, -item.score))
     if limit > 0:
-        ordered = ordered[:limit]
-    return ordered
+        combined_records = combined_records[:limit]
+
+    if combined_records:
+        model_manager._decision_traces[user_id] = trace_entries
+
+    items: List[PersonalizedRecommendationItem] = []
+    for record in combined_records:
+        item = _build_item_from_record(record, include_cluster=include_cluster, cluster_info=cluster_info)
+        if item:
+            items.append(item)
+    return items
 
 
 class FeedbackRequest(BaseModel):
@@ -4101,6 +4742,7 @@ async def submit_feedback(
 
     FEEDBACK_SUBMISSIONS.labels(has_comment="yes" if sanitized_comment else "no").inc()
     normalized_score = normalize_score_for_metrics(score_value, mode)
+    model_manager.rule_metrics.record_feedback(rule_key, score_value, normalized_score)
     if normalized_score is not None:
         FEEDBACK_SCORE.observe(normalized_score)
 
