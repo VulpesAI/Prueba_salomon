@@ -1,7 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 
 import { RecommendationsIngestionService } from './recommendations-ingestion.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
+@UseGuards(SupabaseAuthGuard)
 @Controller()
 export class RecommendationsIngestionController {
   constructor(private readonly ingestionService: RecommendationsIngestionService) {}

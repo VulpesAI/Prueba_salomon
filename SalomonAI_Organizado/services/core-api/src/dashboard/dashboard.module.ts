@@ -10,7 +10,15 @@ import { DashboardRecommendationsGatewayService } from './recommendations-gatewa
 @Module({
   imports: [ConfigModule, AuthModule],
   controllers: [DashboardController],
-  providers: [DashboardService, DashboardForecastingGatewayService, DashboardRecommendationsGatewayService],
-  exports: [DashboardService, DashboardForecastingGatewayService, DashboardRecommendationsGatewayService],
+  providers: [
+    DashboardService,
+    DashboardForecastingGatewayService,
+    DashboardRecommendationsGatewayService,
+  ],
+  exports: [
+    DashboardService,
+    DashboardForecastingGatewayService,
+    DashboardRecommendationsGatewayService,
+  ],
 })
 export class DashboardModule {}

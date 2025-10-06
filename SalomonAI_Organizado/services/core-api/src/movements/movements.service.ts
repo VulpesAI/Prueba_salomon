@@ -90,8 +90,8 @@ export class MovementsService {
       query.type === MovementTypeFilter.INFLOW
         ? 'inflow'
         : query.type === MovementTypeFilter.OUTFLOW
-        ? 'outflow'
-        : undefined;
+          ? 'outflow'
+          : undefined;
 
     const queryOptions: SupabaseTransactionsQueryOptions = {
       userId: query.userId,
@@ -216,5 +216,4 @@ export class MovementsService {
 
     return parts.join(' | ') || 'Movimiento registrado';
   }
-
 }

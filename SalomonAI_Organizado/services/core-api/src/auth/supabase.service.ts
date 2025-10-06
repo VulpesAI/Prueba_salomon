@@ -3,7 +3,21 @@ import { ConfigService } from '@nestjs/config';
 import { SupabaseClient, createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import type { AuthUser } from '@supabase/supabase-js';
-import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
+
+interface TransactionFilterQuery {
+  eq(column: string, value: unknown): this;
+  ilike(column: string, pattern: string): this;
+  gte(column: string, value: unknown): this;
+  lte(column: string, value: unknown): this;
+  lt(column: string, value: unknown): this;
+  or(
+    filters: string,
+    options?: {
+      foreignTable?: string;
+      referencedTable?: string;
+    },
+  ): this;
+}
 
 interface SupabaseAuthResponse {
   user: AuthUser | null;
@@ -424,20 +438,21 @@ export class SupabaseService {
       throw error;
     }
 
-    const row = (Array.isArray(data) ? data[0] : null) as
-      | {
-          total_count?: number | string | null;
-          total_amount?: number | string | null;
-          inflow?: number | string | null;
-          outflow?: number | string | null;
-          average_amount?: number | string | null;
-        }
-      | null;
+    const row = (Array.isArray(data) ? data[0] : null) as {
+      total_count?: number | string | null;
+      total_amount?: number | string | null;
+      inflow?: number | string | null;
+      outflow?: number | string | null;
+      average_amount?: number | string | null;
+    } | null;
 
     return {
-      count: row?.total_count !== undefined && row?.total_count !== null ? Number(row.total_count) : 0,
+      count:
+        row?.total_count !== undefined && row?.total_count !== null ? Number(row.total_count) : 0,
       totalAmount:
-        row?.total_amount !== undefined && row?.total_amount !== null ? Number(row.total_amount) : 0,
+        row?.total_amount !== undefined && row?.total_amount !== null
+          ? Number(row.total_amount)
+          : 0,
       inflow: row?.inflow !== undefined && row?.inflow !== null ? Number(row.inflow) : 0,
       outflow: row?.outflow !== undefined && row?.outflow !== null ? Number(row.outflow) : 0,
       averageAmount:
@@ -447,10 +462,10 @@ export class SupabaseService {
     };
   }
 
-  private applyTransactionFilters(
-    query: PostgrestFilterBuilder<any, any, any, any, any, any, any>,
+  private applyTransactionFilters<TQuery extends TransactionFilterQuery>(
+    query: TQuery,
     options: SupabaseTransactionsQueryOptions,
-  ) {
+  ): TQuery {
     const sanitizedSearch = options.search?.replace(/,/g, '\\,');
 
     query.eq('statement.user_id', options.userId);
@@ -685,13 +700,9 @@ export class SupabaseService {
       userId: row.user_id,
       generatedAt: row.generated_at,
       horizonDays:
-        row.horizon_days !== undefined && row.horizon_days !== null
-          ? Number(row.horizon_days)
-          : 0,
+        row.horizon_days !== undefined && row.horizon_days !== null ? Number(row.horizon_days) : 0,
       historyDays:
-        row.history_days !== undefined && row.history_days !== null
-          ? Number(row.history_days)
-          : 0,
+        row.history_days !== undefined && row.history_days !== null ? Number(row.history_days) : 0,
       modelType: row.model_type,
       metadata: row.metadata ?? null,
       points: Array.isArray(row.forecast_points) ? row.forecast_points : [],

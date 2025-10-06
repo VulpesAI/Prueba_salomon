@@ -109,10 +109,11 @@ const run = (): number => {
   }
 
   const missingCriticalItems: string[] = [];
-  const jwtSecretPresent = hasValue(process.env.JWT_SECRET);
+  const supabaseJwtSecretPresent =
+    hasValue(process.env.SUPABASE_JWT_SECRET) || hasValue(process.env.JWT_SECRET);
 
-  if (!jwtSecretPresent) {
-    missingCriticalItems.push('JWT_SECRET');
+  if (!supabaseJwtSecretPresent) {
+    missingCriticalItems.push('SUPABASE_JWT_SECRET');
   }
 
   const allowedOriginsPresent = hasValue(process.env.ALLOWED_ORIGINS);
@@ -128,7 +129,13 @@ const run = (): number => {
   }
 
   const requiredForMinimal: { name: string; present: boolean; detail?: string }[] = [
-    { name: 'JWT_SECRET', present: jwtSecretPresent },
+    {
+      name: 'SUPABASE_JWT_SECRET',
+      present: supabaseJwtSecretPresent,
+      detail: supabaseJwtSecretPresent
+        ? undefined
+        : 'Copia el JWT Secret del proyecto en Supabase (Project Settings → API) y configúralo como SUPABASE_JWT_SECRET.',
+    },
     {
       name: 'ALLOWED_ORIGINS',
       present: allowedOriginsPresent,

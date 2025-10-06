@@ -70,18 +70,13 @@ describe('MovementsService', () => {
     supabaseService = {
       queryUserTransactions: jest.fn(),
       getMovementsStats: jest.fn(),
-    } as jest.Mocked<
-      Pick<SupabaseService, 'queryUserTransactions' | 'getMovementsStats'>
-    >;
+    } as jest.Mocked<Pick<SupabaseService, 'queryUserTransactions' | 'getMovementsStats'>>;
 
     configService = {
       get: jest.fn().mockReturnValue({ defaultPageSize: 20, maxPageSize: 100 }),
     } as unknown as ConfigService;
 
-    service = new MovementsService(
-      supabaseService as unknown as SupabaseService,
-      configService,
-    );
+    service = new MovementsService(supabaseService as unknown as SupabaseService, configService);
   });
 
   it('requests paginated movements with filters applied in Supabase and maps the response', async () => {
@@ -121,7 +116,8 @@ describe('MovementsService', () => {
     const result = await service.listMovements(query);
 
     expect(supabaseService.queryUserTransactions).toHaveBeenCalledTimes(1);
-    const options = supabaseService.queryUserTransactions.mock.calls[0][0] as SupabaseTransactionsQueryOptions;
+    const options = supabaseService.queryUserTransactions.mock
+      .calls[0][0] as SupabaseTransactionsQueryOptions;
     expect(options).toMatchObject({
       userId: 'user-1',
       accountId: 'acc-1',
