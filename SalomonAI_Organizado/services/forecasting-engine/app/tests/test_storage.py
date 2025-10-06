@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from typing import Any, List
 from uuid import uuid4
 
-from app.models import ForecastSaveRequest
+from app.schemas import ForecastMetrics, ForecastSaveRequest
 from app.storage import ForecastStorage
 
 
@@ -99,6 +99,8 @@ def test_save_and_retrieve_latest_forecast() -> None:
         forecast_type="cashflow_projection",
         forecast_data={"model_type": "auto", "forecasts": []},
         calculated_at=datetime(2024, 1, 1, 12, tzinfo=timezone.utc),
+        model_type="arima",
+        error_metrics=ForecastMetrics(rmse=0.5, mae=0.4, mape=12.0),
     )
 
     saved = storage.save_payload(payload)
@@ -110,6 +112,8 @@ def test_save_and_retrieve_latest_forecast() -> None:
     assert latest.forecast_type == "cashflow_projection"
     assert latest.calculated_at.tzinfo is not None
     assert latest.forecast_data["model_type"] == "auto"
+    assert latest.model_type == "arima"
+    assert latest.error_metrics == {"rmse": 0.5, "mae": 0.4, "mape": 12.0}
 
 
 def test_get_latest_returns_none_when_no_records() -> None:

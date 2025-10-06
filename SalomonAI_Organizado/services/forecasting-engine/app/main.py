@@ -9,11 +9,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import Settings, get_settings
 from .database import create_db_engine, verify_financial_history
 from .forecasting import ForecastingEngine
-from .models import (
+from .schemas import (
     ErrorResponse,
     ForecastResponse,
     ForecastSaveRequest,
     ForecastSaveResponse,
+    ForecastEvaluateRequest,
+    ForecastEvaluateResponse,
+    ForecastMetrics,
+    ForecastTrainRequest,
+    ForecastTrainResponse,
 )
 from .storage import ForecastStorage, build_storage
 from .supabase_client import get_supabase_client
@@ -136,6 +141,79 @@ def generate_forecast(
         logger.debug("Skipping forecast persistence for user %s because Supabase is disabled", user_id)
 
     return response
+
+
+def _build_metrics_payload(metrics: Optional[dict[str, float]]) -> Optional[ForecastMetrics]:
+    if not metrics:
+        return None
+    try:
+        return ForecastMetrics(**metrics)
+    except Exception:
+        return None
+
+
+def _build_category_metrics(metrics: dict[str, dict[str, float]]) -> dict[str, ForecastMetrics]:
+    cleaned: dict[str, ForecastMetrics] = {}
+    for category, values in metrics.items():
+        parsed = _build_metrics_payload(values)
+        if parsed is not None:
+            cleaned[category] = parsed
+    return cleaned
+
+
+@app.post("/forecast/train", response_model=ForecastTrainResponse)
+def train_forecast(
+    payload: ForecastTrainRequest,
+    engine: ForecastingEngine = Depends(get_forecasting_engine),
+) -> ForecastTrainResponse:
+    try:
+        result = engine.train_user(
+            payload.user_id,
+            horizon=payload.horizon,
+            model_preference=payload.model_preference,
+        )
+    except RuntimeError as exc:
+        logger.exception("Training error for user %s", payload.user_id)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    metrics = result.get("metrics_raw") or {}
+    category_metrics = result.get("category_metrics") or {}
+    return ForecastTrainResponse(
+        user_id=payload.user_id,
+        model_type=result["model_type"],
+        history_days=result["history_days"],
+        trained_at=result["trained_at"],
+        metrics=_build_metrics_payload(metrics),
+        parameters=result.get("parameters", {}),
+        category_metrics=_build_category_metrics(category_metrics),
+    )
+
+
+@app.post("/forecast/evaluate", response_model=ForecastEvaluateResponse)
+def evaluate_forecast(
+    payload: ForecastEvaluateRequest,
+    engine: ForecastingEngine = Depends(get_forecasting_engine),
+) -> ForecastEvaluateResponse:
+    try:
+        result = engine.evaluate_user(
+            payload.user_id,
+            horizon=payload.horizon,
+            model_preference=payload.model_preference,
+        )
+    except RuntimeError as exc:
+        logger.exception("Evaluation error for user %s", payload.user_id)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    metrics = result.get("metrics_raw") or {}
+    category_metrics = result.get("category_metrics") or {}
+    return ForecastEvaluateResponse(
+        user_id=payload.user_id,
+        model_type=result["model_type"],
+        evaluated_at=result["evaluated_at"],
+        metrics=_build_metrics_payload(metrics),
+        category_metrics=_build_category_metrics(category_metrics),
+        history_days=result["history_days"],
+    )
 
 
 @app.post("/forecast/save", response_model=ForecastSaveResponse, status_code=201)

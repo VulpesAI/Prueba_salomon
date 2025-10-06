@@ -8,7 +8,7 @@ from uuid import UUID
 
 from supabase import Client
 
-from .models import ForecastResponse, ForecastSaveRequest, ForecastSaveResult
+from .schemas import ForecastResponse, ForecastSaveRequest, ForecastSaveResult
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,8 @@ class ForecastStorage:
             forecast_type=forecast_type,
             forecast_data=response.model_dump(mode="json"),
             calculated_at=response.generated_at,
+            model_type=response.model_type,
+            error_metrics=response.metrics,
         )
         return self.save_payload(payload)
 
@@ -97,12 +99,17 @@ class ForecastStorage:
         else:
             calculated_at = calculated_at.astimezone(timezone.utc)
 
-        return {
+        normalized = {
             "user_id": str(payload.user_id),
             "forecast_type": payload.forecast_type,
             "forecast_data": payload.forecast_data,
             "calculated_at": calculated_at.isoformat(),
         }
+        if payload.model_type:
+            normalized["model_type"] = payload.model_type
+        if payload.error_metrics is not None:
+            normalized["error_metrics"] = payload.error_metrics.model_dump(mode="json")
+        return normalized
 
     @staticmethod
     def _build_result(response: Any) -> _QueryResult:

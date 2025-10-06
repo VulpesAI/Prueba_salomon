@@ -4,10 +4,11 @@ Microservicio responsable de generar proyecciones financieras para los usuarios 
 
 ## Características
 
-- Modelos estadísticos ARIMA y, opcionalmente, Prophet (si está instalado en el entorno)
-- Entrenamiento automático por usuario en base a la serie diaria de flujo neto
-- API REST (FastAPI) con endpoints para salud y generación de proyecciones
+- Modelos estadísticos ARIMA y Prophet con calibración automática de hiperparámetros
+- Entrenamiento y evaluación automáticos por usuario y categoría con métricas de error (RMSE, MAE, MAPE)
+- API REST (FastAPI) con endpoints para salud, entrenamiento (`/forecast/train`), evaluación (`/forecast/evaluate`) y generación de proyecciones
 - Configuración a través de variables de entorno `FORECASTING_*`
+- Preparado para modelos neuronales (LSTM/GRU) activados con `ENABLE_LSTM=true`
 
 ## Variables de entorno
 
@@ -16,7 +17,9 @@ Microservicio responsable de generar proyecciones financieras para los usuarios 
 | `FORECASTING_DATABASE_URL` | Cadena de conexión SQLAlchemy a PostgreSQL | `postgresql+psycopg://postgres:your-supabase-password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require` |
 | `FORECASTING_DEFAULT_MODEL` | Modelo preferido (`auto`, `arima`, `prophet`) | `auto` |
 | `FORECASTING_DEFAULT_HORIZON_DAYS` | Horizonte de proyección en días | `30` |
-| `FORECASTING_MINIMUM_HISTORY_DAYS` | Días mínimos de historia para usar Prophet | `30` |
+| `FORECASTING_MINIMUM_HISTORY_DAYS` | Días mínimos de historia para usar modelos estadísticos | `30` |
+| `FORECASTING_EVALUATION_WINDOW_DAYS` | Ventana utilizada para validar los modelos antes de generar métricas | `14` |
+| `ENABLE_LSTM` | Activa el registro de modelos neuronales (requiere TensorFlow/PyTorch) | `false` |
 | `SUPABASE_URL` / `FORECASTING_SUPABASE_URL` | URL del proyecto Supabase para almacenar resultados | — |
 | `SUPABASE_KEY` / `FORECASTING_SUPABASE_KEY` | Clave service role de Supabase utilizada por el microservicio | — |
 | `FORECASTING_FORECAST_TABLE_NAME` | Nombre de la tabla donde se guardan los pronósticos | `forecast_results` |
@@ -57,6 +60,15 @@ Respuesta:
 
 Si Prophet no está disponible, el motor utiliza automáticamente ARIMA o una proyección heurística como respaldo.
 
+Entrenar y evaluar modelos manualmente:
+
+```http
+POST /forecast/train
+POST /forecast/evaluate
+```
+
+Ambos endpoints devuelven métricas globales y por categoría para trazabilidad.
+
 Para almacenar resultados generados desde orquestadores externos, expone además:
 
 ```http
@@ -71,4 +83,6 @@ Content-Type: application/json
 }
 ```
 
-El servicio persiste los datos en Supabase usando `supabase-py`, garantizando trazabilidad y disponibilidad inmediata para el dashboard.
+El servicio persiste los datos en Supabase usando `supabase-py`, almacenando el modelo utilizado y las métricas de error para garantizar trazabilidad y disponibilidad inmediata para el dashboard.
+
+> **Nota:** Las dependencias para modelos neuronales (`tensorflow`, `torch`) son opcionales y solo deben instalarse cuando `ENABLE_LSTM=true`.
