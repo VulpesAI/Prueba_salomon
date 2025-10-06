@@ -32,7 +32,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 def json_event(chunk: ChatChunk) -> bytes:
-    return (json.dumps({"type": chunk.type, **chunk.data}) + "\n").encode("utf-8")
+    payload = {"type": chunk.type, **chunk.data}
+    return (json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8")
 
 
 @asynccontextmanager
