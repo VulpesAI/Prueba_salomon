@@ -10,3 +10,6 @@ statsmodels==0.14.4
 prophet==1.1.5
 psycopg[binary]==3.2.3
 supabase==2.4.6
+# Optional ML frameworks (enable with ENABLE_LSTM=true before installing)
+# tensorflow==2.17.0
+# torch==2.5.1

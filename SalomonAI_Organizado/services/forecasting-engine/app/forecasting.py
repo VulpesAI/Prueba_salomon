@@ -2,52 +2,56 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Literal, Optional, Tuple
+from typing import Dict, Literal, Optional
 
 import numpy as np
 import pandas as pd
 from sqlalchemy import text
 
-try:
-    from prophet import Prophet  # type: ignore
-
-    PROPHET_AVAILABLE = True
-except Exception:  # pragma: no cover - optional dependency
-    Prophet = None  # type: ignore
-    PROPHET_AVAILABLE = False
-
-from statsmodels.tsa.arima.model import ARIMA
-
 from .config import Settings, get_settings
 from .database import session_scope
-from .models import ForecastPoint, ForecastResponse
+from .models import ModelPreference, ModelSelector, metrics_to_float
+from .schemas import ForecastMetrics, ForecastPoint, ForecastResponse
 
 logger = logging.getLogger(__name__)
 
 
-class ModelSelectionError(RuntimeError):
-    """Raised when no statistical model can be fitted."""
-
-    def __init__(self, message: str, errors: Optional[Dict[str, str]] = None) -> None:
-        super().__init__(message)
-        self.errors: Dict[str, str] = errors or {}
-
-
 class ForecastingEngine:
-    """Generate time-series forecasts for user cash flow."""
+    """Generate calibrated time-series forecasts for user cash flow."""
 
-    def __init__(self, engine, settings: Optional[Settings] = None) -> None:
+    def __init__(
+        self,
+        engine,
+        settings: Optional[Settings] = None,
+        model_selector: Optional[ModelSelector] = None,
+    ) -> None:
         self._engine = engine
         self._settings = settings or get_settings()
+        self._selector = model_selector or ModelSelector(
+            evaluation_window=self._settings.evaluation_window_days,
+            enable_lstm=self._settings.enable_lstm,
+        )
 
     @property
     def settings(self) -> Settings:
         return self._settings
 
-    def _load_history(self, user_id: str) -> pd.Series:
-        query = text(
+    def _load_history_frame(self, user_id: str) -> pd.DataFrame:
+        query_with_category = text(
             """
-            SELECT DATE(transaction_date) AS date, SUM(amount) AS total_amount
+            SELECT DATE(transaction_date) AS date,
+                   COALESCE(category, 'sin_categoria') AS category,
+                   SUM(amount) AS total_amount
+            FROM financial_movements
+            WHERE user_id = :user_id
+            GROUP BY DATE(transaction_date), category
+            ORDER BY DATE(transaction_date)
+            """
+        )
+        fallback_query = text(
+            """
+            SELECT DATE(transaction_date) AS date,
+                   SUM(amount) AS total_amount
             FROM financial_movements
             WHERE user_id = :user_id
             GROUP BY DATE(transaction_date)
@@ -55,15 +59,40 @@ class ForecastingEngine:
             """
         )
 
-        with session_scope(self._engine) as conn:
-            dataframe = pd.read_sql_query(query, conn, params={"user_id": user_id})
+        try:
+            with session_scope(self._engine) as conn:
+                dataframe = pd.read_sql_query(query_with_category, conn, params={"user_id": user_id})
+        except Exception as exc:
+            logger.debug("Fallo consulta categorizada, se usa modo resumido: %s", exc)
+            with session_scope(self._engine) as conn:
+                dataframe = pd.read_sql_query(fallback_query, conn, params={"user_id": user_id})
+            dataframe["category"] = "sin_categoria"
 
+        if dataframe.empty:
+            return dataframe
+
+        dataframe["date"] = pd.to_datetime(dataframe["date"])
+        return dataframe
+
+    def _load_history(self, user_id: str) -> pd.Series:
+        dataframe = self._load_history_frame(user_id)
         if dataframe.empty:
             return pd.Series(dtype=float)
 
-        series = dataframe.set_index("date")["total_amount"].astype(float)
-        series.index = pd.to_datetime(series.index)
-        return series.asfreq("D", fill_value=0.0)
+        grouped = dataframe.groupby("date")["total_amount"].sum().astype(float)
+        return grouped.asfreq("D", fill_value=0.0)
+
+    def _load_category_histories(self, user_id: str) -> Dict[str, pd.Series]:
+        dataframe = self._load_history_frame(user_id)
+        if dataframe.empty or "category" not in dataframe.columns:
+            return {}
+
+        histories: Dict[str, pd.Series] = {}
+        dataframe["category"] = dataframe["category"].fillna("sin_categoria")
+        for category, group in dataframe.groupby("category"):
+            series = group.set_index("date")["total_amount"].astype(float)
+            histories[str(category)] = series.asfreq("D", fill_value=0.0)
+        return histories
 
     def _fallback_projection(self, history: pd.Series, horizon: int) -> np.ndarray:
         if history.empty:
@@ -77,52 +106,50 @@ class ForecastingEngine:
         forecast = rolling_mean + trend * np.arange(1, horizon + 1)
         return forecast
 
-    def _fit_arima(self, history: pd.Series, horizon: int) -> np.ndarray:
-        model = ARIMA(history, order=(1, 1, 1))
-        fitted = model.fit()
-        forecast = fitted.forecast(steps=horizon)
-        return forecast
-
-    def _fit_prophet(self, history: pd.Series, horizon: int) -> np.ndarray:
-        if not PROPHET_AVAILABLE:
-            raise RuntimeError("Prophet is not available in the current environment")
-
-        df = history.reset_index()
-        df.columns = ["ds", "y"]
-        model = Prophet(daily_seasonality=True, weekly_seasonality=True, yearly_seasonality=False)
-        model.fit(df)
-        future = model.make_future_dataframe(periods=horizon, freq="D", include_history=False)
-        forecast = model.predict(future)["yhat"].to_numpy()
-        return forecast
-
-    def _run_model(
+    def _train_and_forecast(
         self,
         history: pd.Series,
         horizon: int,
-        preference: Literal["auto", "arima", "prophet"],
-    ) -> Tuple[np.ndarray, Literal["arima", "prophet"], Dict[str, str]]:
-        if preference == "prophet":
-            return self._fit_prophet(history, horizon), "prophet", {}
-        if preference == "arima":
-            return self._fit_arima(history, horizon), "arima", {}
+        preference: ModelPreference,
+    ) -> tuple[np.ndarray, str, Optional[Dict[str, float]], Dict[str, object]]:
+        training = self._selector.train(history, preference)
+        forecast_values = training.model.forecast(horizon)
+        metrics = metrics_to_float(training.calibration.metrics)
+        parameters = dict(training.calibration.parameters)
+        return forecast_values, training.model.name, metrics, parameters
 
-        errors: Dict[str, str] = {}
-        if PROPHET_AVAILABLE:
+    def _collect_category_metrics(
+        self,
+        user_id: str,
+        preference: ModelPreference,
+    ) -> Dict[str, Dict[str, float]]:
+        results: Dict[str, Dict[str, float]] = {}
+        for category, series in self._load_category_histories(user_id).items():
+            if len(series) < self.settings.minimum_history_days:
+                continue
             try:
-                forecast = self._fit_prophet(history, horizon)
-                return forecast, "prophet", {}
-            except Exception as exc:  # pragma: no cover - executed in error scenarios
-                logger.warning("Auto-selection: Prophet failed for history with %s days: %s", len(history), exc)
-                errors["prophet"] = str(exc)
+                training = self._selector.train(series, preference)
+            except RuntimeError as exc:
+                logger.debug(
+                    "Omitiendo categoría %s para métricas por error de entrenamiento: %s",
+                    category,
+                    exc,
+                )
+                continue
+            metrics = metrics_to_float(training.calibration.metrics)
+            if metrics:
+                results[category] = metrics
+        return results
 
-        try:
-            forecast = self._fit_arima(history, horizon)
-            return forecast, "arima", errors
-        except Exception as exc:  # pragma: no cover - executed in error scenarios
-            logger.warning("Auto-selection: ARIMA failed for history with %s days: %s", len(history), exc)
-            errors["arima"] = str(exc)
-
-        raise ModelSelectionError("No forecasting model could be fitted", errors)
+    @staticmethod
+    def _build_metrics(metrics: Optional[Dict[str, float]]) -> Optional[ForecastMetrics]:
+        if not metrics:
+            return None
+        cleaned = {key: float(value) for key, value in metrics.items() if np.isfinite(value)}
+        required = {"rmse", "mae", "mape"}
+        if not required.issubset(cleaned.keys()):
+            return None
+        return ForecastMetrics(rmse=cleaned["rmse"], mae=cleaned["mae"], mape=cleaned["mape"])
 
     def generate_forecast(
         self,
@@ -135,16 +162,20 @@ class ForecastingEngine:
         history = self._load_history(user_id)
         history_days = len(history)
 
+        metrics: Optional[ForecastMetrics] = None
+        metrics_dict: Optional[Dict[str, float]] = None
+        category_metrics: Dict[str, Dict[str, float]] = {}
+
         if history_days == 0:
             forecast_values = self._fallback_projection(history, horizon_days)
-            model_used: Literal["auto", "arima", "prophet"] = "auto"
+            model_used: str = "auto"
             metadata: Dict[str, object] = {
                 "reason": "no_history",
                 "message": "No se encontraron movimientos históricos, se devolvió una proyección neutra.",
             }
         else:
             model_used = model_preference
-            metadata = {
+            metadata: Dict[str, object] = {
                 "history_start": history.index.min().date().isoformat(),
                 "history_end": history.index.max().date().isoformat(),
                 "history_sum": float(history.sum()),
@@ -162,18 +193,24 @@ class ForecastingEngine:
                 )
             else:
                 try:
-                    forecast_values, selected_model, model_errors = self._run_model(
-                        history,
-                        horizon_days,
-                        model_preference,
-                    )
+                    (
+                        forecast_values,
+                        selected_model,
+                        metrics_dict,
+                        parameters,
+                    ) = self._train_and_forecast(history, horizon_days, model_preference)
                     model_used = selected_model
-                    if model_errors:
-                        metadata.setdefault("reason", "model_degraded")
-                        metadata["model_errors"] = model_errors
-                except ModelSelectionError as exc:
+                    metrics = self._build_metrics(metrics_dict)
+                    if metrics_dict:
+                        metadata["metrics"] = metrics_dict
+                    if parameters:
+                        metadata["model_parameters"] = parameters
+                    category_metrics = self._collect_category_metrics(user_id, model_preference)
+                    if category_metrics:
+                        metadata["category_metrics"] = category_metrics
+                except RuntimeError as exc:
                     logger.warning(
-                        "Falling back to heuristic projection for user %s after model selection failure: %s",
+                        "Falling back to heuristic projection for user %s: %s",
                         user_id,
                         exc,
                     )
@@ -181,20 +218,9 @@ class ForecastingEngine:
                     model_used = "auto"
                     metadata["reason"] = "model_error"
                     metadata["error"] = str(exc)
-                    if exc.errors:
-                        metadata["model_errors"] = exc.errors
-                except Exception as exc:  # pragma: no cover - unexpected failure path
-                    logger.warning("Falling back to heuristic projection for user %s: %s", user_id, exc)
-                    forecast_values = self._fallback_projection(history, horizon_days)
-                    model_used = "auto"
-                    metadata["reason"] = "model_error"
-                    metadata["error"] = str(exc)
 
         generated_at = datetime.now(timezone.utc)
-        if history.empty:
-            start_date = generated_at.date()
-        else:
-            start_date = history.index.max().date()
+        start_date = generated_at.date() if history.empty else history.index.max().date()
 
         forecast_points = []
         current_date = start_date
@@ -207,6 +233,15 @@ class ForecastingEngine:
                 )
             )
 
+        log_payload = {
+            "event": "forecast_generated",
+            "user_id": user_id,
+            "model_type": model_used,
+            "error_metrics": metrics_dict,
+            "timestamp": generated_at.isoformat(),
+        }
+        logger.info("forecast_generated", extra=log_payload)
+
         return ForecastResponse(
             user_id=user_id,
             model_type=model_used,
@@ -215,4 +250,51 @@ class ForecastingEngine:
             history_days=history_days,
             forecasts=forecast_points,
             metadata=metadata,
+            metrics=metrics,
         )
+
+    def train_user(
+        self,
+        user_id: str,
+        *,
+        horizon: Optional[int] = None,
+        model_preference: Literal["auto", "arima", "prophet"] = "auto",
+    ) -> Dict[str, object]:
+        horizon_days = horizon or self.settings.default_horizon_days
+        history = self._load_history(user_id)
+        history_days = len(history)
+        if history_days < self.settings.minimum_history_days:
+            raise RuntimeError("No hay historial suficiente para entrenar modelos estadísticos")
+
+        forecast_values, model_used, metrics_dict, parameters = self._train_and_forecast(
+            history, horizon_days, model_preference
+        )
+        metrics = self._build_metrics(metrics_dict)
+        category_metrics = self._collect_category_metrics(user_id, model_preference)
+
+        return {
+            "user_id": user_id,
+            "model_type": model_used,
+            "history_days": history_days,
+            "trained_at": datetime.now(timezone.utc),
+            "metrics": metrics,
+            "metrics_raw": metrics_dict,
+            "parameters": parameters,
+            "category_metrics": category_metrics,
+            "forecast": forecast_values,
+        }
+
+    def evaluate_user(
+        self,
+        user_id: str,
+        *,
+        horizon: Optional[int] = None,
+        model_preference: Literal["auto", "arima", "prophet"] = "auto",
+    ) -> Dict[str, object]:
+        training_summary = self.train_user(
+            user_id,
+            horizon=horizon,
+            model_preference=model_preference,
+        )
+        training_summary["evaluated_at"] = datetime.now(timezone.utc)
+        return training_summary

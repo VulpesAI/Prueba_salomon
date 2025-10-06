@@ -31,6 +31,14 @@ class Settings(BaseSettings):
         default=30,
         description="Minimum number of days required in the historical series to attempt a statistical model.",
     )
+    evaluation_window_days: int = Field(
+        default=14,
+        description="Number of days reserved from history to evaluate model performance during calibration.",
+    )
+    enable_lstm: bool = Field(
+        default=False,
+        description="Flag to enable experimental LSTM/GRU models when optional dependencies are available.",
+    )
     supabase_url: str = Field(
         default="",
         validation_alias=AliasChoices("FORECASTING_SUPABASE_URL", "SUPABASE_URL"),
