@@ -14,8 +14,8 @@
 }
 
 /*
- * Paleta principal SalomonAI
- * - Primario morado-azul: #743DFF → #007CF0
+ * Paleta principal SalomonAI – Dark Professional Blue-Green
+ * - Primario degradado: #007CF0 → #22C55E
  * - Secundario midnight: #081134
  * - Neutros oscuros: fondo #0B1943, superficie #1F2937, bordes #374151
  */
@@ -35,12 +35,12 @@
   --icon-secondary: 215.29 19.32% 34.51%;
 
   /* Escala de marca */
-  --primary: 257.01 100% 61.96%;
+  --primary: 209 100% 47.06%;
   --primary-foreground: 228 100% 98.04%;
-  --primary-gradient-from: 257.01 100% 61.96%;
-  --primary-gradient-to: 209 100% 47.06%;
-  --primary-dark-from: 257.44 67.72% 50.2%;
-  --primary-dark-to: 211.87 100% 40.98%;
+  --primary-gradient-from: 209 100% 47.06%;
+  --primary-gradient-to: 142.09 70.56% 45.29%;
+  --primary-dark-from: 205.38 100% 30.59%;
+  --primary-dark-to: 141.23 69.89% 36.47%;
   --secondary: 227.73 73.33% 11.76%;
   --secondary-foreground: 228 100% 98.04%;
 
@@ -62,12 +62,12 @@
   --icon-primary: 210 20% 98.04%;
   --icon-secondary: 214.29 31.82% 91.37%;
 
-  --primary: 257.01 100% 61.96%;
+  --primary: 209 100% 47.06%;
   --primary-foreground: 228 100% 98.04%;
-  --primary-gradient-from: 257.01 100% 61.96%;
-  --primary-gradient-to: 209 100% 47.06%;
-  --primary-dark-from: 257.44 67.72% 50.2%;
-  --primary-dark-to: 211.87 100% 40.98%;
+  --primary-gradient-from: 209 100% 47.06%;
+  --primary-gradient-to: 142.09 70.56% 45.29%;
+  --primary-dark-from: 205.38 100% 30.59%;
+  --primary-dark-to: 141.23 69.89% 36.47%;
   --secondary: 227.73 73.33% 11.76%;
   --secondary-foreground: 228 100% 98.04%;
 }
@@ -75,12 +75,12 @@
 /* Custom gradients */
 
 .bg-gradient-hero {
-  background: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%);
 }
 
 .bg-gradient-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%);
+  border: 1px solid rgba(55, 65, 81, 0.35);
 }
 
 .bg-gradient-primary {
