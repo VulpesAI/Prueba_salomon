@@ -9,7 +9,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from statistics import pstdev
-from typing import Any, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Protocol, Sequence, Set, Tuple
 from uuid import UUID, uuid4
 
 from typing import TYPE_CHECKING
@@ -32,6 +32,10 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
+
+from openai import AsyncOpenAI
+from qdrant_client import AsyncQdrantClient
+from qdrant_client.http import models as qm
 
 from prometheus_client import Counter, Gauge, Histogram
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -376,6 +380,227 @@ class NormalizedTransaction:
             "transaction_date": timestamp,
             "updated_at": ensure_utc(self.updated_at).isoformat(),
         }
+
+
+class EmbeddingGenerator(Protocol):
+    async def generate(self, texts: Sequence[str]) -> List[List[float]]:
+        ...
+
+
+class OpenAIEmbeddingGenerator:
+    def __init__(self, client: AsyncOpenAI, model: str, dimensions: int) -> None:
+        self._client = client
+        self._model = model
+        self._dimensions = dimensions
+
+    async def generate(self, texts: Sequence[str]) -> List[List[float]]:
+        if not texts:
+            return []
+        response = await self._client.embeddings.create(model=self._model, input=list(texts))
+        ordered = sorted(response.data, key=lambda item: getattr(item, "index", 0))
+        embeddings: List[List[float]] = []
+        for item in ordered:
+            vector = [float(value) for value in item.embedding]
+            if len(vector) != self._dimensions:
+                raise ValueError("embedding_dimension_mismatch")
+            embeddings.append(vector)
+        return embeddings
+
+
+def compute_user_hash(user_id: str) -> str:
+    digest = hashlib.sha256(user_id.encode("utf-8")).hexdigest()
+    return digest
+
+
+def build_user_profile_text(user_hash: str, features: Dict[str, Any]) -> str:
+    shares = json.dumps(features.get("category_shares", {}), ensure_ascii=False, sort_keys=True)
+    totals = json.dumps(features.get("category_totals", {}), ensure_ascii=False, sort_keys=True)
+    recurring = json.dumps(features.get("recurring_flags", {}), ensure_ascii=False, sort_keys=True)
+    last_transaction = features.get("last_transaction_at")
+    lines = [
+        f"Perfil financiero usuario {user_hash}:",
+        f"window={features.get('window', '90d')}",
+        f"ingresos_mensuales={features.get('income_total')}",
+        f"gastos_mensuales={features.get('expense_total')}",
+        f"neto={features.get('net_cashflow')}",
+        f"tasa_ahorro={features.get('savings_rate')}",
+        f"top_category={features.get('top_category')}",
+        f"shares={shares}",
+        f"totales={totals}",
+        f"recurrencias={recurring}",
+        f"volatilidad_gasto={features.get('volatility_expense')}",
+        f"discrecional={features.get('discretionary_ratio')}",
+        f"esencial={features.get('essential_ratio')}",
+        f"promedio_transaccion={features.get('average_transaction')}",
+        f"merchant_diversity={features.get('merchant_diversity')}",
+        f"transaction_count={features.get('transaction_count')}",
+        f"ultimo_movimiento={last_transaction}",
+    ]
+    return "\n".join(str(line) for line in lines)
+
+
+class QdrantEmbeddingSynchronizer:
+    def __init__(
+        self,
+        client: AsyncQdrantClient,
+        generator: EmbeddingGenerator,
+        *,
+        user_collection: str,
+        item_collection: Optional[str],
+        vector_size: int,
+        model: str,
+        version: str = "v1",
+    ) -> None:
+        self._client = client
+        self._generator = generator
+        self._user_collection = user_collection
+        self._item_collection = item_collection
+        self._vector_size = vector_size
+        self._model = model
+        self._version = version
+        self._collections_ready = False
+        self._lock = asyncio.Lock()
+
+    async def ensure_collections(self) -> None:
+        if self._collections_ready:
+            return
+        async with self._lock:
+            if self._collections_ready:
+                return
+            response = await self._client.get_collections()
+            existing = {collection.name for collection in getattr(response, "collections", [])}
+            params = qm.VectorParams(size=self._vector_size, distance=qm.Distance.COSINE)
+            if self._user_collection not in existing:
+                await self._client.recreate_collection(
+                    collection_name=self._user_collection,
+                    vectors_config=params,
+                )
+            if self._item_collection and self._item_collection not in existing:
+                await self._client.recreate_collection(
+                    collection_name=self._item_collection,
+                    vectors_config=params,
+                )
+            self._collections_ready = True
+
+    def _build_feature_payload(self, features: "UserFeatures") -> Dict[str, Any]:
+        payload = {
+            "window": features.window,
+            "income_total": float(features.total_income),
+            "expense_total": float(features.total_expenses),
+            "net_cashflow": float(features.net_cash_flow),
+            "savings_rate": float(features.savings_rate),
+            "top_category": features.top_category,
+            "category_shares": dict(features.category_shares),
+            "category_totals": dict(features.category_totals),
+            "recurring_flags": dict(features.recurring_flags),
+            "volatility_expense": float(features.volatility_expense),
+            "merchant_diversity": int(features.merchant_diversity),
+            "transaction_count": int(features.transaction_count),
+            "discretionary_ratio": float(features.discretionary_ratio),
+            "essential_ratio": float(features.essential_ratio),
+            "average_transaction": float(features.average_transaction),
+            "last_transaction_at": ensure_utc(features.last_transaction_at).isoformat()
+            if features.last_transaction_at
+            else None,
+        }
+        return payload
+
+    async def sync_user_profiles(self, features: Mapping[str, "UserFeatures"]) -> Dict[str, Any]:
+        if not features:
+            return {"status": "skipped", "reason": "no_users"}
+
+        await self.ensure_collections()
+        start = time.perf_counter()
+        entries: List[Tuple[str, str, Dict[str, Any], str]] = []
+        skipped = 0
+        for user_id, feature in features.items():
+            if not user_id:
+                skipped += 1
+                continue
+            user_hash = compute_user_hash(user_id)
+            feature_payload = self._build_feature_payload(feature)
+            feature_payload.setdefault("window", feature.window)
+            feature_payload.setdefault("model", self._model)
+            as_of = ensure_utc(feature.updated_at).isoformat()
+            feature_payload.setdefault("as_of", as_of)
+            text = build_user_profile_text(user_hash, feature_payload)
+            entries.append((user_hash, text, feature_payload, as_of))
+
+        if not entries:
+            return {"status": "skipped", "reason": "no_profiles"}
+
+        vectors = await self._generator.generate([entry[1] for entry in entries])
+        if len(vectors) != len(entries):
+            raise RuntimeError("embedding_count_mismatch")
+
+        points: List[qm.PointStruct] = []
+        for (user_hash, _, feature_payload, as_of_date), vector in zip(entries, vectors):
+            if len(vector) != self._vector_size:
+                raise ValueError("embedding_dimension_mismatch")
+            payload = {
+                "user_id_hash": user_hash,
+                "as_of_date": as_of_date,
+                "features": feature_payload,
+                "model": self._model,
+                "version": self._version,
+            }
+            points.append(
+                qm.PointStruct(
+                    id=user_hash,
+                    vector=vector,
+                    payload=payload,
+                )
+            )
+
+        await self._client.upsert(collection_name=self._user_collection, points=points, wait=True)
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        return {
+            "status": "ok",
+            "synced": len(points),
+            "skipped": skipped,
+            "model": self._model,
+            "duration_ms": duration_ms,
+        }
+
+    async def find_similar_users(self, user_id: str, top_k: int = 20) -> List[Dict[str, Any]]:
+        if top_k <= 0:
+            return []
+        await self.ensure_collections()
+        user_hash = compute_user_hash(user_id)
+        records = await self._client.retrieve(
+            collection_name=self._user_collection,
+            ids=[user_hash],
+            with_vectors=True,
+        )
+        if not records:
+            raise ValueError("vector_not_found_for_user")
+        reference = records[0]
+        vector = getattr(reference, "vector", None)
+        if vector is None:
+            raise ValueError("vector_not_found_for_user")
+        results = await self._client.search(
+            collection_name=self._user_collection,
+            query_vector=vector,
+            limit=top_k + 1,
+            with_payload=True,
+        )
+        neighbors: List[Dict[str, Any]] = []
+        for item in results:
+            if str(item.id) == user_hash:
+                continue
+            payload = getattr(item, "payload", {}) or {}
+            neighbor_hash = str(payload.get("user_id_hash") or item.id)
+            neighbors.append({"user_id_hash": neighbor_hash, "score": float(item.score)})
+            if len(neighbors) >= top_k:
+                break
+        return neighbors
+
+    async def recommend_by_similarity(self, user_id: str, top_k: int = 5) -> Dict[str, Any]:
+        neighbors = await self.find_similar_users(user_id, top_k=top_k)
+        return {"user_id": compute_user_hash(user_id), "neighbors": neighbors}
+
+    async def close(self) -> None:
+        await self._client.close()
 
 
 class TransactionNormalizer:
@@ -2521,6 +2746,7 @@ class RecommendationPipeline:
         assignment_repository: ClusterAssignmentRepository,
         recommendation_repository: RecommendationOutputRepository,
         pipeline_run_repository: PipelineRunRepository,
+        embedding_sync: Optional[QdrantEmbeddingSynchronizer] = None,
         interval_seconds: int = 300,
         min_cluster_users: int = 50,
         cluster_count: int = 5,
@@ -2539,6 +2765,7 @@ class RecommendationPipeline:
         self.assignment_repository = assignment_repository
         self.recommendation_repository = recommendation_repository
         self.pipeline_run_repository = pipeline_run_repository
+        self.embedding_sync = embedding_sync
         self.interval_seconds = interval_seconds
         self.min_cluster_users = max(min_cluster_users, 1)
         self.cluster_count = max(cluster_count, 1)
@@ -2554,6 +2781,7 @@ class RecommendationPipeline:
         self._current_run_id: Optional[str] = None
         self._current_stage: Optional[str] = None
         self._running = False
+        self._last_embedding_sync: Optional[datetime] = None
 
     async def start(self) -> None:
         if self._task is None:
@@ -2739,6 +2967,34 @@ class RecommendationPipeline:
                 }
             )
 
+            if self.embedding_sync:
+                self._current_stage = "embeddings"
+                selected_feature_map = {
+                    feature.user_id: feature
+                    for feature in user_features
+                    if feature.user_id in selected_user_set
+                }
+                try:
+                    embedding_stage = await self.embedding_sync.sync_user_profiles(selected_feature_map)
+                except Exception as exc:  # pragma: no cover - resiliencia ante dependencias externas
+                    logger.warning(
+                        "embedding_sync_failed",
+                        extra={"error": str(exc), "run_id": run_id},
+                    )
+                    stages.append(
+                        {
+                            "name": "embeddings",
+                            "status": "error",
+                            "reason": str(exc),
+                        }
+                    )
+                else:
+                    if embedding_stage.get("status") == "ok":
+                        self._last_embedding_sync = utcnow()
+                    stage_payload = {"name": "embeddings"}
+                    stage_payload.update(embedding_stage)
+                    stages.append(stage_payload)
+
             PIPELINE_RUNS.labels(status="success").inc()
             PIPELINE_RUN_DURATION.observe(time.perf_counter() - metrics_start)
 
@@ -2873,6 +3129,8 @@ class RecommendationPipeline:
             "last_synced_at": self._last_since.isoformat() if self._last_since else None,
             "state_snapshot": {user: ts.isoformat() for user, ts in self._state_snapshot.items()},
             "unauthorized": self._unauthorized,
+            "embeddings_enabled": self.embedding_sync is not None,
+            "last_embedding_sync": self._last_embedding_sync.isoformat() if self._last_embedding_sync else None,
         }
 
     def is_running(self) -> bool:
@@ -3297,6 +3555,8 @@ class PipelineStatusResponse(BaseModel):
     last_synced_at: Optional[str] = Field(None, alias="lastSyncedAt")
     state_snapshot: Dict[str, str] = Field(default_factory=dict, alias="stateSnapshot")
     unauthorized: bool = Field(False, alias="unauthorized")
+    embeddings_enabled: bool = Field(False, alias="embeddingsEnabled")
+    last_embedding_sync: Optional[str] = Field(None, alias="lastEmbeddingSync")
 
 
 class PipelineRunRequest(BaseModel):
@@ -3358,6 +3618,57 @@ cluster_model_repository = ClusterModelRepository(database_client)
 cluster_assignment_repository = ClusterAssignmentRepository(database_client)
 recommendation_output_repository = RecommendationOutputRepository(database_client)
 pipeline_run_repository = PipelineRunRepository(database_client)
+
+embedding_synchronizer: Optional[QdrantEmbeddingSynchronizer]
+_openai_embedding_client: Optional[AsyncOpenAI]
+_qdrant_async_client: Optional[AsyncQdrantClient]
+
+embedding_synchronizer = None
+_openai_embedding_client = None
+_qdrant_async_client = None
+
+if settings.enable_qdrant_sync:
+    missing: List[str] = []
+    if not settings.qdrant_url:
+        missing.append("QDRANT_URL")
+    if not settings.openai_api_key:
+        missing.append("OPENAI_API_KEY")
+    if settings.embedding_dim <= 0:
+        missing.append("EMBEDDING_DIM")
+    if missing:
+        logger.warning(
+            "Sincronización con Qdrant deshabilitada: faltan configuraciones %s",
+            ", ".join(missing),
+        )
+    else:
+        try:
+            _qdrant_async_client = AsyncQdrantClient(
+                url=settings.qdrant_url,
+                api_key=settings.qdrant_api_key,
+                timeout=settings.qdrant_timeout,
+            )
+            _openai_embedding_client = AsyncOpenAI(api_key=settings.openai_api_key)
+            embedding_generator = OpenAIEmbeddingGenerator(
+                client=_openai_embedding_client,
+                model=settings.embedding_model,
+                dimensions=settings.embedding_dim,
+            )
+            embedding_synchronizer = QdrantEmbeddingSynchronizer(
+                client=_qdrant_async_client,
+                generator=embedding_generator,
+                user_collection=settings.qdrant_collection_users,
+                item_collection=settings.qdrant_collection_items,
+                vector_size=settings.embedding_dim,
+                model=settings.embedding_model,
+                version=settings.embedding_version,
+            )
+            logger.info("Sincronización con Qdrant habilitada")
+        except Exception as exc:  # pragma: no cover - inicialización defensiva
+            logger.warning("No se pudo inicializar la integración con Qdrant: %s", exc)
+            embedding_synchronizer = None
+            _qdrant_async_client = None
+            _openai_embedding_client = None
+
 transaction_fetcher = TransactionFetcher(
     mode=pipeline_mode,
     api_url=financial_movements_url,
@@ -3383,6 +3694,7 @@ recommendation_pipeline = RecommendationPipeline(
     assignment_repository=cluster_assignment_repository,
     recommendation_repository=recommendation_output_repository,
     pipeline_run_repository=pipeline_run_repository,
+    embedding_sync=embedding_synchronizer,
     interval_seconds=pipeline_interval,
     min_cluster_users=settings.min_cluster_users,
     cluster_count=settings.cluster_count,
@@ -3410,6 +3722,11 @@ else:
 @app.on_event("startup")
 async def startup_event() -> None:
     logger.info("Iniciando servicio Recommendation Engine")
+    if embedding_synchronizer:
+        try:
+            await embedding_synchronizer.ensure_collections()
+        except Exception as exc:  # pragma: no cover - inicialización defensiva
+            logger.warning("No se pudieron preparar las colecciones en Qdrant: %s", exc)
     await recommendation_pipeline.start()
 
 
@@ -3417,6 +3734,16 @@ async def startup_event() -> None:
 async def shutdown_event() -> None:
     await recommendation_pipeline.stop()
     await database_client.close()
+    if embedding_synchronizer:
+        try:
+            await embedding_synchronizer.close()
+        except Exception as exc:  # pragma: no cover - cierre defensivo
+            logger.warning("Error al cerrar cliente de Qdrant: %s", exc)
+    if _openai_embedding_client:
+        try:
+            await _openai_embedding_client.close()
+        except Exception:  # pragma: no cover - cierre defensivo
+            pass
 
 
 @app.get("/", response_model=Dict[str, Any])
@@ -3494,6 +3821,48 @@ async def trigger_pipeline_run(
         stages=stages_payload,
         durationMs=float(summary.get("duration_ms", 0.0)),
     )
+
+
+@app.post("/qdrant/sync/user/{user_id}", response_model=Dict[str, Any])
+async def sync_user_embedding(user_id: UUID) -> Dict[str, Any]:
+    if not embedding_synchronizer:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="embeddings_not_enabled")
+    user_id_str = str(user_id)
+    features = await feature_store.get(user_id_str)
+    if not features:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="features_not_found")
+    result = await embedding_synchronizer.sync_user_profiles({user_id_str: features})
+    return {
+        "user_id": user_id_str,
+        "user_id_hash": compute_user_hash(user_id_str),
+        "result": result,
+    }
+
+
+@app.get("/qdrant/users/{user_id}/similar", response_model=Dict[str, Any])
+async def get_similar_users(user_id: UUID, top_k: int = Query(20, ge=1, le=100)) -> Dict[str, Any]:
+    if not embedding_synchronizer:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="embeddings_not_enabled")
+    user_id_str = str(user_id)
+    try:
+        neighbors = await embedding_synchronizer.find_similar_users(user_id_str, top_k=top_k)
+    except ValueError as exc:
+        message = str(exc)
+        if message == "vector_not_found_for_user":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=message) from None
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message) from None
+    return {
+        "user_id": user_id_str,
+        "user_id_hash": compute_user_hash(user_id_str),
+        "neighbors": neighbors,
+        "requested_top_k": top_k,
+    }
+
+
+async def recommend_by_similarity(user_id: str, top_k: int = 5) -> Dict[str, Any]:
+    if not embedding_synchronizer:
+        raise RuntimeError("embeddings_not_enabled")
+    return await embedding_synchronizer.recommend_by_similarity(user_id, top_k=top_k)
 
 
 @app.get("/features/{user_id}", response_model=UserFeatureSummary)
