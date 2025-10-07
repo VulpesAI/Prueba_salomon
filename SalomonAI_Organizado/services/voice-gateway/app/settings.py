@@ -51,7 +51,23 @@ class VoiceGatewaySettings(BaseSettings):
         default="gpt-4o-realtime-preview",
         alias="OPENAI_REALTIME_MODEL",
     )
+    openai_realtime_url: str | None = Field(default=None, alias="OPENAI_REALTIME_URL")
     openai_realtime_api_key: str | None = Field(default=None, alias="OPENAI_REALTIME_API_KEY")
+    openai_realtime_voice: str = Field(default="alloy", alias="OPENAI_REALTIME_VOICE")
+    openai_realtime_audio_format: str = Field(default="mp3", alias="OPENAI_REALTIME_AUDIO_FMT")
+    openai_realtime_transcription_model: str = Field(
+        default="gpt-4o-mini-transcribe",
+        alias="OPENAI_TRANSCRIBE_MODEL",
+    )
+    voice_stream_sample_rate: int = Field(default=16000, alias="VOICE_STREAM_SAMPLE_RATE")
+    voice_stream_max_seconds: int = Field(default=60, alias="VOICE_STREAM_MAX_SECS")
+    openai_realtime_instructions: str = Field(
+        default=(
+            "Eres SalomónAI, coach financiero; responde de forma concisa, empática "
+            "y en español de Chile. Prioriza recomendaciones claras y accionables."
+        ),
+        alias="OPENAI_REALTIME_SYSTEM_PROMPT",
+    )
     openai_tts_model: str = Field(
         default="gpt-4o-mini-tts",
         validation_alias=AliasChoices("VOICE_OPENAI_TTS_MODEL", "OPENAI_TTS_MODEL"),
@@ -117,6 +133,18 @@ class VoiceGatewaySettings(BaseSettings):
     @property
     def resolved_tts_language(self) -> str:
         return (self.tts_default_language_env or "es-CL").strip() or "es-CL"
+
+    @property
+    def resolved_realtime_api_key(self) -> str | None:
+        return self.openai_realtime_api_key or self.resolved_openai_api_key
+
+    @property
+    def resolved_realtime_url(self) -> str:
+        if self.openai_realtime_url:
+            return self.openai_realtime_url
+        model = self.openai_realtime_model
+        base = "wss://api.openai.com/v1/realtime"
+        return f"{base}?model={model}"
 
 
 @lru_cache()
