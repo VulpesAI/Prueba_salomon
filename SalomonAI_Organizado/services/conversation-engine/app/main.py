@@ -4,11 +4,14 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict
+import hashlib
+import time
+from typing import AsyncGenerator, Dict, List
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from openai import AsyncOpenAI
 
 from .core_client import (
     CoreAPIClient,
@@ -19,6 +22,9 @@ from .core_client import (
 from .llm_service import ConversationalLLMService, LLMServiceError
 from .models import (
     ChatChunk,
+    ConversationChatRequest,
+    ConversationChatResponse,
+    ConversationMessage,
     ChatRequest,
     ErrorResponse,
     FinancialSummary,
@@ -62,12 +68,24 @@ def lifespan(app: FastAPI):
         data_service=data_service,
     )
     llm_service = ConversationalLLMService(settings=settings, data_service=data_service)
+    openai_client: AsyncOpenAI | None = None
+    if settings.openai_api_key:
+        openai_client = AsyncOpenAI(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            timeout=settings.openai_timeout_seconds,
+        )
     app.state.nlu = nlu
     app.state.core_client = core_client
     app.state.data_service = data_service
     app.state.llm_service = llm_service
     app.state.settings = settings
-    yield
+    app.state.openai_client = openai_client
+    try:
+        yield
+    finally:
+        if openai_client:
+            await openai_client.close()
 
 
 def get_services(app: FastAPI = Depends()) -> Dict[str, object]:
@@ -76,6 +94,7 @@ def get_services(app: FastAPI = Depends()) -> Dict[str, object]:
         "core_client": app.state.core_client,
         "data_service": getattr(app.state, "data_service", None),
         "llm_service": getattr(app.state, "llm_service", None),
+        "openai_client": getattr(app.state, "openai_client", None),
     }
 
 
@@ -211,6 +230,93 @@ async def chat_handler(request: Request, services=Depends(get_services)) -> Stre
 
     chat_request = ChatRequest.parse_obj(payload)
     return await chat_stream(chat_request, services)  # type: ignore[arg-type]
+
+
+def _hash_text(value: str) -> str:
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()
+
+
+def _prepare_messages(messages: List[ConversationMessage]) -> List[Dict[str, str]]:
+    prepared: List[Dict[str, str]] = []
+    for message in messages:
+        content = (message.content or "").strip()
+        if not content:
+            continue
+        prepared.append({"role": message.role, "content": content})
+    return prepared
+
+
+@app.post("/conversation/chat", response_model=ConversationChatResponse)
+async def conversation_chat(
+    payload: ConversationChatRequest,
+    services=Depends(get_services),
+) -> ConversationChatResponse:
+    openai_client: AsyncOpenAI | None = services.get("openai_client")  # type: ignore[assignment]
+    if openai_client is None:
+        raise HTTPException(status_code=503, detail="openai_not_configured")
+
+    messages = _prepare_messages(payload.messages)
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages_required")
+
+    model = (payload.model or settings.openai_model or "gpt-4o-mini").strip() or "gpt-4o-mini"
+    temperature = payload.temperature
+    if temperature is None:
+        temperature = settings.llm_temperature
+    temperature = max(0.0, min(float(temperature), 2.0))
+
+    started = time.perf_counter()
+    try:
+        response = await openai_client.responses.create(
+            model=model,
+            input=messages,
+            temperature=temperature,
+        )
+    except Exception as exc:  # pragma: no cover - dependencias externas
+        logger.error("Fallo al invocar OpenAI Responses: %s", exc)
+        raise HTTPException(status_code=502, detail="chat_provider_error") from exc
+
+    reply_text = getattr(response, "output_text", "") or ""
+    if not reply_text.strip():
+        # Intento de recuperación manual del texto
+        for item in getattr(response, "output", []) or []:
+            for segment in getattr(item, "content", []) or []:
+                reply_text = getattr(segment, "text", "") or ""
+                if reply_text.strip():
+                    break
+            if reply_text.strip():
+                break
+    reply_text = reply_text.strip()
+    if not reply_text:
+        raise HTTPException(status_code=502, detail="empty_reply")
+
+    usage_payload: Dict[str, int] = {}
+    usage = getattr(response, "usage", None)
+    if usage:
+        prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+        completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+        total_tokens = int(getattr(usage, "total_tokens", prompt_tokens + completion_tokens) or 0)
+        usage_payload = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        }
+
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    user_hash = _hash_text(payload.user_id) if payload.user_id else None
+    message_hashes = [_hash_text(item["content"]) for item in messages]
+    logger.info(
+        "Conversación procesada con OpenAI",
+        extra={
+            "user_hash": user_hash,
+            "message_hashes": message_hashes,
+            "model": model,
+            "temperature": temperature,
+            "duration_ms": duration_ms,
+        },
+    )
+
+    return ConversationChatResponse(reply=reply_text, usage=usage_payload)
 
 
 @app.exception_handler(Exception)

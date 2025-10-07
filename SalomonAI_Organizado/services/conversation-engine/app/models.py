@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Literal, Optional, Type, TypeVar
+
+from pydantic import BaseModel, Field
 
 
 T = TypeVar("T", bound="_DictMixin")
@@ -119,3 +121,20 @@ class LLMAnswer(_DictMixin):
     context: List[FinancialContextSnippet] = field(default_factory=list)
     summary: Optional[FinancialSummary] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+class ConversationMessage(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
+
+
+class ConversationChatRequest(BaseModel):
+    user_id: Optional[str] = None
+    messages: List[ConversationMessage]
+    model: Optional[str] = None
+    temperature: Optional[float] = None
+
+
+class ConversationChatResponse(BaseModel):
+    reply: str
+    usage: Dict[str, int] = Field(default_factory=dict)
