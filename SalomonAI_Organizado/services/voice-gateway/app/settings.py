@@ -27,7 +27,7 @@ class VoiceGatewaySettings(BaseSettings):
     )
     max_audio_seconds: int = Field(default=120, alias="VOICE_MAX_AUDIO_SECONDS")
     max_audio_bytes: int | None = Field(default=None, alias="VOICE_MAX_AUDIO_BYTES")
-    tts_provider: str = Field(default="mock", alias="VOICE_TTS_PROVIDER")
+    tts_provider: str = Field(default="openai", alias="VOICE_TTS_PROVIDER")
     tts_default_voice_env: str | None = Field(default=None, alias="VOICE_TTS_DEFAULT_VOICE")
     tts_default_format_env: str | None = Field(default=None, alias="VOICE_TTS_DEFAULT_FORMAT")
     tts_default_language_env: str | None = Field(default=None, alias="VOICE_TTS_DEFAULT_LANG")
