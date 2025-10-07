@@ -5,8 +5,11 @@ import base64
 import binascii
 import json
 import logging
+import secrets
 import time
-from typing import Dict, Optional
+from collections import defaultdict
+from contextlib import suppress
+from typing import Any, Dict, Optional
 
 from fastapi import (
     Depends,
@@ -17,13 +20,15 @@ from fastapi import (
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
+    status,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.concurrency import run_in_threadpool
+import websockets
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK, InvalidStatusCode
 
 from .models import (
-    VoiceStreamEvent,
     VoiceSynthesisRequest,
     VoiceSynthesisResponse,
     VoiceTranscriptionPayload,
@@ -281,50 +286,453 @@ async def synthesize(
     )
 
 
+async def _connect_realtime_with_retry(url: str, headers: Dict[str, str], retries: int = 3) -> websockets.WebSocketClientProtocol:
+    delay = 1.0
+    last_exc: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            return await websockets.connect(
+                url,
+                extra_headers=headers,
+                ping_interval=20,
+                ping_timeout=20,
+                open_timeout=15,
+                max_size=4 * 1024 * 1024,
+            )
+        except Exception as exc:  # pragma: no cover - dependencias externas
+            last_exc = exc
+            if attempt >= retries:
+                break
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 10)
+    assert last_exc is not None
+    raise last_exc
+
+
+async def _send_session_update(
+    upstream: websockets.WebSocketClientProtocol,
+    *,
+    voice: str,
+    audio_format: str,
+    language: str,
+    instructions: str,
+) -> None:
+    payload = {
+        "type": "session.update",
+        "session": {
+            "input_audio_format": {
+                "type": "pcm16",
+                "sample_rate_hz": settings.voice_stream_sample_rate,
+            },
+            "input_audio_transcription": {
+                "model": settings.openai_realtime_transcription_model,
+                "language": language or settings.default_language,
+            },
+            "voice": voice,
+            "output_audio_format": audio_format,
+            "instructions": instructions,
+        },
+    }
+    await upstream.send(json.dumps(payload))
+
+
+def _extract_text_delta(delta: Any) -> str:
+    if isinstance(delta, str):
+        return delta
+    if isinstance(delta, dict):
+        if "text" in delta and isinstance(delta["text"], str):
+            return delta["text"]
+        if "delta" in delta and isinstance(delta["delta"], str):
+            return delta["delta"]
+    return ""
+
+
+def _extract_audio_delta(delta: Any) -> str:
+    if isinstance(delta, str):
+        return delta
+    if isinstance(delta, dict):
+        if "audio" in delta and isinstance(delta["audio"], str):
+            return delta["audio"]
+        if "data" in delta and isinstance(delta["data"], str):
+            return delta["data"]
+    return ""
+
+
 @app.websocket("/voice/stream")
 async def voice_stream(websocket: WebSocket, language: Optional[str] = "es-CL"):
     await websocket.accept()
-    stt = get_stt_provider()
-    provider_name = getattr(stt, "name", type(stt).__name__)
     session_start = time.perf_counter()
     session_result = "completed"
     STREAM_ACTIVE.inc()
+    session_id = secrets.token_hex(8)
+    provider_label = "openai_realtime"
+    realtime_api_key = settings.resolved_realtime_api_key
+    if not realtime_api_key:
+        STREAM_ERRORS.labels(type="configuration").inc()
+        await websocket.send_json({
+            "type": "error",
+            "code": "missing_api_key",
+            "detail": "OPENAI_REALTIME_API_KEY no está configurada",
+        })
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        STREAM_ACTIVE.dec()
+        STREAM_SESSIONS.labels(result="error").inc()
+        STREAM_SESSION_DURATION.observe(time.perf_counter() - session_start)
+        return
+
+    current_voice = (settings.openai_realtime_voice or "alloy").strip() or "alloy"
+    current_audio_format = (
+        (settings.openai_realtime_audio_format or "mp3").strip().lower() or "mp3"
+    )
+    current_language = (
+        (language or settings.resolved_tts_language or settings.default_language).strip()
+        or settings.default_language
+    )
+    default_instructions = settings.openai_realtime_instructions.strip() or (
+        "Eres SalomónAI, coach financiero; responde de forma concisa, empática y en español de Chile."
+    )
+    instructions = default_instructions
+    upstream: websockets.WebSocketClientProtocol | None = None
+
     try:
+        headers = {
+            "Authorization": f"Bearer {realtime_api_key}",
+            "OpenAI-Beta": "realtime=v1",
+        }
+        try:
+            upstream = await _connect_realtime_with_retry(
+                settings.resolved_realtime_url, headers
+            )
+        except (InvalidStatusCode, ConnectionClosedError, TimeoutError, OSError) as exc:
+            session_result = "error"
+            STREAM_ERRORS.labels(type=exc.__class__.__name__).inc()
+            logger.exception("[%s] No se pudo conectar con OpenAI Realtime: %s", session_id, exc)
+            await websocket.send_json({
+                "type": "error",
+                "code": "upstream_unavailable",
+                "detail": "No se pudo conectar con el proveedor de voz",
+            })
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+            return
+
+        await _send_session_update(
+            upstream,
+            voice=current_voice,
+            audio_format=current_audio_format,
+            language=current_language,
+            instructions=instructions,
+        )
+
         await websocket.send_json({"type": "status", "status": "ready"})
-        while True:
-            message = await websocket.receive_text()
-            data = VoiceStreamEvent.parse_obj(json.loads(message))
-            if data.event == "start":
-                await websocket.send_json({"type": "status", "status": "listening"})
-                if not getattr(stt, "supports_streaming", False):
-                    await websocket.send_json({
-                        "type": "transcript",
-                        "text": "Inicia tu mensaje cuando quieras",
-                        "final": False,
-                    })
-            elif data.event == "audio-chunk":
-                chunk = data.payload.get("chunk", "")
-                result = await stt.transcribe_stream(chunk.encode())
-                STREAM_AUDIO_CHUNKS.labels(provider=provider_name).inc()
-                await websocket.send_json({"type": "transcript", **result})
-            elif data.event == "stop":
-                await websocket.send_json({"type": "status", "status": "stopped"})
-                break
-            else:
-                await websocket.send_json({"type": "error", "message": f"Evento desconocido: {data.event}"})
+
+        response_buffers: Dict[str, str] = defaultdict(str)
+
+        async def client_to_upstream() -> None:
+            nonlocal current_voice, current_audio_format, current_language, session_result, instructions
+            try:
+                while True:
+                    if (
+                        settings.voice_stream_max_seconds > 0
+                        and time.perf_counter() - session_start
+                        > settings.voice_stream_max_seconds
+                    ):
+                        session_result = "timeout"
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "session_timeout",
+                            "detail": "La sesión de voz superó el máximo permitido",
+                        })
+                        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                        return
+
+                    message = await websocket.receive()
+                    if message.get("type") == "websocket.disconnect":
+                        raise WebSocketDisconnect
+
+                    if message.get("text") is not None:
+                        text_data = message["text"]
+                        if not text_data:
+                            continue
+                        try:
+                            data = json.loads(text_data)
+                        except json.JSONDecodeError:
+                            await websocket.send_json({
+                                "type": "error",
+                                "code": "invalid_json",
+                                "detail": "Formato JSON inválido",
+                            })
+                            continue
+
+                        event_type = data.get("type")
+                        if event_type == "config":
+                            if "voice" in data and isinstance(data["voice"], str):
+                                current_voice = data["voice"].strip() or current_voice
+                            if "audio_format" in data and isinstance(data["audio_format"], str):
+                                current_audio_format = data["audio_format"].strip().lower() or current_audio_format
+                            if "lang" in data and isinstance(data["lang"], str):
+                                current_language = data["lang"].strip() or current_language
+                            if "instructions" in data and isinstance(data["instructions"], str):
+                                new_instructions = data["instructions"].strip()
+                                instructions = new_instructions or default_instructions
+                            await _send_session_update(
+                                upstream,
+                                voice=current_voice,
+                                audio_format=current_audio_format,
+                                language=current_language,
+                                instructions=instructions,
+                            )
+                            await websocket.send_json({
+                                "type": "status",
+                                "status": "updated",
+                                "voice": current_voice,
+                                "format": current_audio_format,
+                                "lang": current_language,
+                                "instructions": instructions,
+                            })
+                        elif event_type == "audio_chunk":
+                            audio_base64 = data.get("audio_base64")
+                            if not audio_base64:
+                                await websocket.send_json({
+                                    "type": "error",
+                                    "code": "empty_chunk",
+                                    "detail": "Chunk de audio vacío",
+                                })
+                                continue
+                            try:
+                                audio_bytes = base64.b64decode(audio_base64)
+                            except (ValueError, binascii.Error):
+                                await websocket.send_json({
+                                    "type": "error",
+                                    "code": "invalid_audio",
+                                    "detail": "Audio base64 inválido",
+                                })
+                                continue
+                            if len(audio_bytes) > settings.max_request_bytes:
+                                await websocket.send_json({
+                                    "type": "error",
+                                    "code": "chunk_too_large",
+                                    "detail": "Chunk de audio excede el máximo permitido",
+                                })
+                                continue
+                            STREAM_AUDIO_CHUNKS.labels(provider=provider_label).inc()
+                            await upstream.send(
+                                json.dumps(
+                                    {
+                                        "type": "input_audio_buffer.append",
+                                        "audio": audio_base64,
+                                    }
+                                )
+                            )
+                        elif event_type == "commit":
+                            await upstream.send(json.dumps({"type": "input_audio_buffer.commit"}))
+                            await upstream.send(json.dumps({"type": "response.create"}))
+                        elif event_type == "text":
+                            text_payload = str(data.get("text", "")).strip()
+                            if not text_payload:
+                                await websocket.send_json({
+                                    "type": "error",
+                                    "code": "empty_text",
+                                    "detail": "Texto vacío",
+                                })
+                                continue
+                            await upstream.send(
+                                json.dumps(
+                                    {
+                                        "type": "conversation.item.create",
+                                        "item": {
+                                            "type": "message",
+                                            "role": "user",
+                                            "content": [
+                                                {
+                                                    "type": "input_text",
+                                                    "text": text_payload,
+                                                }
+                                            ],
+                                        },
+                                    }
+                                )
+                            )
+                            await upstream.send(json.dumps({"type": "response.create"}))
+                        else:
+                            await websocket.send_json({
+                                "type": "error",
+                                "code": "unknown_event",
+                                "detail": f"Tipo de evento no soportado: {event_type}",
+                            })
+                    elif message.get("bytes") is not None:
+                        audio_bytes = message["bytes"]
+                        if not audio_bytes:
+                            continue
+                        if len(audio_bytes) > settings.max_request_bytes:
+                            await websocket.send_json(
+                                {
+                                    "type": "error",
+                                    "code": "chunk_too_large",
+                                    "detail": "Chunk de audio excede el máximo permitido",
+                                }
+                            )
+                            continue
+                        audio_base64 = base64.b64encode(audio_bytes).decode("ascii")
+                        STREAM_AUDIO_CHUNKS.labels(provider=provider_label).inc()
+                        await upstream.send(
+                            json.dumps(
+                                {
+                                    "type": "input_audio_buffer.append",
+                                    "audio": audio_base64,
+                                }
+                            )
+                        )
+                    else:
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "unsupported_message",
+                            "detail": "Tipo de mensaje no soportado",
+                        })
+            except WebSocketDisconnect:
+                raise
+            except Exception as exc:  # pragma: no cover - protección frente a fallos inesperados
+                session_result = "error"
+                STREAM_ERRORS.labels(type=exc.__class__.__name__).inc()
+                logger.exception("[%s] Error procesando mensaje del cliente: %s", session_id, exc)
+                await websocket.send_json({
+                    "type": "error",
+                    "code": "client_processing_error",
+                    "detail": "Error procesando el mensaje del cliente",
+                })
+                raise
+
+        async def upstream_to_client() -> None:
+            nonlocal session_result
+            try:
+                async for raw in upstream:
+                    try:
+                        event = json.loads(raw)
+                    except json.JSONDecodeError:  # pragma: no cover - datos corruptos
+                        logger.warning("[%s] Evento inválido de OpenAI: %s", session_id, raw)
+                        continue
+
+                    event_type = event.get("type") or ""
+
+                    if event_type == "response.delta":
+                        response = event.get("response", {}) or {}
+                        response_id = response.get("id", "default")
+                        text_piece = _extract_text_delta(event.get("delta"))
+                        if text_piece:
+                            response_buffers[response_id] += text_piece
+                            await websocket.send_json(
+                                {
+                                    "type": "partial_transcript",
+                                    "text": response_buffers[response_id],
+                                    "final": False,
+                                }
+                            )
+                    elif event_type in {"response.audio.delta", "response.output_audio.delta"}:
+                        chunk = _extract_audio_delta(event.get("delta"))
+                        if chunk:
+                            await websocket.send_json(
+                                {
+                                    "type": "tts_chunk",
+                                    "audio_base64": chunk,
+                                    "format": current_audio_format,
+                                }
+                            )
+                    elif "transcription" in event_type and event_type.endswith("delta"):
+                        text_piece = _extract_text_delta(event.get("delta"))
+                        if text_piece:
+                            await websocket.send_json(
+                                {
+                                    "type": "partial_transcript",
+                                    "text": text_piece,
+                                    "final": False,
+                                }
+                            )
+                    elif "transcription" in event_type and event_type.endswith("completed"):
+                        transcription = event.get("transcription") or {}
+                        text_final = transcription.get("text") or response_buffers.get(
+                            event.get("response", {}).get("id", "default"), ""
+                        )
+                        if text_final:
+                            await websocket.send_json(
+                                {
+                                    "type": "partial_transcript",
+                                    "text": text_final,
+                                    "final": True,
+                                }
+                            )
+                    elif event_type == "response.completed":
+                        response = event.get("response", {}) or {}
+                        response_id = response.get("id", "default")
+                        final_text = response_buffers.pop(response_id, "")
+                        if not final_text:
+                            final_text = response.get("output_text") or ""
+                        await websocket.send_json(
+                            {
+                                "type": "message",
+                                "text": final_text,
+                                "final": True,
+                            }
+                        )
+                    elif event_type == "error":
+                        STREAM_ERRORS.labels(type="upstream").inc()
+                        await websocket.send_json(
+                            {
+                                "type": "error",
+                                "code": "upstream_error",
+                                "detail": event.get("error") or event,
+                            }
+                        )
+                    elif event_type in {"session.updated", "input_audio_buffer.speech_started", "input_audio_buffer.speech_stopped"}:
+                        logger.debug("[%s] Evento informativo de OpenAI: %s", session_id, event_type)
+                    else:
+                        logger.debug("[%s] Evento no manejado de OpenAI: %s", session_id, event_type)
+            except (ConnectionClosedError, ConnectionClosedOK):
+                session_result = "error"
+                logger.info("[%s] Conexión con OpenAI cerrada", session_id)
+                await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+            except Exception as exc:  # pragma: no cover - fallos externos
+                STREAM_ERRORS.labels(type=exc.__class__.__name__).inc()
+                logger.exception("[%s] Error recibiendo datos de OpenAI: %s", session_id, exc)
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "code": "upstream_failure",
+                        "detail": "Error al recibir datos del proveedor",
+                    }
+                )
+                raise
+
+        tasks = [
+            asyncio.create_task(client_to_upstream()),
+            asyncio.create_task(upstream_to_client()),
+        ]
+
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+        for task in pending:
+            task.cancel()
+        with suppress(asyncio.CancelledError):
+            await asyncio.gather(*pending, return_exceptions=True)
+        for task in done:
+            task.result()
+
     except WebSocketDisconnect:
         session_result = "disconnected"
-        logger.info("Cliente WebSocket desconectado")
+        logger.info("[%s] Cliente WebSocket desconectado", session_id)
     except Exception as exc:  # pragma: no cover - logging de emergencia
         session_result = "error"
         STREAM_ERRORS.labels(type=exc.__class__.__name__).inc()
-        logger.exception("Error en flujo de voz: %s", exc)
-        await websocket.send_json({"type": "error", "message": str(exc)})
+        logger.exception("[%s] Error en flujo de voz: %s", session_id, exc)
+        with suppress(Exception):
+            await websocket.send_json({
+                "type": "error",
+                "code": "unexpected",
+                "detail": str(exc),
+            })
     finally:
-        try:
+        if upstream is not None and not upstream.closed:
+            with suppress(Exception):
+                await upstream.close()
+        with suppress(Exception):
             await websocket.close()
-        except RuntimeError:
-            pass
         STREAM_ACTIVE.dec()
         STREAM_SESSIONS.labels(result=session_result).inc()
         STREAM_SESSION_DURATION.observe(time.perf_counter() - session_start)
