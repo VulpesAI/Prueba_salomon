@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/Card"
+import { Card } from "@/components/ui/card"
 import { Section } from "./Section"
 
 type Step = {
