@@ -5,8 +5,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import type { CategoryItem } from "@/hooks/useDashboardOverview";
 import { formatCLP } from "@/lib/currency";
-
-const COLORS = ["#38bdf8", "#22c55e", "#a855f7", "#f97316", "#ef4444"];
+import { getCategoryColor } from "@/lib/ui/palette";
 
 type CategoriesDonutProps = {
   data: CategoryItem[];
@@ -18,9 +17,9 @@ const tooltipFormatter: TooltipProps<number, string>["formatter"] = (value, name
 };
 
 export default function CategoriesDonut({ data }: CategoriesDonutProps) {
-  const pieData = data.map((item, index) => ({
+  const pieData = data.map((item) => ({
     ...item,
-    fill: COLORS[index % COLORS.length],
+    fill: getCategoryColor(item.name),
   }));
 
   return (

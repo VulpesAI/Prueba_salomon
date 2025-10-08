@@ -1,6 +1,8 @@
 import { addHours, subDays, subHours } from "date-fns"
 import type { Route } from "next"
 
+import { ACCOUNT_COLOR_VARS, colorFromVar } from "@/lib/ui/account-colors"
+
 export type AccountType = "checking" | "savings" | "credit" | "investment"
 
 type AccountStatus = "operational" | "syncing" | "action_required" | "error"
@@ -233,11 +235,30 @@ const linkedInstitutions: InstitutionLink[] = [
   },
 ]
 
-const accountTypeMetadata: Record<AccountType, { label: string; color: string }> = {
-  checking: { label: "Cuentas corrientes", color: "hsl(var(--chart-1))" },
-  savings: { label: "Ahorro", color: "hsl(var(--chart-2))" },
-  credit: { label: "Crédito", color: "hsl(var(--chart-3))" },
-  investment: { label: "Inversiones", color: "hsl(var(--chart-4))" },
+const accountTypeMetadata: Record<
+  AccountType,
+  { label: string; colorVar: (typeof ACCOUNT_COLOR_VARS)[AccountType]; color: string }
+> = {
+  checking: {
+    label: "Cuentas corrientes",
+    colorVar: ACCOUNT_COLOR_VARS.checking,
+    color: colorFromVar(ACCOUNT_COLOR_VARS.checking),
+  },
+  savings: {
+    label: "Ahorro",
+    colorVar: ACCOUNT_COLOR_VARS.savings,
+    color: colorFromVar(ACCOUNT_COLOR_VARS.savings),
+  },
+  credit: {
+    label: "Crédito",
+    colorVar: ACCOUNT_COLOR_VARS.credit,
+    color: colorFromVar(ACCOUNT_COLOR_VARS.credit),
+  },
+  investment: {
+    label: "Inversiones",
+    colorVar: ACCOUNT_COLOR_VARS.investment,
+    color: colorFromVar(ACCOUNT_COLOR_VARS.investment),
+  },
 }
 
 const balanceHistory: BalanceHistoryPoint[] = Array.from({ length: 8 }).map((_, index) => {
