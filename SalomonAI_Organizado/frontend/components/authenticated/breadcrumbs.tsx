@@ -77,7 +77,10 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
               <BreadcrumbItem>
                 {crumb.href && !isLast ? (
                   <BreadcrumbLink asChild>
-                    <Link className={linkClassName} href={crumb.href}>
+                    <Link
+                      className={linkClassName}
+                      href={{ pathname: crumb.href }}
+                    >
                       {crumb.label}
                     </Link>
                   </BreadcrumbLink>
