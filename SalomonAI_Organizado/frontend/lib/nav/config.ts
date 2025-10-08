@@ -22,6 +22,7 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react"
+import type { Route } from "next"
 import type { LucideIcon } from "lucide-react"
 
 export type NavBadgeVariant = "default" | "secondary" | "outline"
@@ -34,7 +35,7 @@ export type NavBadge = {
 export type NavItem = {
   id: string
   label: string
-  href: string
+  href: Route
   icon?: LucideIcon
   description?: string
   badge?: NavBadge
