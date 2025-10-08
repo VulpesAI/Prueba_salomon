@@ -104,14 +104,17 @@ export default function TerminosPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-app text-app">
       <Navigation />
-      
+
       {/* Hero Section */}
-      <section className="py-20 bg-gradient-hero">
+      <section className="py-20 bg-section text-app">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4 bg-primary/20 text-primary">
+            <Badge
+              variant="secondary"
+              className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-soft bg-[color:var(--bg-app)]/20 px-4 py-1 text-xs font-medium uppercase tracking-wide text-app"
+            >
               <FileText className="w-4 h-4 mr-2" />
               Términos y Condiciones
             </Badge>
@@ -124,12 +127,12 @@ export default function TerminosPage() {
                 color: 'transparent'
               }}>Servicio</span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-xl text-muted max-w-3xl mx-auto">
               Condiciones claras y transparentes para el uso de SalomonAI
             </p>
             <div className="flex items-center justify-center gap-2 mt-6">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <span className="text-muted-foreground">Última actualización: 15 de Diciembre, 2024</span>
+              <Calendar className="w-5 h-5 text-muted" />
+              <span className="text-muted">Última actualización: 15 de Diciembre, 2024</span>
             </div>
           </div>
         </div>
@@ -140,22 +143,22 @@ export default function TerminosPage() {
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-6">Términos Principales</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-xl text-muted max-w-3xl mx-auto">
               Los aspectos más importantes de nuestro acuerdo de servicio
             </p>
           </div>
 
           <div className="grid gap-8 max-w-4xl mx-auto">
             {sections.map((section, index) => (
-              <Card key={index} className="bg-gradient-card border-primary/20">
+              <Card key={index} className="bg-gradient-card border border-soft text-surface">
                 <CardHeader>
-                  <CardTitle className="text-xl">{section.title}</CardTitle>
+                  <CardTitle className="text-xl text-surface">{section.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
                     {section.content.map((item, idx) => (
                       <li key={idx} className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                        <CheckCircle className="w-5 h-5 text-[color:var(--brand)] mr-3 mt-0.5 flex-shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}

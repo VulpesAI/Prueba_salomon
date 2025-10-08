@@ -136,15 +136,18 @@ export default function FuncionesPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-app text-app">
       <Navigation />
       
       {/* Hero Section */}
-      <section className="py-20 bg-gradient-hero">
+      <section className="py-20 bg-section text-app">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4 bg-primary/20 text-primary">
-              <BarChart3 className="w-4 h-4 mr-2" />
+            <Badge
+              variant="secondary"
+              className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-soft bg-[color:var(--bg-app)]/20 px-4 py-1 text-xs font-medium uppercase tracking-wide text-app"
+            >
+              <BarChart3 className="w-4 h-4" />
               Funciones
             </Badge>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
@@ -156,7 +159,7 @@ export default function FuncionesPage() {
                 color: 'transparent'
               }}>Inteligentes</span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-xl text-muted max-w-3xl mx-auto">
               Descubre todas las herramientas que SalomonAI pone a tu disposición para revolucionar tu gestión financiera
             </p>
           </div>

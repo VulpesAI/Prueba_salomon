@@ -24,17 +24,34 @@ const config: Config = {
         brand: {
           DEFAULT: "#007CF0",
           green: "#22C55E",
-          darkBg: "#0B1943",
-          midnight: "#081134",
+        },
+        app: {
+          light: "#F5F7FF",
+          dark: "#0B1943",
+        },
+        surface: {
+          dark: "#1F2937",
+        },
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          light: "#E2E8F0",
+          dark: "#374151",
+        },
+        error: {
+          DEFAULT: "#EF4444",
+          foreground: "#450A0A",
+        },
+        textpal: {
+          light: "#081134",
+          mutedL: "#475569",
+          dark: "#F5F7FF",
+          mutedD: "#94A3B8",
+          inverse: "#F9FAFB",
         },
         lightBg: "#F5F7FF",
         lightBorder: "#E2E8F0",
         darkSurface: "#1F2937",
         darkBorder: "#374151",
-        error: {
-          DEFAULT: "#EF4444",
-          foreground: "#450A0A",
-        },
         text: {
           primary: "#081134",
           light: "#F9FAFB",
@@ -55,7 +72,6 @@ const config: Config = {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
-        border: "hsl(var(--border))",
         input: "hsl(var(--border))",
         ring: "hsl(var(--primary-gradient-to))",
         background: "hsl(var(--background))",
@@ -103,6 +119,10 @@ const config: Config = {
           "linear-gradient(180deg, rgba(0,124,240,0.03) 0%, rgba(34,197,94,0.04) 100%)",
         "gradient-card-dark":
           "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.03) 100%)",
+        "section-light":
+          "linear-gradient(180deg, #F5F7FF 0%, #E6F3FF 45%, #E9FFF4 100%)",
+        "section-dark":
+          "linear-gradient(180deg, #0B1943 0%, #0A3E7A 50%, #0F766E 100%)",
         "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%)",
       },
       boxShadow: {

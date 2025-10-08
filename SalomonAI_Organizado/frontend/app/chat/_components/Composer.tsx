@@ -65,7 +65,7 @@ export function Composer({ onSend, stt }: { onSend: (text: string) => void; stt:
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full min-h-[44px] max-h-40 resize-y rounded-md border border-neutral bg-white/80 px-3 py-2 text-sm text-primary placeholder:text-muted focus-brand dark:border-soft dark:bg-[rgba(31,41,55,0.85)]"
+          className="w-full min-h-[44px] max-h-40 resize-y rounded-md border border-neutral bg-white/80 px-3 py-2 text-sm text-surface placeholder:text-muted focus-brand dark:border-soft dark:bg-[rgba(31,41,55,0.85)]"
         />
         <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
           <span>Enter envía · Shift+Enter agrega un salto de línea</span>
@@ -79,7 +79,7 @@ export function Composer({ onSend, stt }: { onSend: (text: string) => void; stt:
 
       <button
         type="button"
-        className="inline-flex h-10 items-center gap-2 rounded-md border border-soft bg-[rgba(8,17,52,0.06)] px-3 text-sm font-medium text-primary transition-colors hover:bg-[rgba(8,17,52,0.1)] focus-brand dark:bg-[rgba(255,255,255,0.06)] dark:hover:bg-[rgba(255,255,255,0.1)]"
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-soft bg-[rgba(8,17,52,0.06)] px-3 text-sm font-medium text-surface transition-colors hover:bg-[rgba(8,17,52,0.1)] focus-brand dark:bg-[rgba(255,255,255,0.06)] dark:hover:bg-[rgba(255,255,255,0.1)]"
         aria-label="Enviar mensaje"
         onClick={handleSubmit}
       >

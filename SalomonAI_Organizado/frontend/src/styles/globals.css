@@ -11,7 +11,7 @@ body {
 
 body {
   background-color: var(--bg-app);
-  color: var(--text-primary);
+  color: var(--text-app);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Helvetica,
     Arial, "Apple Color Emoji", "Segoe UI Emoji";
   line-height: 1.6;
@@ -19,8 +19,10 @@ body {
 
 :root {
   --bg-app: #F5F7FF;
-  --text-primary: #081134;
+  --text-app: #081134;
+  --text-surface: #081134;
   --text-muted: #475569;
+  --text-inverse: #F9FAFB;
   --border-neutral: #E2E8F0;
   --brand: #007CF0;
   --accent: #22C55E;
@@ -32,6 +34,10 @@ body {
   --chart-series-3: #EF4444;
   --chart-series-4: #F59E0B;
 
+  --text-primary: var(--text-app);
+  --text-secondary: var(--text-muted);
+  --icon-primary: var(--text-app);
+  --icon-secondary: var(--text-muted);
   --background: 228 100% 98.04%;
   --foreground: 227.73 73.33% 11.76%;
   --panel: 0 0% 100%;
@@ -39,9 +45,6 @@ body {
   --muted: 214 32% 91%;
   --muted-foreground: 215 19% 34%;
   --border: 213 27% 84%;
-  --text-secondary: 215 19% 34%;
-  --icon-primary: 227.73 73.33% 11.76%;
-  --icon-secondary: 215.29 19.32% 34.51%;
   --primary: 209 100% 47.06%;
   --primary-foreground: 228 100% 98.04%;
   --primary-gradient-from: 209 100% 47.06%;
@@ -55,8 +58,10 @@ body {
 
 .dark {
   --bg-app: #0B1943;
-  --text-primary: #F5F7FF;
+  --text-app: #F5F7FF;
+  --text-surface: #F5F7FF;
   --text-muted: #94A3B8;
+  --text-inverse: #081134;
   --border-neutral: #374151;
   --brand: #007CF0;
   --accent: #22C55E;
@@ -64,6 +69,10 @@ body {
   --chart-axis: #94A3B8;
   --chart-grid: rgba(55, 65, 81, 0.5);
 
+  --text-primary: var(--text-app);
+  --text-secondary: var(--text-muted);
+  --icon-primary: var(--text-app);
+  --icon-secondary: var(--text-muted);
   --background: 225 71.79% 15.29%;
   --foreground: 210 20% 98.04%;
   --panel: 215 27.91% 16.86%;
@@ -71,9 +80,6 @@ body {
   --muted: 216.92 19.12% 26.67%;
   --muted-foreground: 225.71 67.74% 87.84%;
   --border: 216.92 19.12% 26.67%;
-  --text-secondary: 214.29 31.82% 91.37%;
-  --icon-primary: 210 20% 98.04%;
-  --icon-secondary: 214.29 31.82% 91.37%;
   --primary: 209 100% 47.06%;
   --primary-foreground: 228 100% 98.04%;
   --primary-gradient-from: 209 100% 47.06%;
@@ -98,16 +104,25 @@ body {
   }
 }
 
+
 .bg-app {
   background-color: var(--bg-app);
 }
 
-.text-primary {
-  color: var(--text-primary);
+.text-app {
+  color: var(--text-app);
+}
+
+.text-surface {
+  color: var(--text-surface);
 }
 
 .text-muted {
   color: var(--text-muted);
+}
+
+.text-inverse {
+  color: var(--text-inverse);
 }
 
 .border-neutral {
@@ -120,6 +135,14 @@ body {
 
 .dark .bg-gradient-card {
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.03) 100%);
+}
+
+.bg-section {
+  background-image: linear-gradient(180deg, #F5F7FF 0%, #E6F3FF 45%, #E9FFF4 100%);
+}
+
+.dark .bg-section {
+  background-image: linear-gradient(180deg, #0B1943 0%, #0A3E7A 50%, #0F766E 100%);
 }
 
 .border-soft {

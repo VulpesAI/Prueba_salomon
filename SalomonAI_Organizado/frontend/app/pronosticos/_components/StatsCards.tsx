@@ -18,9 +18,9 @@ function Stat({ label, value }: { label: string; value: number }) {
   const text = Number.isFinite(value) ? value.toLocaleString('es-CL') : '—';
 
   return (
-    <div className="rounded-card border border-soft bg-gradient-card p-4">
+    <div className="rounded-card border border-soft bg-gradient-card p-4 text-surface">
       <div className="text-sm text-muted">{label}</div>
-      <div className="text-2xl font-semibold tabular-nums">{text}</div>
+      <div className="text-2xl font-semibold tabular-nums text-surface">{text}</div>
     </div>
   );
 }

@@ -32,7 +32,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen bg-background text-foreground font-sans antialiased">
+      <body className="min-h-screen bg-app text-app font-sans antialiased">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

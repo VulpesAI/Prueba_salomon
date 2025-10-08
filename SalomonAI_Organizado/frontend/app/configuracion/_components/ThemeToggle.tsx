@@ -7,10 +7,10 @@ export default function ThemeToggle() {
   const isDark = settings.theme === 'dark';
 
   return (
-    <div className="space-y-2 rounded-card border border-soft bg-gradient-card p-4">
-      <h3 className="text-base font-semibold text-primary">Modo oscuro</h3>
+    <div className="space-y-2 rounded-card border border-soft bg-gradient-card p-4 text-surface">
+      <h3 className="text-base font-semibold text-surface">Modo oscuro</h3>
       <p className="text-sm text-muted">Activa el tema oscuro (recomendado).</p>
-      <label className="inline-flex items-center gap-2 text-sm">
+      <label className="inline-flex items-center gap-2 text-sm text-surface">
         <input
           type="checkbox"
           checked={isDark}

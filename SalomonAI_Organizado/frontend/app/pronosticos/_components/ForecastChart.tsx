@@ -52,7 +52,7 @@ export default function ForecastChart({ data }: { data: ForecastResponse }) {
   );
 
   return (
-    <section className="h-80 rounded-card border border-soft bg-gradient-card p-3">
+    <section className="h-80 rounded-card border border-soft bg-gradient-card p-3 text-surface">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={rows} margin={{ top: 12, right: 16, bottom: 12, left: 8 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
@@ -125,13 +125,13 @@ function TooltipContent(props: TooltipProps<number, string>) {
   }
 
   return (
-    <div className="rounded-card border border-soft bg-gradient-card px-3 py-2 text-sm text-primary shadow-md backdrop-blur">
+    <div className="rounded-card border border-soft bg-gradient-card px-3 py-2 text-sm text-surface shadow-md backdrop-blur">
       <div className="mb-1 text-xs font-medium text-muted">{label}</div>
       <ul className="space-y-1">
         {formatted.map((item) => (
-          <li key={item.key} className="flex items-center justify-between gap-4">
+          <li key={item.key} className="flex items-center justify-between gap-4 text-surface">
             <span className="capitalize text-muted">{item.name}</span>
-            <span className="font-medium tabular-nums text-primary">{item.value}</span>
+            <span className="font-medium tabular-nums text-surface">{item.value}</span>
           </li>
         ))}
       </ul>
