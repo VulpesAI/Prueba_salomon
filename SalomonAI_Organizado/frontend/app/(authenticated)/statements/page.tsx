@@ -1,6 +1,6 @@
 "use client"
 
-import { ManualStatementUploadCard } from "@/components/authenticated/manual-statement-upload-card"
+import StatementUploader from "@/components/StatementUploader"
 import { StatementHistory } from "@/components/authenticated/statements/statement-history"
 import { useStatements } from "@/hooks/use-statements"
 
@@ -17,7 +17,7 @@ export default function StatementsPage() {
         </p>
       </header>
 
-      <ManualStatementUploadCard />
+      <StatementUploader />
 
       <StatementHistory statements={statements} isLoading={isLoading} onRefresh={refetch} />
     </div>

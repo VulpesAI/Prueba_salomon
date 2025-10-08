@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 
-import { ManualStatementUploadCard } from "@/components/authenticated/manual-statement-upload-card"
+import StatementUploader from "@/components/StatementUploader"
 import {
   Card,
   CardContent,
@@ -440,7 +440,7 @@ export default function SettingsProfilePage() {
         </CardContent>
       </Card>
 
-      <ManualStatementUploadCard />
+      <StatementUploader />
     </div>
   )
 }

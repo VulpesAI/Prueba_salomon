@@ -77,3 +77,18 @@ export const TTSOut = z.object({
   provider: z.string(),
 });
 export type TTTSOut = z.infer<typeof TTSOut>;
+
+export const StatementUploadResp = z.object({
+  statement_id: z.string(),
+  status: z.enum(["queued", "processing", "processed", "failed"]).optional(),
+});
+export type TStatementUploadResp = z.infer<typeof StatementUploadResp>;
+
+export const StatementStatus = z.object({
+  statement_id: z.string(),
+  status: z.enum(["queued", "processing", "processed", "failed"]),
+  bank: z.string().nullable(),
+  period: z.string().nullable(),
+  error: z.string().nullable(),
+});
+export type TStatementStatus = z.infer<typeof StatementStatus>;
