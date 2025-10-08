@@ -11,13 +11,14 @@ import {
 
 import { DEFAULT_SETTINGS, type SettingsState, type VoiceId } from '@/types/settings';
 
-import { applyTheme } from './theme';
-import { loadSettings, saveSettings } from './storage';
+import { applyTheme } from '../theme/applyTheme';
+import { getSettings, updateSettings } from './adapter';
+import type { SettingsFormState, ThemeOption } from './types';
 
 type SettingsContextValue = {
   settings: SettingsState;
   setVoice: (voice: VoiceId) => void;
-  setTheme: (theme: 'light' | 'dark') => void;
+  setTheme: (theme: ThemeOption) => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -26,24 +27,46 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    setSettings(loadSettings(DEFAULT_SETTINGS));
+    let active = true;
+    (async () => {
+      try {
+        const dto = await getSettings();
+        if (!active) return;
+        setSettings({ voice: dto.voice, theme: dto.theme });
+      } catch (error) {
+        console.error('Failed to load settings', error);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
-
-  useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
 
   useEffect(() => {
     applyTheme(settings.theme);
   }, [settings.theme]);
 
-  const setVoice = useCallback((voice: VoiceId) => {
-    setSettings((current) => ({ ...current, voice }));
+  const persist = useCallback((next: SettingsState) => {
+    setSettings(next);
+    const payload: SettingsFormState = { voice: next.voice, theme: next.theme };
+    void updateSettings(payload).catch((error) => {
+      console.error('Failed to persist settings', error);
+    });
   }, []);
 
-  const setTheme = useCallback((theme: 'light' | 'dark') => {
-    setSettings((current) => ({ ...current, theme }));
-  }, []);
+  const setVoice = useCallback(
+    (voice: VoiceId) => {
+      persist({ ...settings, voice });
+    },
+    [persist, settings],
+  );
+
+  const setTheme = useCallback(
+    (theme: ThemeOption) => {
+      persist({ ...settings, theme });
+    },
+    [persist, settings],
+  );
 
   const value = useMemo(
     () => ({ settings, setVoice, setTheme }),

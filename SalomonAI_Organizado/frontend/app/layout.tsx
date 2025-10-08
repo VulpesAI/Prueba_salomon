@@ -18,17 +18,17 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        {/* Evita flash de tema leyendo localStorage antes de render */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-(function(){
   try {
-    var raw = localStorage.getItem('salomonai:settings');
-    var theme = raw ? JSON.parse(raw).theme : 'dark';
-    if (theme === 'dark') { document.documentElement.classList.add('dark'); }
-    else { document.documentElement.classList.remove('dark'); }
-  } catch(e) { document.documentElement.classList.add('dark'); }
-})();`,
+    const s = localStorage.getItem('salomon.settings');
+    const t = s ? JSON.parse(s).theme : 'dark';
+    if (t === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  } catch {}
+`,
           }}
         />
       </head>
