@@ -34,7 +34,7 @@ export function useMovimientos(params: {
   return useInfiniteQuery({
     queryKey: ["movimientos", params],
     initialPageParam: 1,
-    queryFn: ({ pageParam }) => {
+    queryFn: async ({ pageParam }) => {
       const query = new URLSearchParams({
         ...Object.fromEntries(
           Object.entries(params).filter(([, value]) => value != null && value !== ""),

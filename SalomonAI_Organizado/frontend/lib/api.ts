@@ -1,4 +1,6 @@
-const API = process.env.NEXT_PUBLIC_API_BASE_URL!;
+const PUBLIC_API = process.env.NEXT_PUBLIC_API_BASE_URL;
+export const API_BASE =
+  typeof window !== "undefined" && !PUBLIC_API ? "" : PUBLIC_API ?? "";
 
 export async function authHeader() {
   if (typeof window === "undefined") {
@@ -10,7 +12,7 @@ export async function authHeader() {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: {
       ...(await authHeader()),
     },
@@ -25,7 +27,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

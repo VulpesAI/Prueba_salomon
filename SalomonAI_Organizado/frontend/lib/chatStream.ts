@@ -1,4 +1,4 @@
-import { authHeader } from "@/lib/api";
+import { API_BASE, authHeader } from "@/lib/api";
 
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
@@ -41,7 +41,7 @@ export async function streamSSE(
   }, timeoutMs);
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/conversation/stream-sse`, {
+    const res = await fetch(`${API_BASE}/conversation/stream-sse`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -131,8 +131,9 @@ export function streamChatWS(
   onOpen?: () => void,
   onClose?: () => void,
 ) {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-  const url = base.replace(/^http/, "ws") + "/conversation/stream";
+  const httpBase =
+    API_BASE || (typeof window !== "undefined" ? window.location.origin : "");
+  const url = httpBase.replace(/^http/, "ws") + "/conversation/stream";
   const socket = new WebSocket(url);
 
   socket.onopen = () => onOpen?.();
