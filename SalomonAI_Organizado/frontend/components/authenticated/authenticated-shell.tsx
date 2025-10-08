@@ -13,6 +13,7 @@ import { Menu } from "lucide-react"
 import { Breadcrumbs } from "./breadcrumbs"
 import { SidebarNav } from "./sidebar-nav"
 import { TopbarActions } from "./topbar-actions"
+import { HeaderResumen } from "../HeaderResumen"
 
 const LoadingShell = () => (
   <div className="flex min-h-screen flex-col bg-background">
@@ -88,8 +89,13 @@ export function AuthenticatedShell({
                 variant="inverted"
               />
             </div>
+            </div>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block">
+              <HeaderResumen />
+            </div>
+            <TopbarActions user={user} onLogout={logout} />
           </div>
-          <TopbarActions user={user} onLogout={logout} />
         </div>
       </header>
       <main className="flex-1 px-4 py-8 md:px-6">

@@ -16,13 +16,13 @@ El token JWT emitido por Firebase o el backend debe almacenarse en `sessionStora
 
 ## Cliente HTTP
 
-El archivo [`lib/api.ts`](../lib/api.ts) centraliza los accesos a `fetch`, inyecta el encabezado `Authorization` con el JWT disponible y valida las respuestas con Zod. Todos los módulos consumen estas funciones a través de los hooks de React Query definidos en [`lib/hooks.ts`](../lib/hooks.ts).
+El archivo [`lib/api.ts`](../lib/api.ts) centraliza los accesos a `fetch` e inyecta el encabezado `Authorization` con el JWT disponible. Las respuestas se validan con Zod en los hooks de React Query definidos en [`lib/hooks.ts`](../lib/hooks.ts).
 
 ## Dashboard
 
-- **Resumen:** `GET /dashboard/resumen` → [`useDashboardResumen`](../lib/hooks.ts) validado con [`DashboardResumen`](../lib/schemas.ts).
-- **Proyección:** `GET /dashboard/proyeccion` → [`useDashboardProyeccion`](../lib/hooks.ts) validado con [`DashboardProyeccion`](../lib/schemas.ts).
-- **UI:** [`app/(authenticated)/dashboard/overview/page.tsx`](../app/(authenticated)/dashboard/overview/page.tsx) muestra métricas reales, skeletons durante carga y estado de error con reintento.
+- **Resumen:** `GET /dashboard/resumen` → [`useResumen`](../lib/hooks.ts) (y [`useDashboardResumen`](../lib/hooks.ts) como alias) validado con [`ResumenResp`](../lib/schemas.ts). El resumen también se muestra en el header mediante [`HeaderResumen`](../components/HeaderResumen.tsx).
+- **Proyección:** `GET /forecasts/{user_id}?horizon=30` → [`useForecast`](../lib/hooks.ts). [`app/(authenticated)/analytics/forecasts/page.tsx`](../app/(authenticated)/analytics/forecasts/page.tsx) renderiza el gráfico en tiempo real con Recharts.
+- **UI principal:** [`app/(authenticated)/dashboard/overview/page.tsx`](../app/(authenticated)/dashboard/overview/page.tsx) muestra métricas reales, skeletons durante carga y estado de error con reintento.
 
 ## Transacciones
 
@@ -31,15 +31,15 @@ El archivo [`lib/api.ts`](../lib/api.ts) centraliza los accesos a `fetch`, inyec
 
 ## Chat conversacional
 
-- **Streaming SSE:** [`streamChatSSE`](../lib/chatStream.ts) consume `POST /conversation/stream-sse` y emite tokens incrementales.
+- **Streaming SSE:** [`streamSSE`](../lib/chatStream.ts) consume `POST /conversation/stream-sse` y entrega tokens, intents e insights en tiempo real.
 - **Fallback sin streaming:** [`useChatSync`](../lib/hooks.ts) usa `POST /conversation/chat`.
 - **WebSocket (opcional):** [`streamChatWS`](../lib/chatStream.ts) se conecta a `WS /conversation/stream` para recibir deltas en tiempo real.
-- **Pantalla:** [`app/(authenticated)/assistant/page.tsx`](../app/(authenticated)/assistant/page.tsx) gestiona la conversación, cancelación y errores.
+- **Pantalla:** [`app/(authenticated)/assistant/page.tsx`](../app/(authenticated)/assistant/page.tsx) gestiona la conversación, cancelación, reconexión básica e insights detectados.
 
 ## Recomendaciones personalizadas
 
-- **Endpoint:** `GET /recommendations/personalized/{user_id}?limit=...` → [`useRecomendaciones`](../lib/hooks.ts).
-- **Vista:** [`app/(authenticated)/analytics/recommendations/page.tsx`](../app/(authenticated)/analytics/recommendations/page.tsx) lista recomendaciones priorizadas y evidencia asociada.
+- **Endpoint:** `GET /recommendations/personalized/{user_id}?limit=...` → [`useRecomendaciones`](../lib/hooks.ts) con feedback mediante [`useRecoFeedback`](../lib/hooks.ts).
+- **Vista:** [`app/(authenticated)/analytics/recommendations/page.tsx`](../app/(authenticated)/analytics/recommendations/page.tsx) lista recomendaciones priorizadas, muestra puntajes del motor y permite enviar feedback "Útil/No útil".
 
 ## Voz (STT / TTS / Tiempo real)
 

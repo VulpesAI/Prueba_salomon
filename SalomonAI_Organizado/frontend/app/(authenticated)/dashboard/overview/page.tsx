@@ -58,6 +58,8 @@ export default function DashboardOverviewPage() {
     return <p>No hay datos disponibles para tu dashboard todavía.</p>;
   }
 
+  const topCategories = resumen.data.top_categories ?? [];
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card className="lg:col-span-2">
@@ -71,7 +73,7 @@ export default function DashboardOverviewPage() {
           <div className="rounded-md border p-4">
             <p className="text-sm font-medium">Categorías principales</p>
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-              {resumen.data.top_categories.map((category) => (
+              {topCategories.map((category) => (
                 <li key={category.name} className="flex items-center justify-between">
                   <span>{category.name}</span>
                   <span>{currencyFormatter.format(category.amount)}</span>
