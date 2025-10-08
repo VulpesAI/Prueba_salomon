@@ -44,3 +44,7 @@ secrets/*.env
 *.pid
 
 services/core-api/dist/
+
+# TypeScript incremental build output
+tsconfig.tsbuildinfo
+frontend/tsconfig.tsbuildinfo

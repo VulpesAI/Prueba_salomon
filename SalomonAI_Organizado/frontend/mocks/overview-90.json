@@ -1,0 +1,33 @@
+{
+  "kpis": {
+    "incomeCLP": 21450000,
+    "expensesCLP": 16820000,
+    "netCLP": 4630000,
+    "incomeDelta": 3.1,
+    "expensesDelta": 4.5,
+    "netDelta": -1.7
+  },
+  "flux": [
+    { "date": "2024-09-01", "amount": 230000, "type": "hist" },
+    { "date": "2024-09-15", "amount": 245000, "type": "hist" },
+    { "date": "2024-10-01", "amount": 255000, "type": "hist" },
+    { "date": "2024-10-15", "amount": 268000, "type": "hist" },
+    { "date": "2024-11-01", "amount": 280000, "type": "hist" },
+    { "date": "2024-11-15", "amount": 292000, "type": "hist" },
+    { "date": "2024-12-01", "amount": 301000, "type": "proj", "model_type": "ensemble", "calculated_at": "2024-11-20T09:00:00Z" },
+    { "date": "2024-12-15", "amount": 308500, "type": "proj", "model_type": "ensemble", "calculated_at": "2024-11-20T09:00:00Z" },
+    { "date": "2025-01-01", "amount": 315000, "type": "proj", "model_type": "ensemble", "calculated_at": "2024-11-20T09:00:00Z" }
+  ],
+  "categories": [
+    { "name": "Arriendo", "amount": 1260000, "percent": 22.4 },
+    { "name": "Supermercado", "amount": 1945000, "percent": 17.2 },
+    { "name": "Transporte", "amount": 1280000, "percent": 11.5 },
+    { "name": "Educación", "amount": 975000, "percent": 8.7 },
+    { "name": "Viajes", "amount": 845000, "percent": 7.4 }
+  ],
+  "insights": [
+    { "text": "Los gastos trimestrales en transporte superan el presupuesto en 9%." },
+    { "text": "La tasa de crecimiento de ingresos se moderó durante noviembre." },
+    { "text": "Considera diversificar inversiones para mantener el flujo neto positivo." }
+  ]
+}

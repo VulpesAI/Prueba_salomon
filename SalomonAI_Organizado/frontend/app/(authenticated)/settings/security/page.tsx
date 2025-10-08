@@ -248,7 +248,7 @@ export default function SettingsSecurityPage() {
             </Button>
             <p className="text-sm text-muted-foreground">
               Encuentra alertas y eventos críticos en el{" "}
-              <Link className="font-medium text-primary underline" href="/(authenticated)/alerts">
+              <Link className="font-medium text-primary underline" href="/alerts">
                 centro de alertas
               </Link>
               .

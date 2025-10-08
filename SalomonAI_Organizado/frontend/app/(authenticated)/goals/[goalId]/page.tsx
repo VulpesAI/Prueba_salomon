@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useMemo } from "react"
 import { useParams } from "next/navigation"
+import type { Route } from "next"
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -491,7 +492,10 @@ export default function GoalDetailPage() {
             </CardContent>
             <CardFooter>
               <Button asChild variant="outline" size="sm">
-                <Link href={`/goals/${detail.id}/editar?step=timeline`} className="inline-flex items-center gap-1">
+                <Link
+                  href={`/goals/${detail.id}/editar?step=timeline` as Route}
+                  className="inline-flex items-center gap-1"
+                >
                   <CalendarCheck2 className="h-4 w-4" />
                   Programar nuevo hito
                 </Link>
