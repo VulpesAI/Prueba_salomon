@@ -29,6 +29,9 @@ import websockets
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK, InvalidStatusCode
 
 from .models import (
+    VoiceCatalogResponse,
+    VoicePreferenceRequest,
+    VoicePreferenceResponse,
     VoiceSynthesisRequest,
     VoiceSynthesisResponse,
     VoiceTranscriptionPayload,
@@ -39,6 +42,8 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from .providers import BaseTTSClient, STTProvider, get_stt_provider, get_tts_client
 from .settings import get_settings
+from .user_settings import VoicePreferenceRepository, build_voice_repository
+from .voice_registry import VoiceEndpoint, voice_registry
 logger = logging.getLogger(__name__)
 settings = get_settings()
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
@@ -113,13 +118,99 @@ metrics_instrumentator.instrument(
 ).expose(app, include_in_schema=False)
 
 
+voice_preferences: VoicePreferenceRepository = build_voice_repository()
+
+
 async def get_clients() -> Dict[str, object]:
     return {"stt": get_stt_provider(), "tts": get_tts_client()}
+
+
+def _extract_user_id_from_headers(headers: Dict[str, str]) -> Optional[str]:
+    for key in ("x-user-id", "x-user", "x-supabase-uid", "x-client-user"):
+        value = headers.get(key)
+        if value and value.strip():
+            return value.strip()
+    return None
+
+
+def _extract_user_id(headers: Dict[str, str], query_params: Dict[str, str]) -> Optional[str]:
+    user_id = _extract_user_id_from_headers(headers)
+    if user_id:
+        return user_id
+    for key in ("user_id", "user", "uid"):
+        value = query_params.get(key)
+        if value and value.strip():
+            return value.strip()
+    return None
+
+
+async def _resolve_voice(endpoint: VoiceEndpoint, requested_voice: Optional[str], headers: Dict[str, str]) -> str:
+    if requested_voice:
+        resolved = voice_registry.resolve_voice(requested_voice, endpoint)
+        if not resolved:
+            raise HTTPException(status_code=400, detail="voice_not_supported")
+        return resolved
+
+    user_id = _extract_user_id_from_headers(headers)
+    if user_id:
+        preferred = await voice_preferences.get_voice(user_id)
+        if preferred:
+            resolved = voice_registry.resolve_voice(preferred, endpoint)
+            if resolved:
+                return resolved
+
+    try:
+        return voice_registry.default_voice(endpoint)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="voice_unavailable") from exc
+
+
+@app.on_event("startup")
+async def _refresh_voice_registry() -> None:  # pragma: no cover - evento de FastAPI
+    await voice_registry.refresh_availability()
 
 
 @app.get("/health")
 async def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/voice/voices", response_model=VoiceCatalogResponse)
+async def list_voices() -> VoiceCatalogResponse:
+    snapshot = voice_registry.availability_snapshot()
+    return VoiceCatalogResponse(
+        voices=snapshot,
+        model_tts=settings.openai_tts_model,
+        model_realtime=settings.openai_realtime_model,
+    )
+
+
+@app.post("/user/settings/voice", response_model=VoicePreferenceResponse)
+async def set_user_voice(payload: VoicePreferenceRequest, request: Request) -> VoicePreferenceResponse:
+    headers = {key.lower(): value for key, value in request.headers.items()}
+    user_id = _extract_user_id_from_headers(headers)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="missing_user_id")
+    voice_id = voice_registry.resolve_voice(payload.voice, "tts")
+    if not voice_id:
+        raise HTTPException(status_code=400, detail="voice_not_supported")
+    await voice_preferences.save_voice(user_id, voice_id)
+    return VoicePreferenceResponse(voice=voice_id)
+
+
+@app.get("/user/settings/voice", response_model=VoicePreferenceResponse)
+async def get_user_voice(request: Request) -> VoicePreferenceResponse:
+    headers = {key.lower(): value for key, value in request.headers.items()}
+    user_id = _extract_user_id_from_headers(headers)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="missing_user_id")
+    preferred = await voice_preferences.get_voice(user_id)
+    if preferred:
+        resolved = voice_registry.resolve_voice(preferred, "tts")
+        if resolved:
+            return VoicePreferenceResponse(voice=resolved)
+    fallback = voice_registry.default_voice("tts")
+    return VoicePreferenceResponse(voice=fallback)
 
 
 @app.post("/voice/transcriptions", response_model=VoiceTranscriptionResponse)
@@ -229,6 +320,7 @@ async def transcribe(
 @app.post("/voice/speech", response_model=VoiceSynthesisResponse)
 async def synthesize(
     payload: VoiceSynthesisRequest,
+    request: Request,
     clients: Dict[str, object] = Depends(get_clients),
 ) -> VoiceSynthesisResponse:
     tts: BaseTTSClient = clients["tts"]
@@ -244,7 +336,8 @@ async def synthesize(
     if audio_format not in {"mp3", "wav"}:
         raise HTTPException(status_code=400, detail="format_not_supported")
 
-    voice = payload.voice or settings.resolved_tts_voice
+    headers = {key.lower(): value for key, value in request.headers.items()}
+    voice = await _resolve_voice("tts", payload.voice, headers)
     language = payload.language or settings.resolved_tts_language
     speed = payload.speed if payload.speed is not None else settings.tts_default_speed
     if speed <= 0:
@@ -380,7 +473,19 @@ async def voice_stream(websocket: WebSocket, language: Optional[str] = "es-CL"):
         STREAM_SESSION_DURATION.observe(time.perf_counter() - session_start)
         return
 
-    current_voice = (settings.openai_realtime_voice or "alloy").strip() or "alloy"
+    headers = {key.lower(): value for key, value in websocket.headers.items()}
+    query_params = {key: value for key, value in websocket.query_params.items()}
+    user_id = _extract_user_id(headers, query_params)
+    preferred_voice: Optional[str] = None
+    if user_id:
+        preferred_raw = await voice_preferences.get_voice(user_id)
+        if preferred_raw:
+            preferred_voice = voice_registry.resolve_voice(preferred_raw, "realtime")
+
+    try:
+        current_voice = preferred_voice or voice_registry.default_voice("realtime")
+    except RuntimeError:
+        current_voice = (settings.openai_realtime_voice or "alloy").strip() or "alloy"
     current_audio_format = (
         (settings.openai_realtime_audio_format or "mp3").strip().lower() or "mp3"
     )
@@ -465,8 +570,24 @@ async def voice_stream(websocket: WebSocket, language: Optional[str] = "es-CL"):
 
                         event_type = data.get("type")
                         if event_type == "config":
+                            invalid_voice = False
                             if "voice" in data and isinstance(data["voice"], str):
-                                current_voice = data["voice"].strip() or current_voice
+                                requested_voice = data["voice"].strip()
+                                if requested_voice:
+                                    resolved_voice = voice_registry.resolve_voice(requested_voice, "realtime")
+                                    if not resolved_voice:
+                                        await websocket.send_json(
+                                            {
+                                                "type": "error",
+                                                "code": "voice_not_supported",
+                                                "detail": f"La voz {requested_voice} no está disponible en tiempo real",
+                                            }
+                                        )
+                                        invalid_voice = True
+                                    else:
+                                        current_voice = resolved_voice
+                            if invalid_voice:
+                                continue
                             if "audio_format" in data and isinstance(data["audio_format"], str):
                                 current_audio_format = data["audio_format"].strip().lower() or current_audio_format
                             if "lang" in data and isinstance(data["lang"], str):

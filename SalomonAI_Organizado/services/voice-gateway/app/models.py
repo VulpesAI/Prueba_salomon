@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -42,3 +42,30 @@ class VoiceSynthesisResponse(BaseModel):
 class VoiceStreamEvent(BaseModel):
     event: str
     payload: Dict[str, str] = Field(default_factory=dict)
+
+
+class VoiceSupportsModel(BaseModel):
+    tts: bool = True
+    realtime: bool = False
+
+
+class VoiceDefinitionModel(BaseModel):
+    id: str
+    label: str
+    supports: VoiceSupportsModel
+    latency_ms: Optional[Dict[str, Optional[float]]] = None
+    failures: Optional[Dict[str, str]] = None
+
+
+class VoiceCatalogResponse(BaseModel):
+    voices: List[VoiceDefinitionModel]
+    model_tts: str
+    model_realtime: str
+
+
+class VoicePreferenceRequest(BaseModel):
+    voice: str
+
+
+class VoicePreferenceResponse(BaseModel):
+    voice: str

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { Navigation } from '../../components/Navigation';
+import { VoicePicker } from '../../components/VoicePicker';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { ManualStatementUploadCard } from '../../components/authenticated/manual-statement-upload-card';
@@ -24,6 +25,7 @@ import { useConversationEngine } from '../../hooks/useConversationEngine';
 import { useVoiceGateway } from '../../hooks/useVoiceGateway';
 import { useFinancialSummary } from '../../hooks/useFinancialSummary';
 import { useDemoFinancialData } from '../../context/DemoFinancialDataContext';
+import { useAuth } from '../../context/AuthContext';
 import type { NormalizedStatement } from '../../lib/statements/parser';
 
 const formatCurrency = (amount: number) =>
@@ -44,6 +46,9 @@ export default function DemoPage() {
   const [sessionId] = useState(() => crypto.randomUUID());
   const [draftMessage, setDraftMessage] = useState('');
   const [voiceDraft, setVoiceDraft] = useState('');
+  const [voiceId, setVoiceId] = useState<string | undefined>(undefined);
+
+  const { user } = useAuth();
 
   const {
     summary,
@@ -87,6 +92,8 @@ export default function DemoPage() {
 
   const voiceGateway = useVoiceGateway({
     sessionId,
+    userId: user?.id,
+    voiceId,
     onPartialTranscript: setVoiceDraft,
     onFinalTranscript: text => {
       setVoiceDraft('');
@@ -238,28 +245,31 @@ export default function DemoPage() {
 
             <div className="lg:col-span-2 space-y-6">
               <Card className="p-6 bg-gradient-card border-primary/20 h-full flex flex-col">
-                <div className="flex items-center justify-between pb-6 mb-4">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-primary" />
-                    <h2 className="text-xl font-semibold">Conversación con SalomonAI</h2>
+                <div className="pb-6 mb-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-primary" />
+                      <h2 className="text-xl font-semibold">Conversación con SalomonAI</h2>
+                    </div>
+                    <Button
+                      variant={voiceStatus === 'listening' ? 'destructive' : 'outline'}
+                      onClick={voiceStatus === 'listening' ? stopVoice : startVoice}
+                      className="flex items-center gap-2"
+                    >
+                      {voiceStatus === 'listening' ? (
+                        <>
+                          <MicOff className="w-4 h-4" />
+                          Detener voz
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-4 h-4" />
+                          Activar voz
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    variant={voiceStatus === 'listening' ? 'destructive' : 'outline'}
-                    onClick={voiceStatus === 'listening' ? stopVoice : startVoice}
-                    className="flex items-center gap-2"
-                  >
-                    {voiceStatus === 'listening' ? (
-                      <>
-                        <MicOff className="w-4 h-4" />
-                        Detener voz
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="w-4 h-4" />
-                        Activar voz
-                      </>
-                    )}
-                  </Button>
+                  <VoicePicker current={voiceId} onChange={setVoiceId} />
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-1 min-h-[18rem]">

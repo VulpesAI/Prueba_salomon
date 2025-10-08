@@ -6,7 +6,7 @@ import { synthesizeSpeech, voiceTurn, VoiceLoopError, VoiceTurnResult } from '@/
 
 type RecorderStatus = 'idle' | 'recording' | 'processing';
 
-export function VoiceButton({ userId }: { userId?: string }) {
+export function VoiceButton({ userId, voiceId }: { userId?: string; voiceId?: string }) {
   const [status, setStatus] = useState<RecorderStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [assistantText, setAssistantText] = useState<string>('');
@@ -55,6 +55,7 @@ export function VoiceButton({ userId }: { userId?: string }) {
       const result = await voiceTurn({
         audioBlob: blob,
         userId,
+        voiceId,
         onMetrics: setMetrics
       });
       handleVoiceResult(result);
@@ -67,7 +68,7 @@ export function VoiceButton({ userId }: { userId?: string }) {
     } finally {
       setStatus('idle');
     }
-  }, [handleVoiceResult, userId]);
+  }, [handleVoiceResult, userId, voiceId]);
 
   const startRecording = useCallback(async () => {
     setError(null);
@@ -118,7 +119,7 @@ export function VoiceButton({ userId }: { userId?: string }) {
   const retryAudio = useCallback(async () => {
     if (!assistantText.trim()) return;
     try {
-      const audioBlob = await synthesizeSpeech({ text: assistantText });
+      const audioBlob = await synthesizeSpeech({ text: assistantText, userId, voiceId });
       const url = URL.createObjectURL(audioBlob);
       const audio = new Audio(url);
       audio.onended = () => URL.revokeObjectURL(url);
@@ -128,7 +129,7 @@ export function VoiceButton({ userId }: { userId?: string }) {
       const message = err instanceof VoiceLoopError ? err.message : 'No fue posible generar el audio.';
       setError(message);
     }
-  }, [assistantText]);
+  }, [assistantText, userId, voiceId]);
 
   return (
     <div className="flex flex-col gap-3">
