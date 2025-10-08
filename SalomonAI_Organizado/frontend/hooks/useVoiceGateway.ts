@@ -6,6 +6,8 @@ export type VoiceStatus = 'idle' | 'connecting' | 'listening' | 'stopped' | 'err
 
 interface VoiceGatewayOptions {
   sessionId: string;
+  userId?: string;
+  voiceId?: string;
   onPartialTranscript?: (text: string) => void;
   onFinalTranscript?: (text: string) => void;
 }
@@ -18,7 +20,13 @@ interface VoiceGatewayHook {
   speak: (text: string) => Promise<void>;
 }
 
-export function useVoiceGateway({ sessionId, onPartialTranscript, onFinalTranscript }: VoiceGatewayOptions): VoiceGatewayHook {
+export function useVoiceGateway({
+  sessionId,
+  userId,
+  voiceId,
+  onPartialTranscript,
+  onFinalTranscript
+}: VoiceGatewayOptions): VoiceGatewayHook {
   const [status, setStatus] = useState<VoiceStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -30,8 +38,12 @@ export function useVoiceGateway({ sessionId, onPartialTranscript, onFinalTranscr
 
   const wsUrl = useMemo(() => {
     const base = restUrl.replace('http://', 'ws://').replace('https://', 'wss://');
-    return `${base}/voice/stream?session=${sessionId}`;
-  }, [restUrl, sessionId]);
+    const params = new URLSearchParams({ session: sessionId });
+    if (userId) {
+      params.set('user', userId);
+    }
+    return `${base}/voice/stream?${params.toString()}`;
+  }, [restUrl, sessionId, userId]);
 
   const cleanup = useCallback(() => {
     reconnectTimeout.current && clearTimeout(reconnectTimeout.current);
@@ -87,6 +99,9 @@ export function useVoiceGateway({ sessionId, onPartialTranscript, onFinalTranscr
     socket.onopen = () => {
       setStatus('listening');
       socket.send(JSON.stringify({ event: 'start', payload: { sessionId } }));
+      if (voiceId) {
+        socket.send(JSON.stringify({ type: 'config', voice: voiceId }));
+      }
     };
     socket.onerror = () => {
       setError('No fue posible conectar con el voice-gateway');
@@ -114,24 +129,34 @@ export function useVoiceGateway({ sessionId, onPartialTranscript, onFinalTranscr
         const response = await fetch(`${restUrl}/voice/speech`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(userId ? { 'X-User-Id': userId } : {})
           },
-          body: JSON.stringify({ text, session_id: sessionId })
+          body: JSON.stringify({ text, session_id: sessionId, voice: voiceId })
         });
         if (!response.ok) {
           throw new Error('No se pudo sintetizar la respuesta');
         }
         const data = await response.json();
         if (data.audio_base64) {
-          const audio = new Audio(`data:${data.format};base64,${data.audio_base64}`);
+          const mime = typeof data.mime === 'string' ? data.mime : 'audio/mp3';
+          const audio = new Audio(`data:${mime};base64,${data.audio_base64}`);
           void audio.play();
         }
       } catch (err) {
         setError((err as Error).message);
       }
     },
-    [restUrl, sessionId]
+    [restUrl, sessionId, userId, voiceId]
   );
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN || !voiceId) {
+      return;
+    }
+    socket.send(JSON.stringify({ type: 'config', voice: voiceId }));
+  }, [voiceId]);
 
   return {
     status,

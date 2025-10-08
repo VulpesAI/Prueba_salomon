@@ -80,6 +80,10 @@ class VoiceGatewaySettings(BaseSettings):
         default="mp3",
         validation_alias=AliasChoices("VOICE_OPENAI_TTS_FORMAT", "OPENAI_TTS_FORMAT"),
     )
+    supabase_url: str | None = Field(default=None, alias="SUPABASE_URL")
+    supabase_service_key: str | None = Field(default=None, alias="SUPABASE_SERVICE_ROLE_KEY")
+    supabase_voice_table: str = Field(default="user_settings", alias="SUPABASE_VOICE_TABLE")
+    supabase_schema: str = Field(default="public", alias="SUPABASE_SCHEMA")
     allowed_origins: List[str] = Field(default_factory=lambda: ["*"], alias="VOICE_GATEWAY_ALLOWED_ORIGINS")
     log_level: str = Field(default="INFO", alias="VOICE_GATEWAY_LOG_LEVEL")
 

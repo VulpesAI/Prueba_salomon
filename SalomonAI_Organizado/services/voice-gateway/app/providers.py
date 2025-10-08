@@ -9,7 +9,17 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import Any, Dict, TypedDict
 
-from fastapi import HTTPException
+try:
+    from fastapi import HTTPException
+except ModuleNotFoundError:  # pragma: no cover - fallback para entornos de QA
+    class HTTPException(Exception):
+        """Fallback mínima para cuando FastAPI no está instalado."""
+
+        def __init__(self, status_code: int, detail: str | None = None) -> None:
+            self.status_code = status_code
+            self.detail = detail
+            message = detail or f"HTTPException {status_code}"
+            super().__init__(message)
 from openai import AsyncOpenAI, OpenAI
 
 from .settings import get_settings

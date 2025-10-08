@@ -29,6 +29,7 @@ interface VoiceTurnOptions {
   chatUrl?: string;
   ttsUrl?: string;
   userId?: string;
+  voiceId?: string;
   timeoutMs?: number;
   onMetrics?: (metrics: VoiceTurnMetrics) => void;
 }
@@ -41,6 +42,7 @@ export async function voiceTurn({
   chatUrl = '/conversation/chat',
   ttsUrl = '/voice/speech',
   userId,
+  voiceId,
   timeoutMs = DEFAULT_TIMEOUT,
   onMetrics
 }: VoiceTurnOptions): Promise<VoiceTurnResult> {
@@ -50,11 +52,16 @@ export async function voiceTurn({
   const totalStarted = performance.now();
 
   const sttStarted = performance.now();
-  const sttResponse = await fetchJson(sttUrl, {
-    audio_base64: audioBase64,
-    mime: mimeType,
-    language: 'es'
-  }, timeoutMs).catch((error) => {
+  const sttResponse = await fetchJson(
+    sttUrl,
+    {
+      audio_base64: audioBase64,
+      mime: mimeType,
+      language: 'es'
+    },
+    timeoutMs,
+    userId ? { 'X-User-Id': userId } : undefined
+  ).catch((error) => {
     throw wrapError('stt_failed', 'No se pudo transcribir el audio', error);
   });
   const sttMs = performance.now() - sttStarted;
@@ -103,11 +110,12 @@ export async function voiceTurn({
       ttsUrl,
       {
         text: reply,
-        voice: 'alloy',
+        voice: voiceId,
         format: 'mp3',
         language: 'es-CL'
       },
-      timeoutMs
+      timeoutMs,
+      userId ? { 'X-User-Id': userId } : undefined
     );
     ttsMs = performance.now() - ttsStarted;
 
@@ -141,10 +149,14 @@ export async function voiceTurn({
 export async function synthesizeSpeech({
   text,
   ttsUrl = '/voice/speech',
+  voiceId,
+  userId,
   timeoutMs = DEFAULT_TIMEOUT
 }: {
   text: string;
   ttsUrl?: string;
+  voiceId?: string;
+  userId?: string;
   timeoutMs?: number;
 }): Promise<Blob> {
   const trimmed = text.trim();
@@ -153,8 +165,9 @@ export async function synthesizeSpeech({
   }
   const response = await fetchJson(
     ttsUrl,
-    { text: trimmed, voice: 'alloy', format: 'mp3', language: 'es-CL' },
-    timeoutMs
+    { text: trimmed, voice: voiceId, format: 'mp3', language: 'es-CL' },
+    timeoutMs,
+    userId ? { 'X-User-Id': userId } : undefined
   ).catch((error) => {
     throw wrapError('tts_failed', 'No fue posible sintetizar la respuesta.', error);
   });
@@ -164,14 +177,20 @@ export async function synthesizeSpeech({
   return base64ToBlob(response.audio_base64, response.mime || 'audio/mp3');
 }
 
-async function fetchJson(url: string, body: Record<string, unknown>, timeoutMs: number) {
+async function fetchJson(
+  url: string,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+  headers?: Record<string, string>
+) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(headers ?? {})
       },
       body: JSON.stringify(body),
       signal: controller.signal

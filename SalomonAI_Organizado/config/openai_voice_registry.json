@@ -1,0 +1,13 @@
+[
+  { "id": "alloy",  "label": "Alloy",  "supports": { "tts": true, "realtime": true } },
+  { "id": "ash",    "label": "Ash",    "supports": { "tts": true, "realtime": true } },
+  { "id": "ballad", "label": "Ballad", "supports": { "tts": true, "realtime": true } },
+  { "id": "coral",  "label": "Coral",  "supports": { "tts": true, "realtime": true } },
+  { "id": "echo",   "label": "Echo",   "supports": { "tts": true, "realtime": true } },
+  { "id": "fable",  "label": "Fable",  "supports": { "tts": true, "realtime": false } },
+  { "id": "onyx",   "label": "Onyx",   "supports": { "tts": true, "realtime": false } },
+  { "id": "nova",   "label": "Nova",   "supports": { "tts": true, "realtime": false } },
+  { "id": "sage",   "label": "Sage",   "supports": { "tts": true, "realtime": true } },
+  { "id": "shimmer","label": "Shimmer","supports": { "tts": true, "realtime": true } },
+  { "id": "verse",  "label": "Verse",  "supports": { "tts": true, "realtime": true } }
+]

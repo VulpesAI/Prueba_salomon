@@ -1,0 +1,13 @@
+{
+  "alloy": {"es-CL": 4.4, "*": 4.2},
+  "ash": {"es-CL": 4.3, "es-MX": 4.2, "*": 4.1},
+  "ballad": {"es-ES": 4.1, "*": 4.0},
+  "coral": {"es-CL": 4.2, "es-CO": 4.1},
+  "echo": {"es-MX": 4.0, "*": 3.9},
+  "fable": {"es-ES": 4.3},
+  "onyx": {"*": 4.0},
+  "nova": {"es-CL": 4.1},
+  "sage": {"es-CL": 4.4, "es-MX": 4.3},
+  "shimmer": {"es-CL": 4.5},
+  "verse": {"es-CL": 4.2, "es-AR": 4.1}
+}
