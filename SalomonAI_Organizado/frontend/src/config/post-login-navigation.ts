@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 
 import type { LucideIcon } from "lucide-react"
+import type { Route } from "next"
 
 export type NavigationBadgeVariant = "default" | "secondary" | "outline"
 
@@ -34,7 +35,7 @@ export type NavigationBadge = {
 
 export type NavigationItem = {
   title: string
-  href: string
+  href: Route
   icon: LucideIcon
   description?: string
   badge?: NavigationBadge
@@ -79,7 +80,7 @@ export const postLoginNavigation: NavigationGroup[] = [
       },
       {
         title: "Detalle de cuenta",
-        href: "/accounts/demo-cuenta",
+        href: "/accounts",
         icon: CreditCard,
         description: "Información de una cuenta vinculada",
       },
@@ -174,7 +175,7 @@ export const postLoginNavigation: NavigationGroup[] = [
       },
       {
         title: "Detalle de meta",
-        href: "/goals/demo-meta",
+        href: "/goals",
         icon: PiggyBank,
         description: "Configuración y eventos de una meta",
       },

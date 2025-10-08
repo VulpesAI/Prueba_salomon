@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from "react"
+import type { Route } from "next"
 
 import { useDemoFinancialData } from "@/context/DemoFinancialDataContext"
 import type { FinancialGoal } from "@/types/goals"
@@ -53,7 +54,7 @@ export interface AssistantResource {
   id: string
   title: string
   description: string
-  href: string
+  href: Route
   type: "reporte" | "guía" | "dashboard"
   cta: string
 }
@@ -63,7 +64,7 @@ export interface AssistantAutomation {
   title: string
   description: string
   impact: string
-  href: string
+  href: Route
 }
 
 export interface AssistantMockData {
@@ -366,7 +367,7 @@ export function useAssistantMock(): AssistantMockData {
         description: `Explora los ${transactionsCount} movimientos registrados y profundiza en ${formatList(
           topExpenseNames
         )}.`,
-        href: "/(authenticated)/transactions",
+        href: "/transactions",
         type: "dashboard",
         cta: "Revisar mis movimientos",
       },
@@ -376,7 +377,7 @@ export function useAssistantMock(): AssistantMockData {
         description: playbookGoal
           ? `Consulta el detalle de ${playbookGoal.name} y ajusta tus aportes mensuales.`
           : "Crea una meta para comenzar a seguir tus ahorros demo.",
-        href: "/(authenticated)/analytics/forecasts",
+        href: "/analytics/forecasts",
         type: "reporte",
         cta: "Abrir panel de metas",
       },
@@ -386,7 +387,7 @@ export function useAssistantMock(): AssistantMockData {
         description: relevantAlert
           ? "Gestiona la alerta más reciente antes de que impacte tu flujo de caja."
           : "Activa recordatorios inteligentes para mantenerte al tanto de tus movimientos.",
-        href: "/(authenticated)/alerts",
+        href: "/alerts",
         type: "guía",
         cta: "Ver mis alertas",
       },
@@ -400,7 +401,7 @@ export function useAssistantMock(): AssistantMockData {
           ? `Recibe avisos si ${playbookCategoryName} supera ${formatClp(playbookCategoryAmount * 1.1)} el próximo mes.`
           : "Configura alertas cuando registres nuevos gastos relevantes.",
         impact: topExpense ? "Impacto alto" : "Impacto medio",
-        href: "/(authenticated)/alerts",
+        href: "/alerts",
       },
       {
         id: "auto-metas",
@@ -409,14 +410,14 @@ export function useAssistantMock(): AssistantMockData {
           ? `Aparta ${formatClp(playbookGoal.expectedMonthlyContribution ?? 0)} cada mes para ${playbookGoal.name}.`
           : "Define tu objetivo de ahorro y activa aportes recurrentes.",
         impact: "Impacto medio",
-        href: "/(authenticated)/analytics/forecasts",
+        href: "/analytics/forecasts",
       },
       {
         id: "auto-flujo",
         title: "Monitorear flujo neto demo",
         description: `Te aviso si tu flujo neto cae por debajo de ${formatClp(netFlow)} para que ajustes a tiempo.`,
         impact: netFlow < 0 ? "Impacto alto" : "Impacto medio",
-        href: "/(authenticated)/analytics/insights",
+        href: "/analytics/insights",
       },
     ]
 

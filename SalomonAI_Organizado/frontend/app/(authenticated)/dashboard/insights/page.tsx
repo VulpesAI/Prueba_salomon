@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useMemo } from "react"
+import type { Route } from "next"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,13 @@ import {
 import { useDashboardIntelligence } from "@/hooks/dashboard/use-dashboard-intelligence"
 import { useDashboardOverview } from "@/hooks/dashboard/use-dashboard-overview"
 import { useDemoFinancialData } from "@/context/DemoFinancialDataContext"
-import { personalBudgetFallback } from "./mock-data"
+import {
+  personalBudgetFallback,
+  type FollowUpAction,
+  type HighlightInsight,
+  type NarrativeInsight,
+  type PriorityInsight,
+} from "./mock-data"
 import {
   ArrowUpRight,
   Download,
@@ -97,7 +104,7 @@ export default function DashboardInsightsPage() {
     const actions: Array<{
       id: string
       label: string
-      href: string
+      href: Route
       icon: HeaderActionIcon
       variant: HeaderActionVariant
     }> = [
@@ -117,7 +124,7 @@ export default function DashboardInsightsPage() {
           savings && savings > 0
             ? `Descargar presupuesto (${formatCurrency(savings)})`
             : "Descargar presupuesto",
-        href: "/dashboard/overview/exportar-presupuesto",
+        href: "/dashboard/overview",
         icon: "download",
         variant: "outline",
       },
@@ -127,7 +134,7 @@ export default function DashboardInsightsPage() {
           goalsCount > 0
             ? `${goalsCount} hábitos financieros`
             : "Ver hábitos financieros",
-        href: "/dashboard/goals",
+        href: "/goals",
         icon: "share",
         variant: "secondary",
       },
@@ -137,7 +144,7 @@ export default function DashboardInsightsPage() {
   }, [goals?.goals.length, intelligence.forecastSummary?.horizonDays, overview.totals?.savings])
 
   const priorities = useMemo(() => {
-    const derived = intelligence.predictiveAlerts.map((alert) => {
+    const derived: PriorityInsight[] = intelligence.predictiveAlerts.map((alert) => {
       const priority = severityToPriority[alert.severity]
       const amount =
         typeof alert.details?.deficit === "number"
@@ -175,12 +182,12 @@ export default function DashboardInsightsPage() {
         summaryParts.push(`Representa el ${alert.details.share}% de tus gastos.`)
       }
 
-      const actionHref =
+      const actionHref: Route =
         alert.type === "cashflow"
-          ? "/dashboard/overview#flujo"
+          ? "/dashboard/overview"
           : alert.type === "savings"
-            ? "/dashboard/goals"
-            : "/dashboard/transactions"
+            ? "/goals"
+            : "/transactions"
 
       const actionLabel =
         alert.type === "cashflow"
@@ -205,7 +212,7 @@ export default function DashboardInsightsPage() {
   }, [intelligence.predictiveAlerts])
 
   const highlights = useMemo(() => {
-    const derived = intelligence.insights.slice(0, 3).map((insight, index) => {
+    const derived: HighlightInsight[] = intelligence.insights.slice(0, 3).map((insight, index) => {
       const icon = highlightIconOrder[index] ?? "shield"
       const badgeVariant: "secondary" | "outline" = index === 0 ? "secondary" : "outline"
 
@@ -228,14 +235,14 @@ export default function DashboardInsightsPage() {
 
   const narratives = useMemo(() => {
     const generatedAt = intelligence.forecastSummary?.generatedAt ?? new Date().toISOString()
-    const derived = intelligence.recommendations.slice(0, 3).map((recommendation) => ({
+    const derived: NarrativeInsight[] = intelligence.recommendations.slice(0, 3).map((recommendation) => ({
       id: recommendation.id,
       title: recommendation.title,
       summary: recommendation.description,
       focus: recommendation.category,
       audience: "Tu plan personal",
       updatedAt: generatedAt,
-      href: `/dashboard/recommendations?resaltar=${recommendation.id}`,
+      href: "/analytics/recommendations",
     }))
 
     return derived.length > 0 ? derived : personalBudgetFallback.narratives
@@ -264,11 +271,11 @@ export default function DashboardInsightsPage() {
   }, [goals?.goals])
 
   const followUpActions = useMemo(() => {
-    const actions = intelligence.recommendations.slice(0, 2).map((recommendation) => ({
+    const actions: FollowUpAction[] = intelligence.recommendations.slice(0, 2).map((recommendation) => ({
       id: recommendation.id,
       title: recommendation.title,
       description: recommendation.explanation,
-      href: `/dashboard/recommendations?categoria=${encodeURIComponent(recommendation.category)}`,
+      href: "/analytics/recommendations",
       label: "Revisar sugerencia",
     }))
 
@@ -278,7 +285,7 @@ export default function DashboardInsightsPage() {
         id: `${firstGoal.id}-habit`,
         title: "Refuerza tu hábito de ahorro",
         description: `Agrega un recordatorio semanal para avanzar en ${firstGoal.name}.`,
-        href: "/dashboard/goals",
+        href: "/goals",
         label: "Ver metas",
       })
     }
@@ -446,7 +453,7 @@ export default function DashboardInsightsPage() {
           </CardContent>
           <CardFooter>
             <Button asChild size="sm" variant="secondary" className="inline-flex items-center gap-1">
-              <Link href="/dashboard/insights/versiones">
+              <Link href="/dashboard/insights">
                 Gestionar versiones
                 <ArrowUpRight className="h-4 w-4" />
               </Link>

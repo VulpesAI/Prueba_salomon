@@ -10,6 +10,7 @@
     "start": "next start --hostname 0.0.0.0 --port $PORT",
     "lint": "next lint",
     "lint:fix": "NEXT_PUBLIC_DEMO_MODE=true next lint --fix",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {

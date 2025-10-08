@@ -20,12 +20,14 @@ export type CategoryDrilldownItem = {
   change: number
 }
 
+import type { Route } from "next"
+
 export type CategoryAdjustment = {
   id: string
   title: string
   description: string
   impact: string
-  href: string
+  href: Route
   actionLabel: string
 }
 
@@ -65,7 +67,7 @@ export type InsightNarrative = {
   title: string
   summary: string
   highlight: string
-  href: string
+  href: Route
 }
 
 export type InsightComparison = {
@@ -86,7 +88,7 @@ export type InsightAction = {
   id: string
   label: string
   description: string
-  href: string
+  href: Route
 }
 
 export type RecommendationCampaign = {
@@ -119,6 +121,6 @@ export type RecommendationFeedback = {
 export type AnalyticsQuickAction = {
   id: string
   label: string
-  href: string
+  href: Route
   description: string
 }

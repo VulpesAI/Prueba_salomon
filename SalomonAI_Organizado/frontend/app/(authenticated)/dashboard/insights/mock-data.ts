@@ -1,3 +1,5 @@
+import type { Route } from "next"
+
 export type InsightPriorityLevel = "alta" | "media" | "baja"
 
 export type PriorityInsight = {
@@ -8,7 +10,7 @@ export type PriorityInsight = {
   helper: string
   priority: InsightPriorityLevel
   actionLabel: string
-  actionHref: string
+  actionHref: Route
 }
 
 export type HighlightInsight = {
@@ -27,7 +29,7 @@ export type NarrativeInsight = {
   focus: string
   audience: string
   updatedAt: string
-  href: string
+  href: Route
 }
 
 export type VersionHistoryItem = {
@@ -42,7 +44,7 @@ export type FollowUpAction = {
   id: string
   title: string
   description: string
-  href: string
+  href: Route
   label: string
 }
 
@@ -57,7 +59,7 @@ export const personalBudgetFallback = {
       helper: "Reordena tus pagos variables y posterga lo prescindible.",
       priority: "alta",
       actionLabel: "Revisar flujo",
-      actionHref: "/dashboard/overview#flujo",
+      actionHref: "/dashboard/overview",
     },
     {
       id: "category-focus",
@@ -68,7 +70,7 @@ export const personalBudgetFallback = {
       helper: "Agenda una alerta automática cuando alcances el tope.",
       priority: "media",
       actionLabel: "Configurar alerta",
-      actionHref: "/dashboard/notifications",
+      actionHref: "/notifications",
     },
     {
       id: "savings-surplus",
@@ -79,7 +81,7 @@ export const personalBudgetFallback = {
       helper: "Traslada el excedente a tu cuenta de ahorro apenas recibas tus ingresos.",
       priority: "baja",
       actionLabel: "Planificar ahorro",
-      actionHref: "/dashboard/goals",
+      actionHref: "/goals",
     },
   ] satisfies PriorityInsight[],
   highlights: [
@@ -117,7 +119,7 @@ export const personalBudgetFallback = {
       focus: "Presupuesto",
       audience: "Tu plan personal",
       updatedAt: "2024-05-10",
-      href: "/dashboard/recommendations",
+      href: "/analytics/recommendations",
     },
     {
       id: "alerts-story",
@@ -127,7 +129,7 @@ export const personalBudgetFallback = {
       focus: "Alertas",
       audience: "Tu plan personal",
       updatedAt: "2024-05-09",
-      href: "/dashboard/notifications",
+      href: "/notifications",
     },
     {
       id: "habit-tracker",
@@ -137,7 +139,7 @@ export const personalBudgetFallback = {
       focus: "Hábitos",
       audience: "Tu plan personal",
       updatedAt: "2024-05-08",
-      href: "/dashboard/goals",
+      href: "/goals",
     },
   ] satisfies NarrativeInsight[],
   versionHistory: [
@@ -168,14 +170,14 @@ export const personalBudgetFallback = {
       id: "schedule-transfer",
       title: "Agenda tu transferencia de ahorro",
       description: "Programa una transferencia automática apenas recibas tu ingreso.",
-      href: "/dashboard/goals",
+      href: "/goals",
       label: "Configurar hábito",
     },
     {
       id: "track-expenses",
       title: "Registra gastos variables cada semana",
       description: "Anota tus compras menores para mantener el control del presupuesto.",
-      href: "/dashboard/transactions",
+      href: "/transactions",
       label: "Abrir registro",
     },
   ] satisfies FollowUpAction[],

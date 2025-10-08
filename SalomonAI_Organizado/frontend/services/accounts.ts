@@ -1,4 +1,5 @@
 import { addHours, subDays, subHours } from "date-fns"
+import type { Route } from "next"
 
 export type AccountType = "checking" | "savings" | "credit" | "investment"
 
@@ -68,7 +69,14 @@ export type BalanceAlert = {
   severity: "high" | "medium" | "low"
   title: string
   description: string
-  href: string
+  href: Route
+}
+
+type QuickAction = {
+  id: string
+  title: string
+  description: string
+  href: Route
 }
 
 export type SynchronizationJob = {
@@ -428,7 +436,7 @@ const balanceAlerts: BalanceAlert[] = [
   },
 ]
 
-const quickActions = [
+const quickActions: QuickAction[] = [
   {
     id: "action-connect",
     title: "Conectar cuenta",
@@ -508,7 +516,7 @@ export const getSyncHistoryForInstitution = (institutionId: string) =>
 export const getRulesForInstitution = (institutionId: string) =>
   institutionRules[institutionId] ?? []
 
-export const getQuickAccountActions = () => quickActions
+export const getQuickAccountActions = (): QuickAction[] => quickActions
 
 export const getInstitutionsSummary = () => {
   const institutions = getLinkedInstitutions()

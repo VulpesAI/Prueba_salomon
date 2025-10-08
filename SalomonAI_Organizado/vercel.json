@@ -1,0 +1,5 @@
+{
+  "buildCommand": "pnpm -C frontend build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs"
+}

@@ -101,7 +101,7 @@ export default function AlertsPage() {
               <CardDescription>{esCL.alerts.list.description}</CardDescription>
             </div>
             <Button asChild variant="outline" size="sm">
-              <Link href="/(authenticated)/notifications">{esCL.alerts.list.historyButton}</Link>
+              <Link href="/notifications">{esCL.alerts.list.historyButton}</Link>
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">

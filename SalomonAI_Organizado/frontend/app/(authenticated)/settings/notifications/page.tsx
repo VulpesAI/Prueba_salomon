@@ -581,7 +581,7 @@ export default function SettingsNotificationsPage() {
             </div>
             <p className="text-sm text-muted-foreground">
               Revisa el historial completo en el{" "}
-              <Link className="font-medium text-primary underline" href="/(authenticated)/notifications">
+              <Link className="font-medium text-primary underline" href="/notifications">
                 {templatesCopy.linkText}
               </Link>
               .

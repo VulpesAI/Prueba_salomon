@@ -1,0 +1,30 @@
+{
+  "kpis": {
+    "incomeCLP": 1850000,
+    "expensesCLP": 1320000,
+    "netCLP": 530000,
+    "incomeDelta": 4.2,
+    "expensesDelta": -2.5,
+    "netDelta": 6.8
+  },
+  "flux": [
+    { "date": "2024-11-01", "amount": 210000, "type": "hist" },
+    { "date": "2024-11-02", "amount": 198000, "type": "hist" },
+    { "date": "2024-11-03", "amount": 205500, "type": "hist" },
+    { "date": "2024-11-04", "amount": 215000, "type": "hist" },
+    { "date": "2024-11-05", "amount": 220500, "type": "hist" },
+    { "date": "2024-11-06", "amount": 225500, "type": "proj", "model_type": "xgboost", "calculated_at": "2024-11-06T08:00:00Z" },
+    { "date": "2024-11-07", "amount": 228000, "type": "proj", "model_type": "xgboost", "calculated_at": "2024-11-06T08:00:00Z" }
+  ],
+  "categories": [
+    { "name": "Arriendo", "amount": 420000, "percent": 31.8 },
+    { "name": "Supermercado", "amount": 265000, "percent": 20.1 },
+    { "name": "Transporte", "amount": 148000, "percent": 11.2 },
+    { "name": "Entretenimiento", "amount": 96000, "percent": 7.3 },
+    { "name": "Salud", "amount": 78000, "percent": 5.9 }
+  ],
+  "insights": [
+    { "text": "Tus gastos en supermercado bajaron 8% respecto a la semana anterior." },
+    { "text": "Se proyecta un flujo neto positivo si mantienes el ritmo de ingresos actual." }
+  ]
+}

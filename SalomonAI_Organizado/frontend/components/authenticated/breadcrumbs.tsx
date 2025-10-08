@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import type { Route } from "next"
 
 import {
   Breadcrumb,
@@ -23,7 +24,7 @@ type BreadcrumbProps = {
 
 type Crumb = {
   label: string
-  href?: string
+  href?: Route
   isCurrent?: boolean
 }
 
