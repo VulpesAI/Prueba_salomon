@@ -19,11 +19,14 @@ const TIMEZONES_FALLBACK = [
   'UTC',
 ];
 
+type IntlWithSupportedValuesOf = typeof Intl & {
+  supportedValuesOf?: (key: 'timeZone') => readonly string[];
+};
+
 function supportedTimeZones(): string[] {
-  // @ts-expect-error supportedValuesOf is not included in all TS lib definitions
-  if (typeof Intl.supportedValuesOf === 'function') {
-    // @ts-expect-error supportedValuesOf is not included in all TS lib definitions
-    return Intl.supportedValuesOf('timeZone') as string[];
+  const intl = Intl as IntlWithSupportedValuesOf;
+  if (typeof intl.supportedValuesOf === 'function') {
+    return [...intl.supportedValuesOf('timeZone')];
   }
   return TIMEZONES_FALLBACK;
 }
