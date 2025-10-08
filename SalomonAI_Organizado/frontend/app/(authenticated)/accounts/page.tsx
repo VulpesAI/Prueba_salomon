@@ -1,6 +1,5 @@
 "use client"
 
-import type { CSSProperties } from "react"
 import Link from "next/link"
 import { ArrowUpRight, Building2, CircleDollarSign } from "lucide-react"
 
@@ -21,13 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import { cn } from "@/lib/utils"
+import { AccountTypeMiniDonut } from "@/components/accounts/AccountTypeMiniDonut"
+import { ACCOUNT_COLOR_VARS, colorFromVar } from "@/lib/ui/account-colors"
 import {
   getAccountTypeSummary,
   getInstitutionsSummary,
@@ -35,25 +29,13 @@ import {
   getQuickAccountActions,
 } from "@/services/accounts"
 
-import { Pie, PieChart, Cell } from "recharts"
-
 export default function AccountsPage() {
   const institutions = getLinkedInstitutions()
   const summary = getInstitutionsSummary()
   const accountTypeSummary = getAccountTypeSummary()
   const actions = getQuickAccountActions()
 
-  const chartData = accountTypeSummary.filter((item) => item.accounts > 0)
-  const chartConfig: ChartConfig = chartData.reduce(
-    (config, item) => ({
-      ...config,
-      [item.type]: {
-        label: item.label,
-        color: item.color,
-      },
-    }),
-    {}
-  )
+  const distributionData = accountTypeSummary.filter((item) => item.accounts > 0)
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("es-CL", {
@@ -229,33 +211,8 @@ export default function AccountsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {chartData.length > 0 ? (
-              <ChartContainer config={chartConfig} className="mx-auto max-w-xs">
-                <PieChart>
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value, name) => [
-                          formatCurrency(Number(value)),
-                          chartConfig[name as keyof typeof chartConfig]?.label ??
-                            name,
-                        ]}
-                      />
-                    }
-                  />
-                  <Pie
-                    data={chartData}
-                    dataKey="balance"
-                    nameKey="type"
-                    innerRadius={50}
-                    strokeWidth={5}
-                  >
-                    {chartData.map((item) => (
-                      <Cell key={item.type} fill={item.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
+            {distributionData.length > 0 ? (
+              <AccountTypeMiniDonut data={distributionData} />
             ) : (
               <p className="text-sm text-muted-foreground">
                 Aún no hay datos suficientes para mostrar el resumen por tipo.
@@ -263,33 +220,32 @@ export default function AccountsPage() {
             )}
 
             <div className="space-y-2 text-sm">
-              {accountTypeSummary.map((item) => (
-                <div
-                  key={item.type}
-                  className="flex items-center justify-between rounded-lg border border-dashed border-border/60 px-3 py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "h-2.5 w-2.5 rounded-full",
-                        "bg-[var(--legend-color)]"
-                      )}
-                      style={{
-                        "--legend-color": item.color,
-                      } as CSSProperties}
-                    />
-                    <span>{item.label}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">
-                      {formatCurrency(item.balance)}
+              {accountTypeSummary.map((item) => {
+                const colorVar = ACCOUNT_COLOR_VARS[item.type] ?? ACCOUNT_COLOR_VARS.checking
+                const color = colorFromVar(colorVar)
+
+                return (
+                  <div
+                    key={item.type}
+                    className="flex items-center justify-between rounded-lg border border-dashed border-border/60 px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        aria-hidden
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span>{item.label}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {item.accounts} cuentas
-                    </p>
+                    <div className="text-right">
+                      <div className="font-medium">{formatCurrency(item.balance)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {item.accounts} cuentas
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>

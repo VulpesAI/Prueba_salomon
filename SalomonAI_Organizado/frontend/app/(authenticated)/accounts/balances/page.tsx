@@ -20,20 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Legend,
-  XAxis,
-  YAxis,
-} from "recharts"
+import { HistoricalSeries } from "@/components/accounts/HistoricalSeries"
+import { ACCOUNT_COLOR_VARS, colorFromVar } from "@/lib/ui/account-colors"
 import {
   getBalanceAlerts,
   getBalanceComparisons,
@@ -47,37 +35,12 @@ export default function AccountBalancesPage() {
   const alerts = getBalanceAlerts()
   const typeSummary = getAccountTypeSummary()
 
-  const chartConfig: ChartConfig = {
-    checking: {
-      label: "Cuentas corrientes",
-      color: "hsl(var(--chart-1))",
-    },
-    savings: {
-      label: "Ahorro",
-      color: "hsl(var(--chart-2))",
-    },
-    credit: {
-      label: "Crédito",
-      color: "hsl(var(--chart-3))",
-    },
-    investment: {
-      label: "Inversión",
-      color: "hsl(var(--chart-4))",
-    },
-  }
-
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("es-CL", {
       style: "currency",
       currency: "CLP",
       maximumFractionDigits: 0,
     }).format(value)
-
-  const formatDate = (value: string) =>
-    new Intl.DateTimeFormat("es-CL", {
-      month: "short",
-      year: "numeric",
-    }).format(new Date(value))
 
   const getSeverityVariant = (severity: string) => {
     switch (severity) {
@@ -135,67 +98,7 @@ export default function AccountBalancesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[320px] w-full">
-            <AreaChart data={balanceHistory}>
-              <CartesianGrid strokeDasharray="4 4" vertical={false} />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatDate}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tickFormatter={(value) =>
-                  new Intl.NumberFormat("es-CL", {
-                    notation: "compact",
-                  }).format(Number(value))
-                }
-                tickLine={false}
-                axisLine={false}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) => formatDate(value as string)}
-                    formatter={(value, name) => [
-                      formatCurrency(Number(value)),
-                      chartConfig[name as keyof typeof chartConfig]?.label ??
-                        name,
-                    ]}
-                  />
-                }
-              />
-              <Legend formatter={(value) => chartConfig[value as keyof typeof chartConfig]?.label ?? value} />
-              <Area
-                type="monotone"
-                dataKey="checking"
-                stroke="var(--color-checking)"
-                fill="var(--color-checking)"
-                fillOpacity={0.2}
-              />
-              <Area
-                type="monotone"
-                dataKey="savings"
-                stroke="var(--color-savings)"
-                fill="var(--color-savings)"
-                fillOpacity={0.2}
-              />
-              <Area
-                type="monotone"
-                dataKey="credit"
-                stroke="var(--color-credit)"
-                fill="var(--color-credit)"
-                fillOpacity={0.2}
-              />
-              <Area
-                type="monotone"
-                dataKey="investment"
-                stroke="var(--color-investment)"
-                fill="var(--color-investment)"
-                fillOpacity={0.2}
-              />
-            </AreaChart>
-          </ChartContainer>
+          <HistoricalSeries data={balanceHistory} />
         </CardContent>
       </Card>
 
@@ -284,22 +187,34 @@ export default function AccountBalancesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {typeSummary.map((item) => (
-              <div
-                key={item.type}
-                className="flex items-center justify-between rounded-lg border border-dashed border-border/60 px-3 py-2"
-              >
-                <span>{item.label}</span>
-                <div className="text-right">
-                  <p className="text-sm font-semibold">
-                    {formatCurrency(item.balance)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.accounts} cuentas
-                  </p>
+            {typeSummary.map((item) => {
+              const colorVar = ACCOUNT_COLOR_VARS[item.type] ?? ACCOUNT_COLOR_VARS.checking
+              const color = colorFromVar(colorVar)
+
+              return (
+                <div
+                  key={item.type}
+                  className="flex items-center justify-between rounded-lg border border-dashed border-border/60 px-3 py-2"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                    {item.label}
+                  </span>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(item.balance)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.accounts} cuentas
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </CardContent>
         </Card>
       </div>
