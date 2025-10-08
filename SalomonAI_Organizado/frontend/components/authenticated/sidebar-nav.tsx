@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -9,38 +10,33 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { buildNav, findSectionByPath, flattenNav, isNavItemActive } from "@/lib/nav/derive"
 import { cn } from "@/lib/utils"
-import { postLoginNavigation } from "@/src/config/post-login-navigation"
 
-import { NavigationGroup } from "./navigation-group"
-import { flattenNavigation, getMatchScore } from "./navigation-utils"
+const SIDEBAR_SECTIONS = buildNav()
 
-const getQuickActions = () =>
-  flattenNavigation(postLoginNavigation)
-    .filter(({ item }) => item.quickAction)
-    .map(({ item }) => item)
-
-export function SidebarNav({
-  navigation = postLoginNavigation,
-  className,
-}: {
-  navigation?: typeof postLoginNavigation
+export type SidebarNavProps = {
   className?: string
-}) {
-  const pathname = usePathname() ?? ""
-  const quickActions = getQuickActions()
-  const activeGroups = navigation
-    .filter((group) =>
-      group.items.some((item) => getMatchScore(pathname, item) > 0)
-    )
-    .map((group) => group.title)
+  sections?: ReturnType<typeof buildNav>
+}
 
-  const accordionComponents = {
-    AccordionItem,
-    AccordionTrigger,
-    AccordionContent,
-  }
+export function SidebarNav({ className, sections: sectionsProp }: SidebarNavProps) {
+  const pathname = usePathname() ?? ""
+  const sections = React.useMemo(
+    () => sectionsProp ?? SIDEBAR_SECTIONS,
+    [sectionsProp]
+  )
+  const currentSectionId =
+    findSectionByPath(sections, pathname) ?? sections[0]?.id
+  const quickActions = React.useMemo(
+    () =>
+      flattenNav(sections)
+        .filter((item) => item.quickAction)
+        .slice(0, 3),
+    [sections]
+  )
 
   return (
     <aside
@@ -60,17 +56,68 @@ export function SidebarNav({
         </div>
         <div className="flex-1 space-y-6 overflow-y-auto px-4 pb-8">
           <Accordion
-            type="multiple"
-            defaultValue={activeGroups.length ? activeGroups : undefined}
+            type="single"
+            collapsible
+            value={currentSectionId ?? undefined}
             className="space-y-6 pt-4"
           >
-            {navigation.map((group) => (
-              <NavigationGroup
-                key={group.title}
-                group={group}
-                pathname={pathname}
-                accordionComponents={accordionComponents}
-              />
+            {sections.map((section) => (
+              <AccordionItem
+                key={section.id}
+                value={section.id}
+                className="border-none"
+              >
+                <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary hover:no-underline [&>svg]:text-iconSecondary [&[data-state=open]]:text-textPrimary [&[data-state=open]>svg]:text-iconPrimary">
+                  {section.label}
+                </AccordionTrigger>
+                <AccordionContent className="px-0 pb-1 pt-2">
+                  <ul className="space-y-1">
+                    {section.items.map((item) => {
+                      const Icon = item.icon
+                      const active = isNavItemActive(pathname, item)
+
+                      return (
+                        <li key={`${section.id}-${item.id}`} className="space-y-1">
+                          <Link
+                            href={item.href}
+                            className={cn(
+                              "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-textSecondary transition",
+                              "hover:bg-gradient-primary hover:text-primary-foreground hover:shadow-sm",
+                              active && "bg-gradient-primary text-primary-foreground shadow-sm"
+                            )}
+                            aria-current={active ? "page" : undefined}
+                          >
+                            {Icon ? (
+                              <Icon
+                                className={cn(
+                                  "h-4 w-4 transition-colors",
+                                  active
+                                    ? "text-primary-foreground"
+                                    : "text-iconSecondary group-hover:text-primary-foreground"
+                                )}
+                              />
+                            ) : null}
+                            <span className="flex-1 truncate">{item.label}</span>
+                            {item.badge ? (
+                              <Badge
+                                variant={item.badge.variant}
+                                className="ml-auto flex-shrink-0"
+                              >
+                                {item.badge.label}
+                              </Badge>
+                            ) : null}
+                          </Link>
+                          {item.description ? (
+                            <p className="px-4 text-xs text-textSecondary">
+                              {item.description}
+                            </p>
+                          ) : null}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
             ))}
           </Accordion>
           {quickActions.length > 0 ? (
@@ -79,20 +126,26 @@ export function SidebarNav({
                 Accesos rápidos
               </p>
               <div className="grid gap-2">
-                {quickActions.map((action) => (
-                  <Button
-                    key={`quick-${action.href}`}
-                    variant="ghost"
-                    size="sm"
-                    className="group justify-start gap-2 text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
-                    asChild
-                  >
-                    <Link href={action.href}>
-                      <action.icon className="h-4 w-4 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
-                      {action.title}
-                    </Link>
-                  </Button>
-                ))}
+                {quickActions.map((action) => {
+                  const Icon = action.icon
+
+                  return (
+                    <Button
+                      key={`quick-${action.href}`}
+                      variant="ghost"
+                      size="sm"
+                      className="group justify-start gap-2 text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
+                      asChild
+                    >
+                      <Link href={action.href}>
+                        {Icon ? (
+                          <Icon className="h-4 w-4 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
+                        ) : null}
+                        {action.label}
+                      </Link>
+                    </Button>
+                  )
+                })}
               </div>
             </div>
           ) : null}

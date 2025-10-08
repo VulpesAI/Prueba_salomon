@@ -20,8 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import type { AuthUser } from "@/context/AuthContext"
-import { postLoginNavigation } from "@/src/config/post-login-navigation"
-import { flattenNavigation } from "./navigation-utils"
+import { buildNav, flattenNav } from "@/lib/nav/derive"
 import { Bell, LogOut, Search } from "lucide-react"
 
 type TopbarActionsProps = {
@@ -29,9 +28,8 @@ type TopbarActionsProps = {
   onLogout?: () => Promise<void> | void
 }
 
-const quickActions = flattenNavigation(postLoginNavigation)
-  .filter(({ item }) => item.quickAction)
-  .map(({ item }) => item)
+const QUICK_ACTIONS = flattenNav(buildNav())
+  .filter((item) => item.quickAction)
   .slice(0, 3)
 
 const getInitials = (user: AuthUser) => {
@@ -85,7 +83,7 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
         />
       </div>
       <div className="hidden items-center gap-2 lg:flex">
-        {quickActions.map((action) => (
+        {QUICK_ACTIONS.map((action) => (
           <Button
             key={action.href}
             variant="ghost"
@@ -94,8 +92,10 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
             asChild
           >
             <Link href={action.href} className="flex items-center gap-2">
-              <action.icon className="h-4 w-4 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
-              <span>{action.title}</span>
+              {action.icon ? (
+                <action.icon className="h-4 w-4 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
+              ) : null}
+              <span>{action.label}</span>
             </Link>
           </Button>
         ))}

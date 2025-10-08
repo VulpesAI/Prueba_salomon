@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/context/AuthContext"
-import { postLoginNavigation } from "@/src/config/post-login-navigation"
 import { Menu } from "lucide-react"
 
 import { Breadcrumbs } from "./breadcrumbs"
@@ -74,20 +73,14 @@ export function AuthenticatedShell({
                 side="left"
                 className="w-72 border-border bg-background p-0 text-textPrimary"
               >
-                <SidebarNav
-                  navigation={postLoginNavigation}
-                  className="h-full border-0"
-                />
+                <SidebarNav className="h-full border-0" />
               </SheetContent>
             </Sheet>
             <div className="hidden flex-col text-textSecondary md:flex">
               <span className="text-sm font-semibold text-textSecondary">
                 Espacio financiero
               </span>
-              <Breadcrumbs
-                navigation={postLoginNavigation}
-                variant="inverted"
-              />
+              <Breadcrumbs variant="inverted" />
             </div>
             </div>
           <div className="flex items-center gap-4">
@@ -100,7 +93,7 @@ export function AuthenticatedShell({
       </header>
       <main className="flex-1 px-4 py-8 md:px-6">
         <div className="pb-6 pt-2 md:hidden">
-          <Breadcrumbs navigation={postLoginNavigation} />
+          <Breadcrumbs />
         </div>
         <div className="mx-auto w-full max-w-6xl space-y-8">{children}</div>
       </main>
