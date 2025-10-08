@@ -64,6 +64,15 @@ const nextConfig = {
     domains: ["localhost"],
     unoptimized: shouldExport,
   },
+  async redirects() {
+    return [
+      {
+        source: "/integraciones",
+        destination: "/seguridad",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

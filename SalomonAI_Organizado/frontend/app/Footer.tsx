@@ -43,11 +43,6 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/integraciones" className="hover:text-primary transition-colors">
-                  Integraciones
-                </Link>
-              </li>
-              <li>
                 <Link href="/seguridad" className="hover:text-primary transition-colors">
                   Seguridad
                 </Link>
