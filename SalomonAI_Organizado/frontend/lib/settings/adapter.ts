@@ -4,26 +4,36 @@ import { SettingsSchema } from './schema';
 import { loadLocalSettings, saveLocalSettings } from './storage';
 import { applyTheme } from '../theme/applyTheme';
 
-const USE_LOCAL_ADAPTER = false; // si true, no hace fetch y opera sólo con localStorage
+const USE_LOCAL_ADAPTER = false;
+
+function deviceDefaults() {
+  const language = typeof navigator !== 'undefined' ? navigator.language || 'es-CL' : 'es-CL';
+  const timeZone = typeof Intl !== 'undefined'
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Santiago'
+    : 'America/Santiago';
+  return { language, timeZone };
+}
 
 const DEFAULTS: SettingsDTO = {
   voice: 'alloy',
   theme: 'dark',
+  ...deviceDefaults(),
+  currency: 'CLP',
   updatedAt: new Date().toISOString()
 };
 
 export async function getSettings(): Promise<SettingsDTO> {
   if (USE_LOCAL_ADAPTER) {
-    const local = loadLocalSettings();
+    const local = loadLocalSettings() ?? {};
     const dto = { ...DEFAULTS, ...local, updatedAt: new Date().toISOString() };
     const parsed = SettingsSchema.parse(dto);
     applyTheme(parsed.theme);
     return parsed;
   }
   const res = await fetch('/api/settings', { cache: 'no-store' });
-  if (!res.ok) throw new Error('No se pudo cargar settings');
-  const data = await res.json();
-  const parsed = SettingsSchema.parse(data);
+  const data = res.ok ? await res.json() : DEFAULTS;
+  const merged = { ...DEFAULTS, ...data };
+  const parsed = SettingsSchema.parse(merged);
   saveLocalSettings(parsed);
   applyTheme(parsed.theme);
   return parsed;
@@ -33,6 +43,9 @@ export async function updateSettings(input: SettingsFormState): Promise<Settings
   const next: SettingsDTO = {
     voice: input.voice,
     theme: input.theme,
+    language: input.language,
+    timeZone: input.timeZone,
+    currency: 'CLP',
     updatedAt: new Date().toISOString()
   };
 
@@ -47,8 +60,7 @@ export async function updateSettings(input: SettingsFormState): Promise<Settings
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(next)
   });
-  if (!res.ok) throw new Error('No se pudo actualizar settings');
-  const data = await res.json();
+  const data = res.ok ? await res.json() : next;
   const parsed = SettingsSchema.parse(data);
   saveLocalSettings(parsed);
   applyTheme(parsed.theme);
