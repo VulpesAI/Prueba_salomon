@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function MovementsList({ filters }: Props) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status, error, refetch } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, error, refetch, isPending, isError } =
     useMovementsInfinite(filters)
 
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -42,14 +42,16 @@ export default function MovementsList({ filters }: Props) {
     }
   }, [fetchNextPage, hasNextPage, isFetchingNextPage])
 
-  if (status === "pending") {
+  if (isPending) {
     return <div className="py-8 text-center" aria-live="polite">Cargando…</div>
   }
 
-  if (status === "error") {
+  if (isError) {
     return (
       <div className="py-8 text-center space-y-3" role="alert" aria-live="assertive">
-        <p className="text-red-600">Error: {(error as Error).message}</p>
+        <p className="text-red-600">
+          Error: {error instanceof Error ? error.message : "No se pudo cargar"}
+        </p>
         <button type="button" className="btn-secondary" onClick={() => refetch()}>
           Reintentar
         </button>

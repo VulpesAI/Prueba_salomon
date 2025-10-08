@@ -172,7 +172,7 @@ function decodeCursor(cursor: string): CursorPayload | null {
       return parsed
     }
     return null
-  } catch (error) {
+  } catch {
     return null
   }
 }
