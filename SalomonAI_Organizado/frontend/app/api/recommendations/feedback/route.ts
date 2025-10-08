@@ -1,34 +1,8 @@
-export const runtime = "nodejs";
+import { NextRequest } from "next/server";
+import { postFeedback } from "@/lib/adapters/recommendations";
 
-type FeedbackPayload = {
-  user_id: string;
-  recommendation_id: string;
-  score: -1 | 0 | 1;
-  comment?: string;
-  client_submission_id?: string;
-};
-
-type StoredFeedback = FeedbackPayload & {
-  feedback_id: string;
-  received_at: string;
-};
-
-const feedbackStore: StoredFeedback[] = [];
-
-export async function POST(req: Request) {
-  const payload = (await req.json()) as FeedbackPayload;
-  const feedback_id = crypto.randomUUID();
-  feedbackStore.push({
-    ...payload,
-    feedback_id,
-    received_at: new Date().toISOString(),
-  });
-
-  return Response.json({ feedback_id, stored: true });
-}
-
-export async function GET() {
-  return Response.json({
-    count: feedbackStore.length,
-  });
+export async function POST(req: NextRequest) {
+  const payload = await req.json();
+  const res = await postFeedback(payload);
+  return Response.json(res, { status: 200 });
 }
