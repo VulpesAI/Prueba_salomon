@@ -1,28 +1,26 @@
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiGet, apiPost } from "@/lib/api";
 import {
   ChatReply,
+  ForecastResp,
   DashboardProyeccion,
-  DashboardResumen,
   MovimientosPage,
-  RecoResponse,
+  RecoResp,
+  ResumenResp,
   STTOut,
   TTSOut,
 } from "@/lib/schemas";
+import { z } from "zod";
 
 export function useDashboardResumen() {
-  return useQuery({
-    queryKey: ["dashboard", "resumen"],
-    queryFn: () => apiGet("/dashboard/resumen", DashboardResumen),
-    staleTime: 60_000,
-  });
+  return useResumen();
 }
 
 export function useDashboardProyeccion() {
   return useQuery({
     queryKey: ["dashboard", "proyeccion"],
-    queryFn: () => apiGet("/dashboard/proyeccion", DashboardProyeccion),
+    queryFn: async () => DashboardProyeccion.parse(await apiGet(`/dashboard/proyeccion`)),
     staleTime: 60_000,
   });
 }
@@ -44,7 +42,7 @@ export function useMovimientos(params: {
         page: String(pageParam),
         limit: process.env.NEXT_PUBLIC_PAGE_SIZE ?? "50",
       });
-      return apiGet(`/movimientos?${query.toString()}`, MovimientosPage);
+      return MovimientosPage.parse(await apiGet(`/movimientos?${query.toString()}`));
     },
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
   });
@@ -52,38 +50,83 @@ export function useMovimientos(params: {
 
 export function useRecomendaciones(userId: string, enabled = true) {
   return useQuery({
-    queryKey: ["recomendaciones", userId],
+    queryKey: ["recs", userId],
     enabled,
-    queryFn: () => apiGet(`/recommendations/personalized/${userId}`, RecoResponse),
+    queryFn: async () =>
+      RecoResp.parse(
+        await apiGet(`/recommendations/personalized/${encodeURIComponent(userId)}?limit=20`),
+      ),
     staleTime: 5 * 60_000,
+  });
+}
+
+const RecoFeedbackSchema = z.object({
+  feedback_id: z.string(),
+  stored: z.boolean(),
+});
+
+export function useRecoFeedback() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      user_id: string;
+      recommendation_id: string;
+      score: -1 | 0 | 1;
+      comment?: string;
+      client_submission_id?: string;
+    }) => RecoFeedbackSchema.parse(await apiPost(`/recommendations/feedback`, payload)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["recs"] });
+    },
+  });
+}
+
+export function useForecast(userId: string, horizon = 30) {
+  return useQuery({
+    enabled: Boolean(userId),
+    queryKey: ["forecast", userId, horizon],
+    queryFn: async () =>
+      ForecastResp.parse(
+        await apiGet(`/forecasts/${encodeURIComponent(userId)}?horizon=${horizon}`),
+      ),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useResumen() {
+  return useQuery({
+    queryKey: ["dashboard", "resumen"],
+    queryFn: async () => ResumenResp.parse(await apiGet(`/dashboard/resumen`)),
+    staleTime: 60_000,
   });
 }
 
 export function useChatSync() {
   return useMutation({
-    mutationFn: (payload: {
+    mutationFn: async (payload: {
       messages: { role: "user" | "system" | "assistant"; content: string }[];
-    }) => apiPost("/conversation/chat", payload, ChatReply),
+    }) => ChatReply.parse(await apiPost(`/conversation/chat`, payload)),
   });
 }
 
 export function useSTT() {
   return useMutation({
-    mutationFn: (payload: {
+    mutationFn: async (payload: {
       audio_base64: string;
       mime: string;
       language?: string;
-    }) => apiPost("/voice/transcriptions", payload, STTOut),
+    }) => STTOut.parse(await apiPost(`/voice/transcriptions`, payload)),
   });
 }
 
 export function useTTS() {
   return useMutation({
-    mutationFn: (payload: {
+    mutationFn: async (payload: {
       text: string;
       voice?: string;
       format?: "mp3" | "wav";
       language?: string;
-    }) => apiPost("/voice/speech", payload, TTSOut),
+    }) => TTSOut.parse(await apiPost(`/voice/speech`, payload)),
   });
 }

@@ -1,29 +1,41 @@
 import { z } from "zod";
 
-export const DashboardResumen = z.object({
-  income_total: z.number(),
-  expense_total: z.number(),
-  net_cashflow: z.number(),
-  top_categories: z.array(
-    z.object({
-      name: z.string(),
-      amount: z.number(),
-    }),
-  ),
+const TopCategory = z.object({
+  name: z.string(),
+  amount: z.number(),
+});
+
+export const ResumenResp = z
+  .object({
+    income_total: z.number(),
+    expense_total: z.number(),
+    net_cashflow: z.number(),
+    top_categories: z.array(TopCategory).optional(),
+  })
+  .passthrough();
+export type TResumenResp = z.infer<typeof ResumenResp>;
+
+export const DashboardResumen = ResumenResp.extend({
+  top_categories: z.array(TopCategory),
 });
 export type TDashboardResumen = z.infer<typeof DashboardResumen>;
 
-export const DashboardProyeccion = z.object({
-  model_type: z.string(),
-  calculated_at: z.string(),
-  series: z.array(
-    z.object({
-      date: z.string(),
-      value: z.number(),
-    }),
-  ),
-});
-export type TDashboardProyeccion = z.infer<typeof DashboardProyeccion>;
+export const ForecastResp = z
+  .object({
+    model_type: z.string(),
+    calculated_at: z.string(),
+    series: z.array(
+      z.object({
+        date: z.string(),
+        value: z.number(),
+      }),
+    ),
+  })
+  .passthrough();
+export type TForecastResp = z.infer<typeof ForecastResp>;
+
+export const DashboardProyeccion = ForecastResp;
+export type TDashboardProyeccion = TForecastResp;
 
 export const Movimiento = z.object({
   id: z.string(),
@@ -54,15 +66,16 @@ export const RecoItem = z.object({
   title: z.string(),
   message: z.string(),
   priority: z.number(),
-  evidence: z.record(z.string(), z.unknown()).optional(),
+  score: z.number().optional(),
+  evidence: z.record(z.unknown()).optional(),
 });
 
-export const RecoResponse = z.object({
+export const RecoResp = z.object({
   user_id: z.string(),
   items: z.array(RecoItem),
   meta: z.object({ count: z.number() }),
 });
-export type TRecoResponse = z.infer<typeof RecoResponse>;
+export type TRecoResp = z.infer<typeof RecoResp>;
 
 export const STTOut = z.object({
   text: z.string(),
