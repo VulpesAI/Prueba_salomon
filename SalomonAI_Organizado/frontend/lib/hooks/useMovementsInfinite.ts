@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query"
+import type { InfiniteData } from "@tanstack/react-query"
 
 import type { MovementsPage } from "@/types/movements"
 
@@ -37,7 +38,13 @@ async function fetchPage({ pageParam, filters }: FetchArgs): Promise<MovementsPa
 }
 
 export function useMovementsInfinite(filters: Filters) {
-  return useInfiniteQuery({
+  return useInfiniteQuery<
+    MovementsPage,
+    Error,
+    InfiniteData<MovementsPage>,
+    ["movements", Filters],
+    string | undefined
+  >({
     queryKey: ["movements", filters],
     queryFn: ({ pageParam }) => fetchPage({ pageParam, filters }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

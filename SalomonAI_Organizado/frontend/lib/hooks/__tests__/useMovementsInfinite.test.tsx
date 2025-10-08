@@ -67,7 +67,7 @@ describe("useMovementsInfinite", () => {
     }
 
     const fetchMock = vi
-      .fn<Parameters<typeof fetch>, ReturnType<typeof fetch>>()
+      .fn<typeof fetch>()
       .mockResolvedValueOnce({
         ok: true,
         json: async () => firstPage,
@@ -115,7 +115,7 @@ describe("useMovementsInfinite", () => {
 
   it("lanza error cuando la respuesta no es exitosa", async () => {
     const fetchMock = vi
-      .fn<Parameters<typeof fetch>, ReturnType<typeof fetch>>()
+      .fn<typeof fetch>()
       .mockResolvedValueOnce({ ok: false } as unknown as Response)
 
     globalThis.fetch = fetchMock as unknown as typeof fetch
