@@ -7,8 +7,6 @@ const voices: { id: VoiceId; label: string }[] = [
   { id: 'alloy', label: 'Alloy' },
   { id: 'ash', label: 'Ash' },
   { id: 'nova', label: 'Nova' },
-  { id: 'verse', label: 'Verse' },
-  { id: 'sonora', label: 'Sonora' },
 ];
 
 export default function VoiceSelect() {

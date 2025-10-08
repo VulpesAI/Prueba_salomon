@@ -1,24 +1,14 @@
-export const LS_KEYS = {
-  SETTINGS: 'salomonai:settings',
-} as const;
+const KEY = 'salomon.settings';
 
-export function loadSettings<T>(fallback: T): T {
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-
+export function loadLocalSettings(): Partial<import('./types').SettingsDTO> | null {
+  if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(LS_KEYS.SETTINGS);
-    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
-  } catch {
-    return fallback;
-  }
+    const raw = localStorage.getItem(KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
-export function saveSettings<T>(value: T) {
-  try {
-    window.localStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(value));
-  } catch {
-    // no-op
-  }
+export function saveLocalSettings(dto: import('./types').SettingsDTO) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(KEY, JSON.stringify(dto));
 }

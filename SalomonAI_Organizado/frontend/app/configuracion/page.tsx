@@ -1,22 +1,11 @@
 'use client';
+import SettingsForm from '@/components/settings/SettingsForm';
 
-import ConnectedAccounts from './_components/ConnectedAccounts';
-import ExportDataCard from './_components/ExportDataCard';
-import PrivacyCard from './_components/PrivacyCard';
-import ThemeToggle from './_components/ThemeToggle';
-import VoiceSelect from './_components/VoiceSelect';
-
-export default function ConfiguracionPage() {
+export default function SettingsPage() {
   return (
-    <main className="container space-y-6 py-6">
+    <div className="max-w-2xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">Configuración</h1>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <VoiceSelect />
-        <ThemeToggle />
-        <PrivacyCard />
-        <ConnectedAccounts />
-        <ExportDataCard />
-      </div>
-    </main>
+      <SettingsForm />
+    </div>
   );
 }
