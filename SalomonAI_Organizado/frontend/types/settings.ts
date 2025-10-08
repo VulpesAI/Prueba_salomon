@@ -1,8 +1,10 @@
-export type VoiceId = 'alloy' | 'ash' | 'nova' | 'verse' | 'sonora';
+import type { ThemeOption, VoiceOption } from '@/lib/settings/types';
+
+export type VoiceId = VoiceOption;
 
 export interface SettingsState {
   voice: VoiceId;
-  theme: 'light' | 'dark';
+  theme: ThemeOption;
 }
 
 export const DEFAULT_SETTINGS: SettingsState = {
