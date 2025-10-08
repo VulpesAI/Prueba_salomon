@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ExportDataCard() {
   const [busy, setBusy] = useState(false);
+  const { toast } = useToast();
 
   async function handleExport() {
     setBusy(true);
