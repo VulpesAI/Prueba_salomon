@@ -4,7 +4,7 @@ import type {
   MovementPresetsResponse,
   MovementsResponse,
   MovementCondition,
-} from "@/types/movements"
+} from "@/types/movements-legacy"
 
 type RequestOptions = {
   signal?: AbortSignal

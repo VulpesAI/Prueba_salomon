@@ -54,7 +54,7 @@ import type {
   MovementPreset,
   MovementPresetsResponse,
   MovementsResponse,
-} from "@/types/movements"
+} from "@/types/movements-legacy"
 import { useToast } from "@/hooks/use-toast"
 import { useQueryClient } from "@tanstack/react-query"
 
