@@ -12,7 +12,12 @@ export function useRecommendationFeedback({
 }) {
   const queryClient = useQueryClient();
 
-  return useMutation<FeedbackResponse, Error, FeedbackPayload>({
+  return useMutation<
+    FeedbackResponse,
+    Error,
+    FeedbackPayload,
+    { previous?: RecommendationsResponse }
+  >({
     mutationFn: async (payload) => {
       const res = await fetch("/api/recommendations/feedback", {
         method: "POST",
