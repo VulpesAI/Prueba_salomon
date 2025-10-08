@@ -159,3 +159,17 @@ body {
     color: transparent;
   }
 }
+
+@layer components {
+  .input {
+    @apply h-10 w-full rounded-md border border-border bg-background px-3 text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 font-medium text-primary-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex h-10 items-center justify-center rounded-md border border-border px-4 font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60;
+  }
+}
