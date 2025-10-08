@@ -52,3 +52,9 @@ Los componentes que dependen de `recharts` (`FluxChart` y `CategoriesDonut`) se 
 - Mientras llega la integración con la API real se utilizan mocks en `mocks/overview-*.json`.
 - Se incluyen estados de carga (`Skeletons`) y de error con opción de reintento.
 - El layout soporta modo claro/oscuro mediante clases de Tailwind (`bg-background`, `text-foreground`).
+
+## Pronósticos `/pronosticos`
+
+- La página consume `/api/forecasts?horizon=7|30|90`, implementado en `app/api/forecasts/route.ts`, que responde con `ForecastResponse` (definido en `types/forecasts.ts`).
+- El adaptador `lib/adapters/forecasts.ts` genera una serie histórica de 90 días más el horizonte solicitado, incluyendo bandas de incertidumbre (`lo`/`hi`) para los puntos proyectados.
+- La UI obtiene los datos mediante `useForecast` (`lib/hooks/useForecast.ts`) usando React Query. Para conectar el backend real basta con actualizar el route handler para que proxyee el endpoint definitivo o sustituir la implementación de `getForecast`; los componentes de `app/pronosticos` no requieren cambios.
