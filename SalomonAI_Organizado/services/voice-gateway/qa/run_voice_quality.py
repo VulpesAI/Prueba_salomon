@@ -9,16 +9,17 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
-
-from app.providers import BaseTTSClient, STTProvider, get_stt_provider, get_tts_client
-from app.settings import get_settings
-from app.voice_registry import voice_registry
-
-from .metrics import SpeechMetrics, compute_metrics
+from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING
 
 DEFAULT_MAX_WER = 0.18
 DEFAULT_MIN_NUMERIC = 0.98
+
+if TYPE_CHECKING:  # pragma: no cover - solo para hints estáticos
+    from app.providers import BaseTTSClient, STTProvider
+    from .metrics import SpeechMetrics
+else:
+    BaseTTSClient = STTProvider = Any  # type: ignore[misc,assignment]
+    SpeechMetrics = Any  # type: ignore[misc,assignment]
 
 
 @dataclass
@@ -86,6 +87,8 @@ async def evaluate_voice(
     settings,
     mos_table: Dict[str, Dict[str, float]],
 ) -> Dict[str, Any]:
+    from .metrics import compute_metrics
+
     evaluations: List[VoiceEvaluation] = []
 
     for case in cases:
@@ -180,6 +183,22 @@ async def main() -> int:
     parser.add_argument("--output", type=Path, help="Archivo donde guardar el reporte JSON")
     args = parser.parse_args()
 
+    try:
+        from app.providers import (
+            BaseTTSClient as RuntimeBaseTTSClient,
+            get_stt_provider,
+            get_tts_client,
+        )
+        from app.settings import get_settings
+        from app.voice_registry import voice_registry
+    except ModuleNotFoundError as exc:
+        hint = "pip install -r services/voice-gateway/requirements.txt"
+        print(
+            f"[voice-qa] Dependencias ausentes para el harness: {exc}. Ejecuta `{hint}`.",
+            file=sys.stderr,
+        )
+        return 1
+
     settings = get_settings()
     if not settings.resolved_openai_api_key:
         print("[voice-qa] OPENAI_API_KEY no configurada, se omite la evaluación", file=sys.stderr)
@@ -200,7 +219,7 @@ async def main() -> int:
     tts = get_tts_client()
     stt = get_stt_provider()
 
-    if not isinstance(tts, BaseTTSClient):
+    if not isinstance(tts, RuntimeBaseTTSClient):
         raise RuntimeError("El cliente TTS no implementa la interfaz esperada")
 
     reports: List[Dict[str, Any]] = []
