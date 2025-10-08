@@ -100,12 +100,15 @@ export default function AssistantPage() {
             }
             case "insight": {
               if (typeof event.kind !== "string") return;
-              const id = `${event.kind}-${JSON.stringify(event.payload ?? {})}`;
+              const kind = event.kind;
+              const payload = event.payload as unknown;
+              const id = `${kind}-${JSON.stringify(payload ?? {})}`;
               setInsights((prev) => {
                 if (prev.some((insight) => insight.id === id)) {
                   return prev;
                 }
-                return [...prev, { id, kind: event.kind, payload: event.payload }];
+                const next: InsightSignal[] = [...prev, { id, kind, payload }];
+                return next;
               });
               break;
             }

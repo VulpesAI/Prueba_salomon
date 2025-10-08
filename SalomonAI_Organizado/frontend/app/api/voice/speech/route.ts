@@ -3,18 +3,27 @@ import { Buffer } from "node:buffer";
 
 export const runtime = "nodejs";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+let cachedClient: OpenAI | null = null;
+
+function getClient(): OpenAI {
+  if (!cachedClient) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing OPENAI_API_KEY");
+    }
+    cachedClient = new OpenAI({ apiKey });
+  }
+  return cachedClient;
+}
 
 export async function POST(req: Request) {
-  const { text, voice = "alloy", format = "mp3", language = "es-CL" } = await req.json();
+  const { text, voice = "alloy", format = "mp3" } = await req.json();
+  const client = getClient();
   const result = await client.audio.speech.create({
     model: "gpt-4o-mini-tts",
     voice,
     input: text,
-    format,
-    language,
+    response_format: format,
   });
 
   const audio = Buffer.from(await result.arrayBuffer());

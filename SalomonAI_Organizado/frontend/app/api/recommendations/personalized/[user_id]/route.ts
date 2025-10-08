@@ -1,9 +1,8 @@
-export async function GET(
-  _request: Request,
-  context: { params: { user_id: string } },
-) {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const userId = url.pathname.split("/").pop() ?? "";
   return Response.json({
-    user_id: context.params.user_id,
+    user_id: userId,
     items: [],
     meta: { count: 0 },
   });

@@ -14,15 +14,16 @@ function createSeries(horizon: number) {
   });
 }
 
-export async function GET(request: Request, context: { params: { user_id: string } }) {
+export async function GET(request: Request) {
   const url = new URL(request.url);
   const horizon = Number(url.searchParams.get("horizon") ?? "30");
+  const userId = url.pathname.split("/").pop() ?? "";
   const series = createSeries(horizon);
 
   return Response.json({
     model_type: "fallback-linear",
     calculated_at: new Date().toISOString(),
     series,
-    user_id: context.params.user_id,
+    user_id: userId,
   });
 }

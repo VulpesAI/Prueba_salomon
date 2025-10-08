@@ -67,7 +67,7 @@ export const RecoItem = z.object({
   message: z.string(),
   priority: z.number(),
   score: z.number().optional(),
-  evidence: z.record(z.unknown()).optional(),
+  evidence: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const RecoResp = z.object({
