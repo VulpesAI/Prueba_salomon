@@ -77,14 +77,17 @@ export default function ProductoPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-app text-app">
       <Navigation />
-      
+
       {/* Hero Section */}
-      <section className="py-20 bg-gradient-hero">
+      <section className="py-20 bg-section text-app">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4 bg-primary/20 text-primary">
+            <Badge
+              variant="secondary"
+              className="mb-4 inline-flex items-center justify-center gap-2 rounded-full border border-soft bg-[color:var(--bg-app)]/20 px-4 py-1 text-xs font-medium uppercase tracking-wide text-app"
+            >
               <Brain className="w-4 h-4 mr-2" />
               Producto
             </Badge>
@@ -97,7 +100,7 @@ export default function ProductoPage() {
                 color: 'transparent'
               }}>Chile Necesita</span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            <p className="text-xl text-muted max-w-3xl mx-auto mb-8">
               SalomonAI combina inteligencia artificial avanzada con conocimiento profundo del sistema financiero chileno para revolucionar cómo manejas tu dinero.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

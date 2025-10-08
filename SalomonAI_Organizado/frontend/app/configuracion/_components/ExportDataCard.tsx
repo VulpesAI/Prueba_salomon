@@ -32,13 +32,13 @@ export default function ExportDataCard() {
   }
 
   return (
-    <div className="space-y-2 rounded-xl border p-4">
-      <h3 className="text-base font-semibold">Exportación de datos</h3>
-      <p className="text-sm text-muted-foreground">
+    <div className="space-y-2 rounded-card border border-soft bg-gradient-card p-4 text-surface">
+      <h3 className="text-base font-semibold text-surface">Exportación de datos</h3>
+      <p className="text-sm text-muted">
         Descarga futura de reporte consolidado (CSV/JSON). Próximamente.
       </p>
       <button
-        className="h-9 rounded-md border px-4 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-soft bg-[rgba(8,17,52,0.06)] px-4 text-sm font-medium text-surface transition-colors hover:bg-[rgba(8,17,52,0.1)] focus-brand disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgba(255,255,255,0.06)] dark:hover:bg-[rgba(255,255,255,0.1)]"
         type="button"
         onClick={handleExport}
         disabled={busy}

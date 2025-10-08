@@ -15,13 +15,11 @@ export default function VoiceSelect() {
   const { settings, setVoice } = useSettings();
 
   return (
-    <div className="space-y-2 rounded-xl border p-4">
+    <div className="space-y-2 rounded-card border border-soft bg-gradient-card p-4 text-surface">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold">Voz preferida</h3>
-          <p className="text-sm text-muted-foreground">
-            Selecciona la voz para TTS.
-          </p>
+          <h3 className="text-base font-semibold text-surface">Voz preferida</h3>
+          <p className="text-sm text-muted">Selecciona la voz para TTS.</p>
         </div>
       </div>
       <label className="sr-only" htmlFor="voice">
@@ -30,7 +28,7 @@ export default function VoiceSelect() {
       <select
         id="voice"
         aria-label="Voz preferida"
-        className="h-9 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="h-9 w-full rounded-md border border-neutral bg-white px-3 text-sm text-surface focus-brand dark:border-soft dark:bg-[rgba(31,41,55,0.85)]"
         value={settings.voice}
         onChange={(event) => setVoice(event.target.value as VoiceId)}
       >

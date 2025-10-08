@@ -3,56 +3,6 @@ import tailwindcssAnimate from "tailwindcss-animate";
 
 import { CATEGORY_COLOR_MAP } from "./config/category-colors";
 
-const palette = {
-  primary: {
-    DEFAULT: "#007CF0",
-    foreground: "#F5F7FF",
-    from: "#007CF0",
-    to: "#22C55E",
-  },
-  "primary-dark": {
-    from: "#005A9C",
-    to: "#1C9E4A",
-  },
-  secondary: {
-    DEFAULT: "#081134",
-    foreground: "#F5F7FF",
-  },
-  neutral: {
-    light: {
-      background: "#F5F7FF",
-      surface: "#FFFFFF",
-      subtle: "#F1F5F9",
-      muted: "#E2E8F0",
-      "muted-foreground": "#475569",
-      border: "#CBD5E1",
-      foreground: "#081134",
-    },
-    dark: {
-      background: "#0B1943",
-      surface: "#1F2937",
-      subtle: "#1F2937",
-      muted: "#374151",
-      "muted-foreground": "#E2E8F0",
-      border: "#374151",
-      foreground: "#F9FAFB",
-    },
-  },
-  success: {
-    DEFAULT: "#22C55E",
-    foreground: "#052E16",
-  },
-  warning: {
-    DEFAULT: "#F59E0B",
-    foreground: "#451A03",
-  },
-  error: {
-    DEFAULT: "#EF4444",
-    foreground: "#450A0A",
-  },
-  categories: CATEGORY_COLOR_MAP,
-} as const;
-
 const config: Config = {
   darkMode: "class",
   content: [
@@ -71,7 +21,43 @@ const config: Config = {
     },
     extend: {
       colors: {
-        ...palette,
+        brand: {
+          DEFAULT: "#007CF0",
+          green: "#22C55E",
+        },
+        app: {
+          light: "#F5F7FF",
+          dark: "#0B1943",
+        },
+        surface: {
+          dark: "#1F2937",
+        },
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          light: "#E2E8F0",
+          dark: "#374151",
+        },
+        error: {
+          DEFAULT: "#EF4444",
+          foreground: "#450A0A",
+        },
+        textpal: {
+          light: "#081134",
+          mutedL: "#475569",
+          dark: "#F5F7FF",
+          mutedD: "#94A3B8",
+          inverse: "#F9FAFB",
+        },
+        lightBg: "#F5F7FF",
+        lightBorder: "#E2E8F0",
+        darkSurface: "#1F2937",
+        darkBorder: "#374151",
+        text: {
+          primary: "#081134",
+          light: "#F9FAFB",
+          mutedLight: "#475569",
+          mutedDark: "#94A3B8",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -86,7 +72,6 @@ const config: Config = {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
-        border: "hsl(var(--border))",
         input: "hsl(var(--border))",
         ring: "hsl(var(--primary-gradient-to))",
         background: "hsl(var(--background))",
@@ -115,26 +100,34 @@ const config: Config = {
           foreground: "hsl(var(--text-primary))",
         },
         destructive: {
-          DEFAULT: palette.error.DEFAULT,
-          foreground: palette.error.foreground,
+          DEFAULT: "#EF4444",
+          foreground: "#450A0A",
         },
         success: {
-          DEFAULT: palette.success.DEFAULT,
-          foreground: palette.success.foreground,
+          DEFAULT: "#22C55E",
+          foreground: "#052E16",
         },
         warning: {
-          DEFAULT: palette.warning.DEFAULT,
-          foreground: palette.warning.foreground,
+          DEFAULT: "#F59E0B",
+          foreground: "#451A03",
         },
-        error: {
-          DEFAULT: palette.error.DEFAULT,
-          foreground: palette.error.foreground,
-        },
+        categories: CATEGORY_COLOR_MAP,
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, #007CF0 0%, #22C55E 100%)",
+        "gradient-primary": "linear-gradient(90deg, #007CF0 0%, #22C55E 100%)",
+        "gradient-card-light":
+          "linear-gradient(180deg, rgba(0,124,240,0.03) 0%, rgba(34,197,94,0.04) 100%)",
+        "gradient-card-dark":
+          "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.03) 100%)",
+        "section-light":
+          "linear-gradient(180deg, #F5F7FF 0%, #E6F3FF 45%, #E9FFF4 100%)",
+        "section-dark":
+          "linear-gradient(180deg, #0B1943 0%, #0A3E7A 50%, #0F766E 100%)",
         "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%)",
-        "gradient-card": "linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%)",
+      },
+      boxShadow: {
+        focusBlue: "0 0 0 2px rgba(0,124,240,0.5)",
+        focusGreen: "0 0 0 2px rgba(34,197,94,0.55)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -143,6 +136,7 @@ const config: Config = {
         DEFAULT: "var(--radius)",
         xl: "calc(var(--radius) + 4px)",
         "2xl": "calc(var(--radius) + 8px)",
+        card: "0.75rem",
       },
       keyframes: {
         "accordion-down": {

@@ -16,7 +16,7 @@ export default function Evidence({ items }: { items: EvidenceItem[] }) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="text-sm underline transition hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+        className="text-sm text-surface underline transition hover:no-underline focus-brand"
         aria-expanded={open}
         aria-controls={disclosureId}
       >
@@ -25,7 +25,7 @@ export default function Evidence({ items }: { items: EvidenceItem[] }) {
       {open ? (
         <div
           id={disclosureId}
-          className="mt-2 rounded-lg border border-border bg-background/40 p-3 text-sm"
+          className="mt-2 rounded-card border border-soft bg-gradient-card p-3 text-sm text-surface"
         >
           <ul className="list-disc space-y-1 pl-5">
             {items.map((evidence, index) => (
