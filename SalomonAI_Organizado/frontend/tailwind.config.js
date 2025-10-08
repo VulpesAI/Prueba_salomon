@@ -52,7 +52,7 @@ const palette = {
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ["class"],
+  darkMode: "class",
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -85,8 +85,8 @@ module.exports = {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--border))",
+        border: "var(--border)",
+        input: "var(--border)",
         ring: "hsl(var(--primary-gradient-to))",
         background: "hsl(var(--background))",
         panel: "hsl(var(--panel))",
@@ -102,16 +102,17 @@ module.exports = {
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "var(--accent)",
+          foreground: "#ffffff",
         },
+        "accent-muted": "var(--accent-muted)",
         popover: {
           DEFAULT: "hsl(var(--panel))",
           foreground: "hsl(var(--text-primary))",
         },
         card: {
-          DEFAULT: "hsl(var(--panel))",
-          foreground: "hsl(var(--text-primary))",
+          DEFAULT: "var(--card)",
+          foreground: "var(--text)",
         },
         destructive: {
           DEFAULT: palette.error.DEFAULT,
@@ -122,13 +123,20 @@ module.exports = {
           foreground: palette.success.foreground,
         },
         warning: {
-          DEFAULT: palette.warning.DEFAULT,
+          DEFAULT: "var(--warning)",
           foreground: palette.warning.foreground,
         },
         error: {
           DEFAULT: palette.error.DEFAULT,
           foreground: palette.error.foreground,
         },
+        bg: "var(--bg)",
+        "bg-muted": "var(--bg-muted)",
+        text: "var(--text)",
+        "text-muted": "var(--text-muted)",
+        positive: "var(--positive)",
+        negative: "var(--negative)",
+        skeleton: "var(--skeleton)",
       },
       backgroundImage: {
         "gradient-primary": "linear-gradient(135deg, #007CF0 0%, #22C55E 100%)",
@@ -139,6 +147,8 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "var(--radius)",
+        "2xl": "calc(var(--radius) + 4px)",
       },
       keyframes: {
         "accordion-down": {
