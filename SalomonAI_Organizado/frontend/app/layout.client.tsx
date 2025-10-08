@@ -1,22 +1,20 @@
-"use client"
+'use client'
 
 import '@/styles/globals.css'
-import { ThemeProvider } from '@/components/providers/theme-provider'
+
+import { AppProviders } from './providers'
 import { cn } from '@/lib/utils'
 
-export default function RootLayoutClient({
-  children,
-  fonts
-}: {
+type RootLayoutClientProps = {
   children: React.ReactNode
   fonts: { inter: { className: string } }
-}) {
+}
+
+export default function RootLayoutClient({ children, fonts }: RootLayoutClientProps) {
   return (
-    <html lang="es" suppressHydrationWarning className="dark">
-      <body className={cn(fonts.inter.className, 'bg-background')}>
-        <ThemeProvider defaultTheme="dark">
-          {children}
-        </ThemeProvider>
+    <html lang="es" suppressHydrationWarning>
+      <body className={cn(fonts.inter.className, 'bg-background text-foreground')}>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   )
