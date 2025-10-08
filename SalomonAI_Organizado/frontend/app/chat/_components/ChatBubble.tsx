@@ -5,11 +5,12 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
+        className={[
+          'max-w-[80%] text-sm px-3 py-2 rounded-2xl border border-soft shadow-none',
           isUser
-            ? 'bg-primary text-primary-foreground rounded-br-sm'
-            : 'bg-muted text-muted-foreground rounded-bl-sm'
-        }`}
+            ? 'rounded-br-sm bg-[rgba(0,124,240,0.2)] text-primary'
+            : 'rounded-bl-sm bg-[rgba(255,255,255,0.08)] text-primary'
+        ].join(' ')}
         role="article"
         aria-label={isUser ? 'Mensaje de usuario' : 'Mensaje de asistente'}
       >
