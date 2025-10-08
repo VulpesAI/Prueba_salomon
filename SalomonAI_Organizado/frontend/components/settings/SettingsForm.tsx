@@ -18,8 +18,9 @@ export default function SettingsForm() {
         const dto = await getSettings();
         setForm({ voice: dto.voice, theme: dto.theme });
         setSavedAt(dto.updatedAt);
-      } catch (e: any) {
-        setError(e.message ?? 'Error cargando preferencias');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Error cargando preferencias';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -32,8 +33,9 @@ export default function SettingsForm() {
     try {
       const dto = await updateSettings(form);
       setSavedAt(dto.updatedAt);
-    } catch (e: any) {
-      setError(e.message ?? 'Error guardando preferencias');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error guardando preferencias';
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -52,7 +54,10 @@ export default function SettingsForm() {
           <select
             className="mt-1 w-full rounded-lg border p-2 bg-background"
             value={form.voice}
-            onChange={(e) => setForm((f) => ({ ...f, voice: e.target.value as any }))}
+            onChange={(event) => {
+              const voice = event.target.value as VoiceOption;
+              setForm((previous) => ({ ...previous, voice }));
+            }}
             aria-label="Voz preferida"
           >
             {VOICES.map(v => <option key={v} value={v}>{v}</option>)}
