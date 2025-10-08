@@ -6,7 +6,12 @@ import { SettingsFormState, VoiceOption } from '@/lib/settings/types';
 const VOICES: VoiceOption[] = ['alloy', 'ash', 'nova'];
 
 export default function SettingsForm() {
-  const [form, setForm] = useState<SettingsFormState>({ voice: 'alloy', theme: 'dark' });
+  const [form, setForm] = useState<SettingsFormState>({
+    voice: 'alloy',
+    theme: 'dark',
+    language: 'es-CL',
+    timeZone: 'America/Santiago',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +21,12 @@ export default function SettingsForm() {
     (async () => {
       try {
         const dto = await getSettings();
-        setForm({ voice: dto.voice, theme: dto.theme });
+        setForm({
+          voice: dto.voice,
+          theme: dto.theme,
+          language: dto.language,
+          timeZone: dto.timeZone,
+        });
         setSavedAt(dto.updatedAt);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Error cargando preferencias';

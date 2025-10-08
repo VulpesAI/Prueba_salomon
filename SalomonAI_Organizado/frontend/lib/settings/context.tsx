@@ -32,7 +32,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       try {
         const dto = await getSettings();
         if (!active) return;
-        setSettings({ voice: dto.voice, theme: dto.theme });
+        setSettings({
+          voice: dto.voice,
+          theme: dto.theme,
+          language: dto.language,
+          timeZone: dto.timeZone,
+        });
       } catch (error) {
         console.error('Failed to load settings', error);
       }
@@ -48,7 +53,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback((next: SettingsState) => {
     setSettings(next);
-    const payload: SettingsFormState = { voice: next.voice, theme: next.theme };
+    const payload: SettingsFormState = {
+      voice: next.voice,
+      theme: next.theme,
+      language: next.language,
+      timeZone: next.timeZone,
+    };
     void updateSettings(payload).catch((error) => {
       console.error('Failed to persist settings', error);
     });
