@@ -2,15 +2,15 @@
 
 import * as React from "react";
 
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui-demo/button";
+import { Card } from "@/components/ui-demo/card";
 import { Chip } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/ui-demo/input";
 import { Loading } from "@/components/ui/Loading";
-import { Select } from "@/components/ui/Select";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Select } from "@/components/ui-demo/select";
+import { Skeleton } from "@/components/ui-demo/skeleton";
 
 const categories = [
   { value: "food", label: "Comida" },

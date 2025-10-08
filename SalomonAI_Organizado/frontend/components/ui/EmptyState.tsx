@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "./Button";
+import { Button } from "@/components/ui-demo/button";
 
 interface EmptyStateProps {
   title?: string;
