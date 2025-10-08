@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import type { Route } from "next"
 
 import {
   Breadcrumb,
@@ -13,26 +12,26 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { postLoginNavigation } from "@/src/config/post-login-navigation"
-
-import { findBestMatch } from "./navigation-utils"
+import type { NavSection } from "@/lib/nav/config"
+import { buildNav, findBestMatch } from "@/lib/nav/derive"
 
 type BreadcrumbProps = {
-  navigation?: typeof postLoginNavigation
+  sections?: NavSection[]
   variant?: "default" | "inverted"
 }
 
 type Crumb = {
   label: string
-  href?: Route
+  href?: string
   isCurrent?: boolean
 }
 
-export function Breadcrumbs({
-  navigation = postLoginNavigation,
-  variant = "default",
-}: BreadcrumbProps) {
+export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) {
   const pathname = usePathname() ?? ""
+  const navigation = React.useMemo(
+    () => sections ?? buildNav(),
+    [sections]
+  )
   const match = findBestMatch(navigation, pathname)
 
   const isInverted = variant === "inverted"
@@ -51,14 +50,14 @@ export function Breadcrumbs({
   ]
 
   if (match) {
-    const defaultGroupItem = match.group.items[0]
-    const groupHref = defaultGroupItem?.href ?? "/dashboard/overview"
+    const defaultSectionItem = match.section.items[0]
+    const sectionHref = defaultSectionItem?.href ?? "/dashboard/overview"
 
-    if (defaultGroupItem && defaultGroupItem.href !== "/dashboard/overview") {
-      crumbs.push({ label: match.group.title, href: groupHref })
+    if (defaultSectionItem && defaultSectionItem.href !== "/dashboard/overview") {
+      crumbs.push({ label: match.section.label, href: sectionHref })
     }
 
-    crumbs.push({ label: match.item.title, href: match.item.href, isCurrent: true })
+    crumbs.push({ label: match.item.label, href: match.item.href, isCurrent: true })
   }
 
   return (
@@ -78,7 +77,10 @@ export function Breadcrumbs({
               <BreadcrumbItem>
                 {crumb.href && !isLast ? (
                   <BreadcrumbLink asChild>
-                    <Link className={linkClassName} href={crumb.href}>
+                    <Link
+                      className={linkClassName}
+                      href={{ pathname: crumb.href }}
+                    >
                       {crumb.label}
                     </Link>
                   </BreadcrumbLink>
