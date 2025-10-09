@@ -1,15 +1,13 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/context/AuthContext"
-import { Brain, Menu } from "lucide-react"
+import { Brain, Menu, X } from "lucide-react"
 
 import { Breadcrumbs } from "./breadcrumbs"
 import Sidebar from "@/components/nav/Sidebar"
@@ -44,6 +42,7 @@ export function AuthenticatedShell({
 }) {
   const { user, logout, isLoading } = useAuth()
   const router = useRouter()
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
 
   React.useEffect(() => {
     if (!isLoading && !user) {
@@ -60,35 +59,35 @@ export function AuthenticatedShell({
       <header className="sticky top-0 z-30 border-b border-app-border bg-app-surface">
         <div className="flex h-16 items-center justify-between px-4 text-app md:px-6">
           <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="hidden items-center gap-3 rounded-2xl border border-transparent px-2 py-1 transition hover:border-app-border-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg sm:flex"
-            >
-              <div className="brand-gradient-bg rounded-xl p-2 text-primary-foreground shadow-sm">
-                <Brain className="h-5 w-5 text-primary-foreground" aria-hidden />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold leading-tight brand-gradient-text">
-                  SalomonAI
-                </span>
-                <Badge
-                  variant="outline"
-                  className="mt-0.5 w-fit border-primary/30 px-2 py-0 text-[10px] uppercase tracking-wide text-primary"
-                >
-                  Beta
-                </Badge>
-              </div>
-            </Link>
-            <Sheet>
+            <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
               <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Abrir navegación"
-                  className="group text-app hover:bg-app-surface-subtle focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                <button
+                  type="button"
+                  aria-label={isSidebarOpen ? "Cerrar navegación" : "Abrir navegación"}
+                  className="group flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-app-border-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg"
                 >
-                  <Menu className="h-5 w-5 transition-colors group-hover:text-primary-foreground" />
-                </Button>
+                  <div className="brand-gradient-bg rounded-xl p-2 text-primary-foreground shadow-sm">
+                    <Brain className="h-5 w-5 text-primary-foreground" aria-hidden />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold leading-tight brand-gradient-text">
+                      SalomonAI
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="mt-0.5 w-fit border-primary/30 px-2 py-0 text-[10px] uppercase tracking-wide text-primary"
+                    >
+                      Beta
+                    </Badge>
+                  </div>
+                  <span className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl border border-primary/30 bg-app-surface-subtle text-primary transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                    {isSidebarOpen ? (
+                      <X className="h-4 w-4" aria-hidden />
+                    ) : (
+                      <Menu className="h-4 w-4" aria-hidden />
+                    )}
+                  </span>
+                </button>
               </SheetTrigger>
               <SheetContent
                 side="left"
