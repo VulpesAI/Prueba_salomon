@@ -34,25 +34,30 @@ body {
   --chart-series-3: #EF4444;
   --chart-series-4: #F59E0B;
 
-  --text-primary: var(--text-app);
-  --text-secondary: var(--text-muted);
-  --icon-primary: var(--text-app);
-  --icon-secondary: var(--text-muted);
-  --background: 228 100% 98.04%;
-  --foreground: 227.73 73.33% 11.76%;
-  --panel: 0 0% 100%;
-  --panel-subtle: 213 40% 96%;
-  --muted: 214 32% 91%;
-  --muted-foreground: 215 19% 34%;
-  --border: 213 27% 84%;
-  --primary: 209 100% 47.06%;
-  --primary-foreground: 228 100% 98.04%;
-  --primary-gradient-from: 209 100% 47.06%;
-  --primary-gradient-to: 142.09 70.56% 45.29%;
-  --primary-dark-from: 205.38 100% 30.59%;
-  --primary-dark-to: 141.23 69.89% 36.47%;
-  --secondary: 227.73 73.33% 11.76%;
-  --secondary-foreground: 228 100% 98.04%;
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 215 27% 16%;
+  --card-foreground: var(--foreground);
+  --input: 214 20% 65%;
+  --muted: 215 19% 24%;
+  --muted-foreground: 214 20% 70%;
+  --border: 215 27% 26%;
+  --primary: var(--primary-from);
+  --primary-foreground: 210 40% 98%;
+  --primary-from: 221 83% 53%;
+  --primary-to: 142 72% 45%;
+  --primary-dark-from: 221 83% 48%;
+  --primary-dark-to: 142 72% 40%;
+  --primary-gradient-from: var(--primary-from);
+  --primary-gradient-to: var(--primary-to);
+  --secondary: 222 47% 11%;
+  --secondary-foreground: 210 40% 98%;
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --icon-primary: var(--foreground);
+  --icon-secondary: var(--muted-foreground);
+  --panel: var(--card);
+  --panel-subtle: 215 24% 20%;
   --radius: 0.75rem;
 }
 
@@ -69,25 +74,30 @@ body {
   --chart-axis: #94A3B8;
   --chart-grid: rgba(55, 65, 81, 0.5);
 
-  --text-primary: var(--text-app);
-  --text-secondary: var(--text-muted);
-  --icon-primary: var(--text-app);
-  --icon-secondary: var(--text-muted);
-  --background: 225 71.79% 15.29%;
-  --foreground: 210 20% 98.04%;
-  --panel: 215 27.91% 16.86%;
-  --panel-subtle: 220.91 39.29% 10.98%;
-  --muted: 216.92 19.12% 26.67%;
-  --muted-foreground: 225.71 67.74% 87.84%;
-  --border: 216.92 19.12% 26.67%;
-  --primary: 209 100% 47.06%;
-  --primary-foreground: 228 100% 98.04%;
-  --primary-gradient-from: 209 100% 47.06%;
-  --primary-gradient-to: 142.09 70.56% 45.29%;
-  --primary-dark-from: 205.38 100% 30.59%;
-  --primary-dark-to: 141.23 69.89% 36.47%;
-  --secondary: 227.73 73.33% 11.76%;
-  --secondary-foreground: 228 100% 98.04%;
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 215 27% 16%;
+  --card-foreground: var(--foreground);
+  --input: 215 20% 65%;
+  --muted: 215 19% 24%;
+  --muted-foreground: 214 20% 70%;
+  --border: 215 27% 26%;
+  --primary: var(--primary-from);
+  --primary-foreground: 210 40% 98%;
+  --primary-from: 221 83% 53%;
+  --primary-to: 142 72% 45%;
+  --primary-dark-from: 221 83% 48%;
+  --primary-dark-to: 142 72% 40%;
+  --primary-gradient-from: var(--primary-from);
+  --primary-gradient-to: var(--primary-to);
+  --secondary: 222 47% 11%;
+  --secondary-foreground: 210 40% 98%;
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --icon-primary: var(--foreground);
+  --icon-secondary: var(--muted-foreground);
+  --panel: var(--card);
+  --panel-subtle: 215 24% 20%;
 }
 
 * {
@@ -100,7 +110,7 @@ body {
   }
 
   body {
-    @apply bg-background text-textPrimary;
+    @apply bg-background text-foreground;
   }
 }
 
@@ -193,11 +203,19 @@ body {
 }
 
 .bg-gradient-primary {
-  background: linear-gradient(90deg, #007CF0 0%, #22C55E 100%);
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary-from)) 0%,
+    hsl(var(--primary-to)) 100%
+  );
 }
 
 .text-gradient-primary {
-  background: linear-gradient(90deg, #007CF0 0%, #22C55E 100%) !important;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary-from)) 0%,
+    hsl(var(--primary-to)) 100%
+  ) !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
@@ -206,8 +224,20 @@ body {
 }
 
 @layer utilities {
+  .bg-gradient-primary {
+    @apply bg-gradient-to-r from-[hsl(var(--primary-from))] to-[hsl(var(--primary-to))];
+  }
+
+  .bg-gradient-primary-dark {
+    @apply bg-gradient-to-r from-[hsl(var(--primary-dark-from))] to-[hsl(var(--primary-dark-to))];
+  }
+
   .text-gradient {
-    background: linear-gradient(90deg, #007CF0 0%, #22C55E 100%);
+    background: linear-gradient(
+      90deg,
+      hsl(var(--primary-from)) 0%,
+      hsl(var(--primary-to)) 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;

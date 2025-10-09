@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssForms from "@tailwindcss/forms";
 import tailwindcssAnimate from "tailwindcss-animate";
 
 import { CATEGORY_COLOR_MAP } from "./config/category-colors";
@@ -33,7 +34,7 @@ const config: Config = {
           dark: "#1F2937",
         },
         border: {
-          DEFAULT: "hsl(var(--border))",
+          DEFAULT: "hsl(var(--border) / <alpha-value>)",
           light: "#E2E8F0",
           dark: "#374151",
         },
@@ -61,8 +62,8 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          from: "hsl(var(--primary-gradient-from))",
-          to: "hsl(var(--primary-gradient-to))",
+          from: "hsl(var(--primary-from))",
+          to: "hsl(var(--primary-to))",
         },
         "primary-dark": {
           from: "hsl(var(--primary-dark-from))",
@@ -72,20 +73,20 @@ const config: Config = {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
-        input: "hsl(var(--border))",
-        ring: "hsl(var(--primary-gradient-to))",
-        background: "hsl(var(--background))",
-        panel: "hsl(var(--panel))",
-        "panel-subtle": "hsl(var(--panel-subtle))",
-        foreground: "hsl(var(--text-primary))",
+        input: "hsl(var(--input) / <alpha-value>)",
+        ring: "hsl(var(--primary-to) / <alpha-value>)",
+        background: "hsl(var(--background) / <alpha-value>)",
+        panel: "hsl(var(--panel) / <alpha-value>)",
+        "panel-subtle": "hsl(var(--panel-subtle) / <alpha-value>)",
+        foreground: "hsl(var(--foreground) / <alpha-value>)",
         textPrimary: "hsl(var(--text-primary))",
         textSecondary: "hsl(var(--text-secondary))",
         textMuted: "hsl(var(--text-muted))",
         iconPrimary: "hsl(var(--icon-primary))",
         iconSecondary: "hsl(var(--icon-secondary))",
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+          foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
         },
         accent: {
           DEFAULT: "hsl(var(--primary))",
@@ -96,8 +97,8 @@ const config: Config = {
           foreground: "hsl(var(--text-primary))",
         },
         card: {
-          DEFAULT: "hsl(var(--panel))",
-          foreground: "hsl(var(--text-primary))",
+          DEFAULT: "hsl(var(--card) / <alpha-value>)",
+          foreground: "hsl(var(--card-foreground) / <alpha-value>)",
         },
         destructive: {
           DEFAULT: "#EF4444",
@@ -112,9 +113,20 @@ const config: Config = {
           foreground: "#451A03",
         },
         categories: CATEGORY_COLOR_MAP,
+        "primary-from": "hsl(var(--primary-from) / <alpha-value>)",
+        "primary-to": "hsl(var(--primary-to) / <alpha-value>)",
+        "primary-dark-from": "hsl(var(--primary-dark-from) / <alpha-value>)",
+        "primary-dark-to": "hsl(var(--primary-dark-to) / <alpha-value>)",
+      },
+      gradientColorStops: {
+        "primary-from": "hsl(var(--primary-from))",
+        "primary-to": "hsl(var(--primary-to))",
+        "primary-dark-from": "hsl(var(--primary-dark-from))",
+        "primary-dark-to": "hsl(var(--primary-dark-to))",
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(90deg, #007CF0 0%, #22C55E 100%)",
+        "gradient-primary":
+          "linear-gradient(90deg, hsl(var(--primary-from)) 0%, hsl(var(--primary-to)) 100%)",
         "gradient-card-light":
           "linear-gradient(180deg, rgba(0,124,240,0.03) 0%, rgba(34,197,94,0.04) 100%)",
         "gradient-card-dark":
@@ -157,7 +169,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [tailwindcssForms, tailwindcssAnimate],
 } satisfies Config;
 
 export default config;
