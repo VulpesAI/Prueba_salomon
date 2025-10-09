@@ -23,13 +23,13 @@ body {
   --text-app: #081134;
   --text-surface: #081134;
   --text-muted-legacy: #475569;
-  --text-inverse: #F9FAFB;
+  --text-inverse: #F5F7FF;
   --border-neutral: #E2E8F0;
   --brand: #007CF0;
   --accent-legacy: #22C55E;
   --error-legacy: #EF4444;
   --chart-axis: #475569;
-  --chart-grid: rgba(226, 232, 240, 0.5);
+  --chart-grid: rgba(148, 163, 184, 0.25);
   --chart-series-1: #007CF0;
   --chart-series-2: #3B82F6;
   --chart-series-3: #06B6D4;
@@ -37,32 +37,32 @@ body {
   --chart-series-5: #F59E0B;
   --chart-series-6: #EF4444;
 
-  --background: 222 47% 11%;
-  --foreground: 228 100% 98%;
-  --card: 215 28% 17%;
+  --background: 228 100% 98%;
+  --foreground: 228 73% 12%;
+  --card: 0 0% 100%;
   --card-foreground: var(--foreground);
-  --input: 212 70% 24%;
-  --muted: 218 34% 25%;
-  --muted-foreground: 215 20% 65%;
-  --border: 212 70% 24%;
-  --primary: var(--primary-from);
+  --input: 214 32% 91%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 20% 35%;
+  --border: 214 32% 91%;
+  --primary: 209 100% 47%;
   --primary-foreground: 228 100% 98%;
-  --primary-from: 209 100% 47%;
-  --primary-via: 262 89% 66%;
-  --primary-to: 189 94% 43%;
-  --primary-dark-from: 212 70% 24%;
-  --primary-dark-to: 189 94% 43%;
+  --primary-from: 257 100% 62%;
+  --primary-via: 248 87% 61%;
+  --primary-to: 209 100% 47%;
+  --primary-dark-from: 257 68% 50%;
+  --primary-dark-to: 212 100% 41%;
   --primary-gradient-from: var(--primary-from);
   --primary-gradient-via: var(--primary-via);
   --primary-gradient-to: var(--primary-to);
-  --secondary: 222 47% 11%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 228 73% 12%;
+  --secondary-foreground: 228 100% 98%;
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --icon-primary: var(--foreground);
   --icon-secondary: var(--muted-foreground);
-  --panel: var(--card);
-  --panel-subtle: 212 70% 24%;
+  --panel: 0 0% 100%;
+  --panel-subtle: 222 100% 96%;
   --radius: 0.75rem;
 
   /* Semantic tokens mapped to existing palette */
@@ -80,9 +80,9 @@ body {
 
   --bg: hsl(var(--bg-hsl));
   --surface: hsl(var(--surface-hsl));
-  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 55%, transparent);
+  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 65%, transparent);
   --card-surface: hsl(var(--card-hsl));
-  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 80%, transparent);
+  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 85%, transparent);
   --border-color: hsl(var(--border-hsl));
   --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 55%, transparent);
   --text: hsl(var(--text-hsl));
@@ -116,39 +116,39 @@ body {
   --text-surface: #F5F7FF;
   --text-muted: #94A3B8;
   --text-inverse: #081134;
-  --border-neutral: #123A68;
+  --border-neutral: #374151;
   --brand: #007CF0;
   --accent-legacy: #22C55E;
   --error-legacy: #EF4444;
   --chart-axis: #94A3B8;
-  --chart-grid: rgba(55, 65, 81, 0.5);
+  --chart-grid: rgba(55, 65, 81, 0.45);
 
   --background: 225 72% 15%;
-  --foreground: 228 100% 98%;
+  --foreground: 210 20% 98%;
   --card: 215 28% 17%;
   --card-foreground: var(--foreground);
-  --input: 212 70% 24%;
-  --muted: 218 34% 25%;
+  --input: 217 19% 27%;
+  --muted: 216 28% 18%;
   --muted-foreground: 215 20% 65%;
-  --border: 212 70% 24%;
-  --primary: var(--primary-from);
-  --primary-foreground: 228 100% 98%;
-  --primary-from: 209 100% 47%;
-  --primary-via: 262 89% 66%;
-  --primary-to: 189 94% 43%;
-  --primary-dark-from: 212 70% 24%;
-  --primary-dark-to: 189 94% 43%;
+  --border: 217 19% 27%;
+  --primary: 209 100% 47%;
+  --primary-foreground: 210 40% 98%;
+  --primary-from: 257 68% 50%;
+  --primary-via: 248 87% 61%;
+  --primary-to: 212 100% 41%;
+  --primary-dark-from: 257 68% 50%;
+  --primary-dark-to: 212 100% 41%;
   --primary-gradient-from: var(--primary-from);
   --primary-gradient-via: var(--primary-via);
   --primary-gradient-to: var(--primary-to);
-  --secondary: 222 47% 11%;
+  --secondary: 225 72% 15%;
   --secondary-foreground: 210 40% 98%;
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --icon-primary: var(--foreground);
   --icon-secondary: var(--muted-foreground);
-  --panel: var(--card);
-  --panel-subtle: 215 24% 20%;
+  --panel: 215 28% 17%;
+  --panel-subtle: 217 19% 27%;
 
   --bg-hsl: var(--background);
   --surface-hsl: var(--muted);
@@ -228,7 +228,7 @@ body {
 }
 
 .text-surface {
-  color: var(--surface);
+  color: var(--text-surface);
 }
 
 .text-muted {
@@ -308,19 +308,19 @@ body {
 }
 
 .bg-gradient-card {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent) 0%, color-mix(in srgb, var(--success) 8%, transparent) 100%);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 
 .dark .bg-gradient-card {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--accent) 6%, transparent) 100%);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
 }
 
 .bg-section {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--bg) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--bg) 85%, var(--success) 15%) 100%);
+  background-image: linear-gradient(180deg, rgba(245, 247, 255, 0.85) 0%, rgba(232, 237, 255, 0.9) 50%, rgba(255, 255, 255, 0.92) 100%);
 }
 
 .dark .bg-section {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--bg) 88%, var(--accent) 12%) 0%, color-mix(in srgb, var(--bg) 82%, var(--success) 18%) 100%);
+  background-image: linear-gradient(180deg, rgba(11, 25, 67, 0.9) 0%, rgba(18, 58, 104, 0.8) 60%, rgba(17, 24, 39, 0.9) 100%);
 }
 
 .border-soft {
@@ -377,7 +377,11 @@ body {
 }
 
 .bg-gradient-hero {
-  background: linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%);
+  background: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
+}
+
+.dark .bg-gradient-hero {
+  background: linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(116, 61, 255, 0.32) 100%);
 }
 
 .bg-gradient-primary {
