@@ -1,7 +1,48 @@
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  Bell,
+  Bot,
+  Brain,
+  ChartBarStacked,
+  ChartLine,
+  Compass,
+  CreditCard,
+  FileText,
+  Goal,
+  GraduationCap,
+  LayoutDashboard,
+  LineChart,
+  ListTree,
+  PiggyBank,
+  PieChart,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Wallet,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import type { Route } from "next"
-import type { ReactNode } from "react"
 
-export type NavItem = { id: string; label: string; href: Route; icon?: ReactNode }
+export type NavBadgeVariant = "default" | "secondary" | "outline"
+
+export type NavBadge = {
+  label: string
+  variant?: NavBadgeVariant
+}
+
+export type NavItem = {
+  id: string
+  label: string
+  href: Route
+  icon?: LucideIcon
+  description?: string
+  badge?: NavBadge
+  exact?: boolean
+  quickAction?: boolean
+}
+
 export type NavSection = { id: string; label: string; items: NavItem[] }
 
 export const NAV_SECTIONS_BASE: NavSection[] = [
@@ -71,9 +112,27 @@ export const NAV_SECTIONS_BASE: NavSection[] = [
     id: "settings",
     label: "Configuración",
     items: [
-      { id: "settings-profile", label: "Perfil", href: "/settings/profile" },
-      { id: "settings-security", label: "Seguridad", href: "/settings/security" },
-      { id: "settings-notifications", label: "Notificaciones", href: "/settings/notifications" },
+      {
+        id: "settings-profile",
+        label: "Perfil",
+        href: "/settings/profile",
+        icon: Settings,
+        description: "Datos personales, preferencias y carga manual de cartolas",
+      },
+      {
+        id: "settings-security",
+        label: "Seguridad",
+        href: "/settings/security",
+        icon: ShieldCheck,
+        description: "Accesos y autenticación",
+      },
+      {
+        id: "settings-notifications",
+        label: "Notificaciones",
+        href: "/settings/notifications",
+        icon: GraduationCap,
+        description: "Alertas de correo y push",
+      },
     ],
   },
 ]
