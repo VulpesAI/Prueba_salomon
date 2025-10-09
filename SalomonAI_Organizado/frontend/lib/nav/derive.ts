@@ -8,12 +8,10 @@ import {
 } from "./config"
 
 export function buildNav(): NavSection[] {
-  const seen = new Set<string>()
+  const seen = new Set<Route>()
   const result: NavSection[] = []
-
   for (const section of NAV_SECTIONS_BASE) {
     const items: NavItem[] = []
-
     for (const item of section.items) {
       const href = String(item.href)
       if (!href || href === "#") {
@@ -39,25 +37,15 @@ export function buildNav(): NavSection[] {
         items,
       })
     }
+    if (items.length) result.push({ ...section, items })
   }
-
   return result
 }
 
-export function flattenNav(sections: NavSection[]): NavItem[] {
-  return sections.flatMap((section) => section.items)
-}
-
-export function findSectionByPath(
-  sections: NavSection[],
-  pathname: string
-): string | null {
-  for (const section of sections) {
-    if (section.items.some((item) => isNavItemActive(pathname, item))) {
-      return section.id
-    }
+export function findSectionByPath(sections: NavSection[], pathname: string): string | null {
+  for (const s of sections) {
+    if (s.items.some((i) => pathname === i.href || pathname.startsWith(i.href + "/"))) return s.id
   }
-
   return null
 }
 
