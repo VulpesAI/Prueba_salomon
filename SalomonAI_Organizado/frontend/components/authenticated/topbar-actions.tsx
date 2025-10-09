@@ -68,12 +68,12 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
   }, [onLogout])
 
   return (
-    <div className="flex items-center gap-3 text-textPrimary">
+    <div className="flex items-center gap-3 text-foreground">
       <div className="hidden items-center gap-2 md:flex">
-        <Search className="h-4 w-4 text-iconSecondary" aria-hidden />
+        <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
         <Input
           placeholder="Buscar en tu espacio financiero"
-          className="w-64 border-border/60 bg-panel-subtle text-textPrimary placeholder:text-textSecondary focus-visible:ring-primary-to"
+          className="w-64 border-border/60 bg-card text-foreground placeholder:text-muted-foreground focus-visible:ring-primary-to"
           aria-label="Buscar"
         />
       </div>
@@ -81,7 +81,7 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
+          className="text-foreground hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
           onClick={handleReloadDemoData}
         >
           Cargar datos de ejemplo
@@ -90,7 +90,7 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="group text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
+        className="group text-foreground hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
         asChild
       >
         <Link
@@ -98,7 +98,7 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
           aria-label="Notificaciones"
           className="flex items-center justify-center"
         >
-          <Bell className="h-5 w-5 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
+          <Bell className="h-5 w-5 transition-colors group-hover:text-primary-foreground" />
         </Link>
       </Button>
       <DropdownMenu>
@@ -106,22 +106,22 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="group gap-2 text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
+            className="group gap-2 text-foreground hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
           >
-            <Avatar className="h-8 w-8 border border-border/60 bg-panel-subtle text-textPrimary">
+            <Avatar className="h-8 w-8 border border-border/60 bg-card text-foreground">
               {user.avatarUrl ? (
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
               ) : null}
-              <AvatarFallback className="bg-panel-subtle text-textPrimary">
+              <AvatarFallback className="bg-card text-foreground">
                 {getInitials(user)}
               </AvatarFallback>
             </Avatar>
             <div className="hidden flex-col text-left leading-tight sm:flex">
-              <span className="text-sm font-medium text-textPrimary group-hover:text-primary-foreground">
+              <span className="text-sm font-medium text-foreground group-hover:text-primary-foreground">
                 {user.name}
               </span>
               {user.email ? (
-                <span className="text-xs text-textSecondary">{user.email}</span>
+                <span className="text-xs text-muted-foreground">{user.email}</span>
               ) : null}
             </div>
           </Button>

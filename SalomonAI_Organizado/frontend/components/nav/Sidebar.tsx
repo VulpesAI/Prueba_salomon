@@ -21,7 +21,7 @@ export default function Sidebar() {
       <Accordion type="single" collapsible value={currentSectionId ?? undefined}>
         {sections.map((section) => (
           <AccordionItem key={section.id} value={section.id} className="border-none">
-            <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary hover:no-underline [&>svg]:text-iconSecondary data-[state=open]:text-textPrimary data-[state=open]>svg:text-iconPrimary">
+            <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:no-underline [&>svg]:text-muted-foreground data-[state=open]:text-foreground data-[state=open]>svg:text-foreground">
               {section.label}
             </AccordionTrigger>
             <AccordionContent className="overflow-hidden text-sm">
@@ -38,12 +38,12 @@ export default function Sidebar() {
                             "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
                             active
                               ? "bg-gradient-primary text-primary-foreground shadow-sm"
-                              : "text-textSecondary hover:bg-gradient-primary hover:text-primary-foreground hover:shadow-sm"
+                              : "text-muted-foreground hover:bg-gradient-primary hover:text-primary-foreground hover:shadow-sm"
                           )}
                         >
                           <span className="flex-1 truncate">{item.label}</span>
                           {item.id === "insights" && (
-                            <div className="ml-auto inline-flex flex-shrink-0 items-center rounded-full border border-transparent bg-secondary px-2.5 py-0.5 text-xs font-semibold transition-colors hover:bg-secondary/80">
+                            <div className="ml-auto inline-flex flex-shrink-0 items-center rounded-full border border-transparent bg-card px-2.5 py-0.5 text-xs font-semibold transition-colors hover:bg-card/80">
                               IA
                             </div>
                           )}

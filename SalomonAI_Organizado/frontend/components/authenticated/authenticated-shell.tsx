@@ -15,8 +15,8 @@ import { TopbarActions } from "./topbar-actions"
 import { HeaderResumen } from "../HeaderResumen"
 
 const LoadingShell = () => (
-  <div className="flex min-h-screen flex-col bg-background">
-    <header className="border-b border-border bg-panel px-4 text-textPrimary md:px-6">
+  <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <header className="border-b border-border bg-background px-4 md:px-6">
       <div className="flex h-16 items-center justify-between">
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded-full" />
@@ -54,9 +54,9 @@ export function AuthenticatedShell({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-panel text-textPrimary">
-        <div className="flex h-16 items-center justify-between px-4 md:px-6">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-30 border-b border-border bg-background">
+        <div className="flex h-16 items-center justify-between px-4 text-foreground md:px-6">
           <div className="flex items-center gap-3">
             <Sheet>
               <SheetTrigger asChild>
@@ -64,26 +64,26 @@ export function AuthenticatedShell({
                   variant="ghost"
                   size="icon"
                   aria-label="Abrir navegación"
-                  className="group text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
+                  className="group text-foreground hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
                 >
-                  <Menu className="h-5 w-5 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
+                  <Menu className="h-5 w-5 transition-colors group-hover:text-primary-foreground" />
                 </Button>
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-72 border-border bg-background p-0 text-textPrimary"
+                className="w-72 border-border bg-background p-0 text-foreground"
               >
                 <Sidebar />
               </SheetContent>
             </Sheet>
-            <div className="hidden flex-col text-textSecondary md:flex">
-              <span className="text-sm font-semibold text-textSecondary">
+            <div className="hidden flex-col text-muted-foreground md:flex">
+              <span className="text-sm font-semibold text-muted-foreground">
                 Espacio financiero
               </span>
               <Breadcrumbs variant="inverted" />
             </div>
-            </div>
-          <div className="flex items-center gap-4">
+          </div>
+          <div className="flex items-center gap-4 text-foreground">
             <div className="hidden md:block">
               <HeaderResumen />
             </div>
