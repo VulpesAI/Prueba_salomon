@@ -31,24 +31,26 @@ body {
   --chart-axis: #475569;
   --chart-grid: rgba(226, 232, 240, 0.5);
   --chart-series-1: #007CF0;
-  --chart-series-2: #22C55E;
-  --chart-series-3: #EF4444;
-  --chart-series-4: #F59E0B;
+  --chart-series-2: #3B82F6;
+  --chart-series-3: #06B6D4;
+  --chart-series-4: #22C55E;
+  --chart-series-5: #F59E0B;
+  --chart-series-6: #EF4444;
 
   --background: 222 47% 11%;
-  --foreground: 210 40% 98%;
-  --card: 215 27% 16%;
+  --foreground: 228 100% 98%;
+  --card: 215 28% 17%;
   --card-foreground: var(--foreground);
-  --input: 214 20% 65%;
-  --muted: 215 19% 24%;
-  --muted-foreground: 214 20% 70%;
-  --border: 215 27% 26%;
+  --input: 212 70% 24%;
+  --muted: 218 34% 25%;
+  --muted-foreground: 215 20% 65%;
+  --border: 212 70% 24%;
   --primary: var(--primary-from);
-  --primary-foreground: 210 40% 98%;
-  --primary-from: 221 83% 53%;
-  --primary-to: 142 72% 45%;
-  --primary-dark-from: 221 83% 48%;
-  --primary-dark-to: 142 72% 40%;
+  --primary-foreground: 228 100% 98%;
+  --primary-from: 209 100% 47%;
+  --primary-to: 189 94% 43%;
+  --primary-dark-from: 212 70% 24%;
+  --primary-dark-to: 189 94% 43%;
   --primary-gradient-from: var(--primary-from);
   --primary-gradient-to: var(--primary-to);
   --secondary: 222 47% 11%;
@@ -58,7 +60,7 @@ body {
   --icon-primary: var(--foreground);
   --icon-secondary: var(--muted-foreground);
   --panel: var(--card);
-  --panel-subtle: 215 24% 20%;
+  --panel-subtle: 212 70% 24%;
   --radius: 0.75rem;
 
   /* Semantic tokens mapped to existing palette */
@@ -70,7 +72,7 @@ body {
   --text-muted-hsl: var(--muted-foreground);
   --accent-hsl: var(--primary);
   --accent-contrast-hsl: var(--primary-foreground);
-  --success-hsl: 142 72% 45%;
+  --success-hsl: 142 71% 45%;
   --warning-hsl: 38 92% 50%;
   --danger-hsl: 0 84% 60%;
 
@@ -104,6 +106,8 @@ body {
   --bg-app: var(--bg);
   --text-app: var(--text);
   --text-muted: var(--text-muted);
+
+  --brand-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
 }
 
 .dark {
@@ -112,27 +116,27 @@ body {
   --text-surface: #F5F7FF;
   --text-muted: #94A3B8;
   --text-inverse: #081134;
-  --border-neutral: #374151;
+  --border-neutral: #123A68;
   --brand: #007CF0;
   --accent-legacy: #22C55E;
   --error-legacy: #EF4444;
   --chart-axis: #94A3B8;
   --chart-grid: rgba(55, 65, 81, 0.5);
 
-  --background: 222 47% 11%;
-  --foreground: 210 40% 98%;
-  --card: 215 27% 16%;
+  --background: 225 72% 15%;
+  --foreground: 228 100% 98%;
+  --card: 215 28% 17%;
   --card-foreground: var(--foreground);
-  --input: 215 20% 65%;
-  --muted: 215 19% 24%;
-  --muted-foreground: 214 20% 70%;
-  --border: 215 27% 26%;
+  --input: 212 70% 24%;
+  --muted: 218 34% 25%;
+  --muted-foreground: 215 20% 65%;
+  --border: 212 70% 24%;
   --primary: var(--primary-from);
-  --primary-foreground: 210 40% 98%;
-  --primary-from: 221 83% 53%;
-  --primary-to: 142 72% 45%;
-  --primary-dark-from: 221 83% 48%;
-  --primary-dark-to: 142 72% 40%;
+  --primary-foreground: 228 100% 98%;
+  --primary-from: 209 100% 47%;
+  --primary-to: 189 94% 43%;
+  --primary-dark-from: 212 70% 24%;
+  --primary-dark-to: 189 94% 43%;
   --primary-gradient-from: var(--primary-from);
   --primary-gradient-to: var(--primary-to);
   --secondary: 222 47% 11%;
@@ -142,7 +146,7 @@ body {
   --icon-primary: var(--foreground);
   --icon-secondary: var(--muted-foreground);
   --panel: var(--card);
-  --panel-subtle: 215 24% 20%;
+  --panel-subtle: 212 70% 24%;
 
   --bg-hsl: var(--background);
   --surface-hsl: var(--muted);
@@ -152,9 +156,9 @@ body {
   --text-muted-hsl: var(--muted-foreground);
   --accent-hsl: var(--primary);
   --accent-contrast-hsl: var(--primary-foreground);
-  --success-hsl: 142 72% 40%;
+  --success-hsl: 142 71% 45%;
   --warning-hsl: 38 92% 50%;
-  --danger-hsl: 0 84% 58%;
+  --danger-hsl: 0 84% 60%;
 
   --bg: hsl(var(--bg-hsl));
   --surface: hsl(var(--surface-hsl));
@@ -181,6 +185,8 @@ body {
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+
+  --brand-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
 }
 
 * {
@@ -195,6 +201,19 @@ body {
   body {
     @apply bg-app-bg text-app;
   }
+}
+
+.brand-gradient-bg {
+  background: var(--brand-gradient);
+}
+
+.brand-gradient-text {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  display: inline-block;
 }
 
 

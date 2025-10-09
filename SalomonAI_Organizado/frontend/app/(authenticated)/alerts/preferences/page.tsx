@@ -208,7 +208,10 @@ export default function AlertsPreferencesPage() {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="text-base font-semibold">{rule.name}</h4>
-                      <Badge className="border border-amber-300 bg-amber-100 text-amber-700" variant="outline">
+                      <Badge
+                        className="border-[color:color-mix(in_srgb,var(--warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--warning)_16%,transparent)] text-app-warning"
+                        variant="outline"
+                      >
                         {rule.severity}
                       </Badge>
                     </div>

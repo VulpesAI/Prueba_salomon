@@ -135,7 +135,7 @@ export function VoiceButton({ userId, voiceId }: { userId?: string; voiceId?: st
     <div className="flex flex-col gap-3">
       <button
         type="button"
-        className="rounded-full bg-emerald-600 px-6 py-3 text-white shadow hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-400"
+        className="rounded-full bg-[color:var(--accent)] px-6 py-3 text-white shadow transition-colors hover:bg-[color:color-mix(in_srgb,var(--accent)_82%,black)] disabled:cursor-not-allowed disabled:bg-[color:color-mix(in_srgb,var(--accent)_55%,transparent)]"
         onClick={handleButtonClick}
         disabled={status === 'processing'}
       >
@@ -148,12 +148,12 @@ export function VoiceButton({ userId, voiceId }: { userId?: string; voiceId?: st
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-app-danger">{error}</p>}
 
       {ttsFailed && (
         <button
           type="button"
-          className="self-start text-sm text-emerald-700 underline"
+          className="self-start text-sm text-app-success underline"
           onClick={() => {
             setError(null);
             void retryAudio();

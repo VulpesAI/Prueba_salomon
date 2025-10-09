@@ -5,11 +5,11 @@ const palette = {
     DEFAULT: "#007CF0",
     foreground: "#F5F7FF",
     from: "#007CF0",
-    to: "#22C55E",
+    to: "#06B6D4",
   },
   "primary-dark": {
-    from: "#005A9C",
-    to: "#1C9E4A",
+    from: "#123A68",
+    to: "#06B6D4",
   },
   secondary: {
     DEFAULT: "#081134",
@@ -28,11 +28,11 @@ const palette = {
     dark: {
       background: "#0B1943",
       surface: "#1F2937",
-      subtle: "#1F2937",
-      muted: "#374151",
-      "muted-foreground": "#E2E8F0",
-      border: "#374151",
-      foreground: "#F9FAFB",
+      subtle: "#123A68",
+      muted: "#2A3A55",
+      "muted-foreground": "#94A3B8",
+      border: "#123A68",
+      foreground: "#F5F7FF",
     },
   },
   success: {
@@ -139,9 +139,9 @@ module.exports = {
         skeleton: "var(--skeleton)",
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, #007CF0 0%, #22C55E 100%)",
-        "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%)",
-        "gradient-card": "linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%)",
+        "gradient-primary": "linear-gradient(135deg, #007CF0 0%, #06B6D4 100%)",
+        "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.85) 0%, rgba(6, 182, 212, 0.35) 100%)",
+        "gradient-card": "linear-gradient(135deg, rgba(18, 58, 104, 0.35) 0%, rgba(42, 58, 85, 0.15) 100%)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -5,14 +5,14 @@ import type { InsightKPI } from "@/lib/insights/types";
 import { cn } from "@/lib/utils";
 
 const AMOUNT_COLOR: Record<InsightKPI["kind"], string> = {
-  ingresos: "text-emerald-400",
-  gastos: "text-rose-400",
+  ingresos: "text-app-success",
+  gastos: "text-app-danger",
   neto: "text-foreground",
 };
 
 const DELTA_BG: Record<"positive" | "negative" | "neutral", string> = {
-  positive: "bg-emerald-500/10 text-emerald-400",
-  negative: "bg-rose-500/10 text-rose-400",
+  positive: "bg-[color:color-mix(in_srgb,var(--success)_20%,transparent)] text-app-success",
+  negative: "bg-[color:color-mix(in_srgb,var(--danger)_20%,transparent)] text-app-danger",
   neutral: "bg-muted text-muted-foreground",
 };
 

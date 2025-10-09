@@ -15,17 +15,11 @@ export const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-primary rounded-lg">
+            <div className="p-2 brand-gradient-bg rounded-lg">
               <Brain className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold" style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                color: 'transparent'
-              }}>
+              <h1 className="text-xl font-bold brand-gradient-text">
                 SalomonAI
               </h1>
               <Badge variant="outline" className="text-xs -mt-1 border-primary/30 text-primary">

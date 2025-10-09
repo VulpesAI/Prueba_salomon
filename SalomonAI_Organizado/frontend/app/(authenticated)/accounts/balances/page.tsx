@@ -164,8 +164,8 @@ export default function AccountBalancesPage() {
                       <span
                         className={
                           account.change30d >= 0
-                            ? "text-sm font-medium text-emerald-600"
-                            : "text-sm font-medium text-destructive"
+                            ? "text-sm font-medium text-app-success"
+                            : "text-sm font-medium text-app-danger"
                         }
                       >
                         {account.change30d >= 0 ? "+" : ""}
