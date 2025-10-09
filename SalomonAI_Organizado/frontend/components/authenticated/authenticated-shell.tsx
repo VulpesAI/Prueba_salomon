@@ -73,7 +73,7 @@ export function AuthenticatedShell({
                 side="left"
                 className="w-72 border-border bg-background p-0 text-textPrimary"
               >
-                <Sidebar />
+                <Sidebar className="h-full border-0" />
               </SheetContent>
             </Sheet>
             <div className="hidden flex-col text-textSecondary md:flex">
