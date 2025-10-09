@@ -1,27 +1,4 @@
-import {
-  Activity,
-  AlertCircle,
-  AlertTriangle,
-  Bell,
-  Bot,
-  Brain,
-  ChartBarStacked,
-  ChartLine,
-  Compass,
-  CreditCard,
-  FileText,
-  Goal,
-  GraduationCap,
-  LayoutDashboard,
-  LineChart,
-  ListTree,
-  PiggyBank,
-  PieChart,
-  Settings,
-  ShieldCheck,
-  Sparkles,
-  Wallet,
-} from "lucide-react"
+import { GraduationCap, Settings, ShieldCheck } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import type { Route } from "next"
 
