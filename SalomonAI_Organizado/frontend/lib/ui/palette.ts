@@ -1,13 +1,13 @@
 export const CATEGORY_COLORS: Record<string, string> = {
-  Supermercado: "#38bdf8", // sky-400
-  Arriendo: "#22c55e", // green-500
-  Transporte: "#a855f7", // purple-500
-  Entretenimiento: "#f97316", // orange-500
-  Educación: "#ef4444", // red-500
-  Servicios: "#facc15", // yellow-400
+  Supermercado: "#06B6D4",
+  Arriendo: "#007CF0",
+  Transporte: "#3B82F6",
+  Entretenimiento: "#F59E0B",
+  Educación: "#22C55E",
+  Servicios: "#123A68",
 };
 
-const DEFAULT_COLOR = "#94a3b8"; // slate-400 fallback
+const DEFAULT_COLOR = "#94A3B8";
 
 export function getCategoryColor(name: string): string {
   return CATEGORY_COLORS[name] ?? DEFAULT_COLOR;

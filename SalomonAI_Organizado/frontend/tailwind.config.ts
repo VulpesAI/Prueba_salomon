@@ -49,7 +49,7 @@ const config: Config = {
         border: {
           DEFAULT: "hsl(var(--border) / <alpha-value>)",
           light: "#E2E8F0",
-          dark: "#374151",
+          dark: "#123A68",
         },
         error: {
           DEFAULT: "#EF4444",
@@ -65,7 +65,7 @@ const config: Config = {
         lightBg: "#F5F7FF",
         lightBorder: "#E2E8F0",
         darkSurface: "#1F2937",
-        darkBorder: "#374151",
+        darkBorder: "#123A68",
         text: {
           primary: "#081134",
           light: "#F9FAFB",
@@ -141,18 +141,18 @@ const config: Config = {
         "gradient-primary":
           "linear-gradient(90deg, hsl(var(--primary-from)) 0%, hsl(var(--primary-to)) 100%)",
         "gradient-card-light":
-          "linear-gradient(180deg, rgba(0,124,240,0.03) 0%, rgba(34,197,94,0.04) 100%)",
+          "linear-gradient(180deg, rgba(0,124,240,0.03) 0%, rgba(6,182,212,0.04) 100%)",
         "gradient-card-dark":
-          "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.03) 100%)",
+          "linear-gradient(180deg, rgba(18,58,104,0.35) 0%, rgba(42,58,85,0.15) 100%)",
         "section-light":
           "linear-gradient(180deg, #F5F7FF 0%, #E6F3FF 45%, #E9FFF4 100%)",
         "section-dark":
-          "linear-gradient(180deg, #0B1943 0%, #0A3E7A 50%, #0F766E 100%)",
-        "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%)",
+          "linear-gradient(180deg, #0B1943 0%, #123A68 50%, #06B6D4 100%)",
+        "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.85) 0%, rgba(6, 182, 212, 0.35) 100%)",
       },
       boxShadow: {
         focusBlue: "0 0 0 2px rgba(0,124,240,0.5)",
-        focusGreen: "0 0 0 2px rgba(34,197,94,0.55)",
+        focusGreen: "0 0 0 2px rgba(6,182,212,0.55)",
       },
       borderRadius: {
         lg: "var(--radius)",
