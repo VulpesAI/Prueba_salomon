@@ -42,7 +42,7 @@ export const Navigation = () => {
             <Link href="/funciones" className="text-muted-foreground hover:text-foreground transition-colors">
               Funciones
             </Link>
-            <Link href="/seguridad" className="hover:text-primary transition-colors">
+            <Link href="/seguridad" className="text-muted-foreground hover:text-foreground transition-colors">
               Seguridad
             </Link>
           </div>
@@ -80,7 +80,11 @@ export const Navigation = () => {
               <Link href="/funciones" className="text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>
                 Funciones
               </Link>
-              <Link href="/seguridad" className="hover:text-primary transition-colors" onClick={() => setIsMenuOpen(false)}>
+              <Link
+                href="/seguridad"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 Seguridad
               </Link>
               <div className="pt-4 space-y-2">

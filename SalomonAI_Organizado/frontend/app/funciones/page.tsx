@@ -3,7 +3,6 @@
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -391,10 +390,14 @@ export default function FuncionesPage() {
           <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
             30 días de acceso completo a todas las funciones. Sin compromisos.
           </p>
-          <Button size="lg" variant="secondary" className="text-lg px-8 py-3">
+          <a
+            href="https://prueba-salomon.vercel.app/signup"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-primary bg-background text-primary hover:bg-primary/10 h-11 rounded-md text-lg px-8 py-3"
+            rel="noopener noreferrer"
+          >
             <Zap className="w-5 h-5 mr-2" />
             Comenzar Prueba Gratuita
-          </Button>
+          </a>
         </div>
       </section>
 
