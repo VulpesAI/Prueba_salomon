@@ -1,7 +1,9 @@
+import type { Route } from "next"
+
 import { NAV_SECTIONS_BASE, NAV_ALIASES, type NavItem, type NavSection } from "./config"
 
 export function buildNav(): NavSection[] {
-  const seen = new Set<string>()
+  const seen = new Set<Route>()
   const result: NavSection[] = []
   for (const section of NAV_SECTIONS_BASE) {
     const items: NavItem[] = []
@@ -23,6 +25,6 @@ export function findSectionByPath(sections: NavSection[], pathname: string): str
   return null
 }
 
-export function isActive(pathname: string, href: string): boolean {
+export function isActive(pathname: string, href: Route): boolean {
   return pathname === href || pathname.startsWith(href + "/")
 }

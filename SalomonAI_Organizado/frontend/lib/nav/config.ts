@@ -1,6 +1,7 @@
+import type { Route } from "next"
 import type { ReactNode } from "react"
 
-export type NavItem = { id: string; label: string; href: string; icon?: ReactNode }
+export type NavItem = { id: string; label: string; href: Route; icon?: ReactNode }
 export type NavSection = { id: string; label: string; items: NavItem[] }
 
 export const NAV_SECTIONS_BASE: NavSection[] = [
@@ -77,7 +78,7 @@ export const NAV_SECTIONS_BASE: NavSection[] = [
   },
 ]
 
-export const NAV_ALIASES: Record<string, string> = {
+export const NAV_ALIASES: Partial<Record<Route, string>> = {
   "/accounts": "Resumen de cuentas",
   "/accounts/balances": "Saldos",
   "/accounts/synchronization": "Sincronización",
