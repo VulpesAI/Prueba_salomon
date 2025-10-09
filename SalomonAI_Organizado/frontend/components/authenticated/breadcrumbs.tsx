@@ -12,8 +12,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import type { NavSection } from "@/lib/nav/config"
-import { buildNav, findBestMatch } from "@/lib/nav/derive"
+import type { NavItem, NavSection } from "@/lib/nav/config"
+import { buildNav, findSectionByPath, isActive } from "@/lib/nav/derive"
 
 type BreadcrumbProps = {
   sections?: NavSection[]
@@ -32,7 +32,26 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
     () => sections ?? buildNav(),
     [sections]
   )
-  const match = findBestMatch(navigation, pathname)
+  const currentSectionId = findSectionByPath(navigation, pathname)
+  const match = React.useMemo(() => {
+    let best: { section: NavSection; item: NavItem } | null = null
+    for (const section of navigation) {
+      for (const item of section.items) {
+        if (isActive(pathname, item.href)) {
+          if (!best || item.href.length > best.item.href.length) {
+            best = { section, item }
+          }
+        }
+      }
+    }
+    if (best) return best
+    if (currentSectionId) {
+      const section = navigation.find((s) => s.id === currentSectionId)
+      const item = section?.items[0]
+      if (section && item) return { section, item }
+    }
+    return null
+  }, [currentSectionId, navigation, pathname])
 
   const isInverted = variant === "inverted"
   const listClassName = isInverted

@@ -20,17 +20,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import type { AuthUser } from "@/context/AuthContext"
-import { buildNav, flattenNav } from "@/lib/nav/derive"
 import { Bell, LogOut, Search } from "lucide-react"
 
 type TopbarActionsProps = {
   user: AuthUser
   onLogout?: () => Promise<void> | void
 }
-
-const QUICK_ACTIONS = flattenNav(buildNav())
-  .filter((item) => item.quickAction)
-  .slice(0, 3)
 
 const getInitials = (user: AuthUser) => {
   if (user.name) {
@@ -81,24 +76,6 @@ export function TopbarActions({ user, onLogout }: TopbarActionsProps) {
           className="w-64 border-border/60 bg-panel-subtle text-textPrimary placeholder:text-textSecondary focus-visible:ring-primary-to"
           aria-label="Buscar"
         />
-      </div>
-      <div className="hidden items-center gap-2 lg:flex">
-        {QUICK_ACTIONS.map((action) => (
-          <Button
-            key={action.href}
-            variant="ghost"
-            size="sm"
-            className="group text-textPrimary hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
-            asChild
-          >
-            <Link href={action.href} className="flex items-center gap-2">
-              {action.icon ? (
-                <action.icon className="h-4 w-4 text-iconPrimary transition-colors group-hover:text-primary-foreground" />
-              ) : null}
-              <span>{action.label}</span>
-            </Link>
-          </Button>
-        ))}
       </div>
       {IS_DEMO_MODE ? (
         <Button
