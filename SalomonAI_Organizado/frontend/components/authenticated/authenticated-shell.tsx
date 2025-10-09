@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext"
 import { Menu } from "lucide-react"
 
 import { Breadcrumbs } from "./breadcrumbs"
-import { SidebarNav } from "./sidebar-nav"
+import Sidebar from "@/components/nav/Sidebar"
 import { TopbarActions } from "./topbar-actions"
 import { HeaderResumen } from "../HeaderResumen"
 
@@ -73,7 +73,7 @@ export function AuthenticatedShell({
                 side="left"
                 className="w-72 border-border bg-background p-0 text-textPrimary"
               >
-                <SidebarNav className="h-full border-0" />
+                <Sidebar className="h-full border-0" />
               </SheetContent>
             </Sheet>
             <div className="hidden flex-col text-textSecondary md:flex">

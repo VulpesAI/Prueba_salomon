@@ -22,8 +22,8 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react"
-import type { Route } from "next"
 import type { LucideIcon } from "lucide-react"
+import type { Route } from "next"
 
 export type NavBadgeVariant = "default" | "secondary" | "outline"
 
@@ -43,11 +43,7 @@ export type NavItem = {
   quickAction?: boolean
 }
 
-export type NavSection = {
-  id: string
-  label: string
-  items: NavItem[]
-}
+export type NavSection = { id: string; label: string; items: NavItem[] }
 
 export const NAV_SECTIONS_BASE: NavSection[] = [
   {
@@ -261,8 +257,7 @@ export const NAV_SECTIONS_BASE: NavSection[] = [
         label: "Perfil",
         href: "/settings/profile",
         icon: Settings,
-        description:
-          "Datos personales, preferencias y carga manual de cartolas",
+        description: "Datos personales, preferencias y carga manual de cartolas",
       },
       {
         id: "settings-security",
@@ -282,7 +277,7 @@ export const NAV_SECTIONS_BASE: NavSection[] = [
   },
 ]
 
-export const NAV_ALIASES: Record<string, string> = {
+export const NAV_ALIASES: Partial<Record<Route, string>> = {
   "/accounts": "Resumen de cuentas",
   "/accounts/balances": "Saldos",
   "/accounts/synchronization": "Sincronización",

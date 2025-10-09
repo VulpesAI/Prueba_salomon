@@ -1,3 +1,5 @@
+import type { Route } from "next"
+
 import {
   NAV_ALIASES,
   NAV_SECTIONS_BASE,
@@ -13,11 +15,16 @@ export function buildNav(): NavSection[] {
     const items: NavItem[] = []
 
     for (const item of section.items) {
-      if (seen.has(item.href)) {
+      const href = String(item.href)
+      if (!href || href === "#") {
         continue
       }
 
-      seen.add(item.href)
+      if (seen.has(href)) {
+        continue
+      }
+
+      seen.add(href)
 
       const alias = NAV_ALIASES[item.href]
       items.push({
@@ -54,19 +61,8 @@ export function findSectionByPath(
   return null
 }
 
-export function isActive(pathname: string, href: string): boolean {
-  const normalizedPath = normalize(pathname)
-  const normalizedHref = normalize(href)
-
-  if (normalizedHref.length === 0) {
-    return false
-  }
-
-  if (normalizedPath === normalizedHref) {
-    return true
-  }
-
-  return normalizedPath.startsWith(`${normalizedHref}/`)
+export function isActive(pathname: string, href: Route): boolean {
+  return isMatch(pathname, String(href))
 }
 
 export function isNavItemActive(pathname: string, item: NavItem): boolean {
@@ -100,7 +96,7 @@ export function findBestMatch(
 
 function getMatchScore(pathname: string, item: NavItem): number {
   const normalizedPath = normalize(pathname)
-  const normalizedHref = normalize(sanitizeDynamicSegments(item.href))
+  const normalizedHref = normalize(sanitizeDynamicSegments(String(item.href)))
 
   if (normalizedHref.length === 0) {
     return 0
@@ -120,6 +116,21 @@ function getMatchScore(pathname: string, item: NavItem): number {
   }
 
   return 0
+}
+
+function isMatch(pathname: string, href: string): boolean {
+  const normalizedPath = normalize(pathname)
+  const normalizedHref = normalize(sanitizeDynamicSegments(href))
+
+  if (normalizedHref.length === 0) {
+    return false
+  }
+
+  if (normalizedPath === normalizedHref) {
+    return true
+  }
+
+  return normalizedPath.startsWith(`${normalizedHref}/`)
 }
 
 const TRAILING_SLASH_REGEX = /\/$/
