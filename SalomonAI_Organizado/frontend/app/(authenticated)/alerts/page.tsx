@@ -23,19 +23,23 @@ type Severity = "critical" | "high" | "medium" | "low"
 const severityStyles: Record<Severity, { label: string; className: string }> = {
   critical: {
     label: esCL.alerts.severities.critical,
-    className: "bg-destructive/15 text-destructive border-destructive/40",
+    className:
+      "border-[color:color-mix(in_srgb,var(--danger)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--danger)_16%,transparent)] text-app-danger",
   },
   high: {
     label: esCL.alerts.severities.high,
-    className: "bg-amber-100 text-amber-700 border-amber-300",
+    className:
+      "border-[color:color-mix(in_srgb,var(--warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--warning)_16%,transparent)] text-app-warning",
   },
   medium: {
     label: esCL.alerts.severities.medium,
-    className: "bg-sky-100 text-sky-700 border-sky-300",
+    className:
+      "border-[color:color-mix(in_srgb,#06B6D4_45%,transparent)] bg-[color:color-mix(in_srgb,#06B6D4_14%,transparent)] text-[#06B6D4]",
   },
   low: {
     label: esCL.alerts.severities.low,
-    className: "bg-emerald-100 text-emerald-700 border-emerald-300",
+    className:
+      "border-[color:color-mix(in_srgb,var(--success)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--success)_14%,transparent)] text-app-success",
   },
 }
 

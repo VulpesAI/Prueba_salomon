@@ -106,7 +106,7 @@ export default function AnalyticsCategoriesPage() {
           <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2">
-                <Flame className="h-5 w-5 text-orange-500" />
+                <Flame className="h-5 w-5 text-[#F59E0B]" />
                 Mapa de calor de impacto
               </CardTitle>
               <CardDescription>
@@ -195,8 +195,8 @@ export default function AnalyticsCategoriesPage() {
                         className={cn(
                           "inline-flex items-center gap-1",
                           row.status === "up"
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-                            : "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200"
+                            ? "bg-[color:color-mix(in_srgb,var(--success)_18%,transparent)] text-app-success dark:bg-[color:color-mix(in_srgb,var(--success)_28%,transparent)]"
+                            : "bg-[color:color-mix(in_srgb,var(--danger)_18%,transparent)] text-app-danger dark:bg-[color:color-mix(in_srgb,var(--danger)_28%,transparent)]"
                         )}
                       >
                         {row.status === "up" ? "↑" : "↓"} {formatPercentage(Math.abs(row.change))}
@@ -215,7 +215,7 @@ export default function AnalyticsCategoriesPage() {
           <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-blue-500" />
+                <Layers className="h-5 w-5 text-[#3B82F6]" />
                 Detalle de subcategorías
               </CardTitle>
               <CardDescription>
@@ -255,10 +255,12 @@ export default function AnalyticsCategoriesPage() {
                       <TableCell className="text-right">
                         {formatCurrency(item.averageTicket)}
                       </TableCell>
-                      <TableCell className={cn(
-                        "text-right font-medium",
-                        item.change >= 0 ? "text-emerald-600" : "text-red-600"
-                      )}>
+                      <TableCell
+                        className={cn(
+                          "text-right font-medium",
+                          item.change >= 0 ? "text-app-success" : "text-app-danger"
+                        )}
+                      >
                         {item.change >= 0 ? "+" : "-"}
                         {formatPercentage(Math.abs(item.change))}
                       </TableCell>
@@ -273,7 +275,7 @@ export default function AnalyticsCategoriesPage() {
         <Card className="flex flex-col lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-purple-500" />
+              <Send className="h-5 w-5 text-brand" />
               Acciones sugeridas
             </CardTitle>
             <CardDescription>

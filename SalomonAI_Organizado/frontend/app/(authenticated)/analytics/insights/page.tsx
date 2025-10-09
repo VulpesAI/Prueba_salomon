@@ -137,7 +137,7 @@ export default function AnalyticsInsightsPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Columns className="h-5 w-5 text-indigo-500" />
+              <Columns className="h-5 w-5 text-[#3B82F6]" />
               Comparativo de hábitos
             </CardTitle>
             <CardDescription>
@@ -230,7 +230,7 @@ export default function AnalyticsInsightsPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Radar className="h-5 w-5 text-rose-500" />
+              <Radar className="h-5 w-5 text-[#06B6D4]" />
               Resumen de tu situación
             </CardTitle>
             <CardDescription>
@@ -259,9 +259,9 @@ export default function AnalyticsInsightsPage() {
                       variant="outline"
                       className={cn(
                         metric.tone === "positive"
-                          ? "border-emerald-500 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-200"
+                          ? "border-[color:color-mix(in_srgb,var(--success)_55%,transparent)] text-app-success"
                           : metric.tone === "negative"
-                          ? "border-red-500 text-red-600 dark:border-red-500/60 dark:text-red-200"
+                          ? "border-[color:color-mix(in_srgb,var(--danger)_55%,transparent)] text-app-danger"
                           : "border-muted-foreground/40 text-muted-foreground",
                       )}
                     >
@@ -285,7 +285,7 @@ export default function AnalyticsInsightsPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-purple-500" />
+              <MessageSquare className="h-5 w-5 text-brand" />
               Recomendaciones para ti
             </CardTitle>
             <CardDescription>

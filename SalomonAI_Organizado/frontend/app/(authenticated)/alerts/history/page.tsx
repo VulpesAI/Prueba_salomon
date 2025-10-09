@@ -69,15 +69,18 @@ type ReminderSnapshot = {
 const severityStyles: Record<Severity, { label: string; className: string }> = {
   high: {
     label: "Prioritario",
-    className: "bg-amber-100 text-amber-700 border-amber-300",
+    className:
+      "border-[color:color-mix(in_srgb,var(--warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--warning)_16%,transparent)] text-app-warning",
   },
   medium: {
     label: "Seguimiento",
-    className: "bg-sky-100 text-sky-700 border-sky-300",
+    className:
+      "border-[color:color-mix(in_srgb,#06B6D4_45%,transparent)] bg-[color:color-mix(in_srgb,#06B6D4_14%,transparent)] text-[#06B6D4]",
   },
   low: {
     label: "Informativo",
-    className: "bg-emerald-100 text-emerald-700 border-emerald-300",
+    className:
+      "border-[color:color-mix(in_srgb,var(--success)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--success)_14%,transparent)] text-app-success",
   },
 }
 

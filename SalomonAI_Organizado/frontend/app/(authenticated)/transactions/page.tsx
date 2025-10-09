@@ -106,8 +106,8 @@ export default function TransactionsPage() {
                 <p
                   className={
                     movimiento.amount < 0
-                      ? "text-sm font-semibold text-red-600"
-                      : "text-sm font-semibold text-emerald-600"
+                      ? "text-sm font-semibold text-app-danger"
+                      : "text-sm font-semibold text-app-success"
                   }
                 >
                   {formatter.format(movimiento.amount)} {movimiento.currency}
