@@ -43,12 +43,18 @@ export default function ContactoPage() {
       if (!res.ok) throw new Error('No se pudo enviar el mensaje.');
       setOk('Mensaje enviado. Te responderemos pronto.');
       setForm(INITIAL);
-    } catch (e: any) {
-      setErr(e.message ?? 'Error al enviar.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al enviar.';
+      setErr(message);
     } finally {
       setSaving(false);
     }
   }
+
+  const inputClass =
+    'w-full appearance-none rounded-lg border border-input bg-background/70 px-3 py-2 ' +
+    'text-foreground placeholder:text-muted-foreground/70 shadow-sm ' +
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -76,7 +82,7 @@ export default function ContactoPage() {
             >
               <input
                 id="name"
-                className="sal-input"
+                className={inputClass}
                 value={form.name}
                 onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
                 required
@@ -92,7 +98,7 @@ export default function ContactoPage() {
               <input
                 id="email"
                 type="email"
-                className="sal-input"
+                className={inputClass}
                 value={form.email}
                 onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                 required
@@ -104,7 +110,7 @@ export default function ContactoPage() {
           <Field label="Asunto" htmlFor="subject" error={null}>
             <input
               id="subject"
-              className="sal-input"
+              className={inputClass}
               value={form.subject}
               onChange={(e) => setForm(f => ({ ...f, subject: e.target.value }))}
               required
@@ -114,7 +120,7 @@ export default function ContactoPage() {
           <Field label="Mensaje" htmlFor="message" error={null}>
             <textarea
               id="message"
-              className="sal-input min-h-40 resize-y"
+              className={`${inputClass} min-h-40 resize-y`}
               value={form.message}
               onChange={(e) => setForm(f => ({ ...f, message: e.target.value }))}
               required
@@ -124,7 +130,7 @@ export default function ContactoPage() {
           <label className="flex items-start gap-3 text-sm">
             <input
               type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-input bg-background text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+              className="mt-1 h-4 w-4 rounded border-input bg-background text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               checked={form.accept}
               onChange={(e) => setForm(f => ({ ...f, accept: e.target.checked }))}
             />
@@ -148,7 +154,11 @@ export default function ContactoPage() {
           <button
             type="submit"
             disabled={saving}
-            className="sal-btn-primary"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-5 py-2.5 text-sm font-medium text-white
+                       bg-gradient-to-r from-primary-from to-primary-to
+                       hover:from-primary-dark-from hover:to-primary-dark-to
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                       disabled:pointer-events-none disabled:opacity-60"
             aria-busy={saving}
           >
             {saving && <Spinner className="mr-2" />}
@@ -156,25 +166,6 @@ export default function ContactoPage() {
           </button>
         </div>
       </form>
-
-      {/* estilos locales del form (usar tokens del design system) */}
-      <style jsx>{`
-        .sal-input {
-          @apply w-full rounded-lg border border-input bg-background px-3 py-2
-                 text-foreground shadow-xs
-                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
-                 placeholder:text-muted-foreground/70;
-        }
-        .sal-btn-primary {
-          @apply inline-flex items-center justify-center gap-2 whitespace-nowrap
-                 rounded-lg px-5 py-2.5 text-sm font-medium
-                 text-white
-                 bg-gradient-to-r from-primary-from to-primary-to
-                 hover:from-primary-dark-from hover:to-primary-dark-to
-                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-                 disabled:pointer-events-none disabled:opacity-60;
-        }
-      `}</style>
     </div>
   );
 }
