@@ -61,7 +61,11 @@ export default function UIDemo() {
         </div>
 
         <ErrorState onRetry={() => console.log("retry")} />
-        <EmptyState ctaLabel="Subir cartola" onCta={() => console.log("cta")} />
+        <EmptyState
+          title="Aún no hay información"
+          ctaLabel="Subir cartola"
+          onCta={() => console.log("cta")}
+        />
       </Card>
     </div>
   );

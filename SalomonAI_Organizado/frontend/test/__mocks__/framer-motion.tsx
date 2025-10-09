@@ -17,7 +17,7 @@ function createMotionComponent<Tag extends keyof JSX.IntrinsicElements>(tag: Tag
 }
 
 const handler: ProxyHandler<Record<string, unknown>> = {
-  get: (_, element: string) => createMotionComponent(element as keyof JSX.IntrinsicElements),
+  get: (_, element: string) => createMotionComponent(element as keyof ReactJSX.IntrinsicElements),
 }
 
 export const motion = new Proxy({}, handler) as unknown as typeof import("framer-motion").motion

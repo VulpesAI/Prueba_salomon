@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+
 import { buildNav, findSectionByPath, isActive } from "@/lib/nav/derive"
 import {
   Accordion,
@@ -15,10 +17,22 @@ export default function Sidebar() {
   const pathname = usePathname()
   const sections = buildNav()
   const currentSectionId = findSectionByPath(sections, pathname) ?? sections[0]?.id
+  const [openSectionId, setOpenSectionId] = useState<string | undefined>(
+    currentSectionId ?? undefined,
+  )
+
+  useEffect(() => {
+    setOpenSectionId(currentSectionId ?? undefined)
+  }, [currentSectionId])
 
   return (
     <nav aria-label="Navegación lateral" className="space-y-6 pt-4" data-orientation="vertical">
-      <Accordion type="single" collapsible value={currentSectionId ?? undefined}>
+      <Accordion
+        type="single"
+        collapsible
+        value={openSectionId}
+        onValueChange={setOpenSectionId}
+      >
         {sections.map((section) => (
           <AccordionItem key={section.id} value={section.id} className="border-none">
             <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:no-underline [&>svg]:text-muted-foreground data-[state=open]:text-foreground data-[state=open]>svg:text-foreground">
