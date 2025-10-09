@@ -3,7 +3,12 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-
+import {
+  buildNav,
+  findSectionByPath,
+  flattenNav,
+  isNavItemActive,
+} from "@/lib/nav/derive"
 import {
   Accordion,
   AccordionContent,
@@ -12,22 +17,16 @@ import {
 } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { buildNav, findSectionByPath, flattenNav, isNavItemActive } from "@/lib/nav/derive"
 import { cn } from "@/lib/utils"
 
-const SIDEBAR_SECTIONS = buildNav()
-
-export type SidebarNavProps = {
+type SidebarProps = {
   className?: string
   sections?: ReturnType<typeof buildNav>
 }
 
-export function SidebarNav({ className, sections: sectionsProp }: SidebarNavProps) {
+export default function Sidebar({ className, sections: sectionsProp }: SidebarProps) {
   const pathname = usePathname() ?? ""
-  const sections = React.useMemo(
-    () => sectionsProp ?? SIDEBAR_SECTIONS,
-    [sectionsProp]
-  )
+  const sections = React.useMemo(() => sectionsProp ?? buildNav(), [sectionsProp])
   const currentSectionId =
     findSectionByPath(sections, pathname) ?? sections[0]?.id
   const quickActions = React.useMemo(
@@ -67,7 +66,7 @@ export function SidebarNav({ className, sections: sectionsProp }: SidebarNavProp
                 value={section.id}
                 className="border-none"
               >
-                <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary hover:no-underline [&>svg]:text-iconSecondary [&[data-state=open]]:text-textPrimary [&[data-state=open]>svg]:text-iconPrimary">
+                <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary hover:no-underline [&>svg]:text-iconSecondary data-[state=open]:text-textPrimary data-[state=open]>svg:text-iconPrimary">
                   {section.label}
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-1 pt-2">

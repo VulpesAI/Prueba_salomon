@@ -12,8 +12,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import type { NavSection } from "@/lib/nav/config"
-import { buildNav, findBestMatch } from "@/lib/nav/derive"
+import type { Route } from "next"
+
+import type { NavItem, NavSection } from "@/lib/nav/config"
+import { buildNav, findSectionByPath, isActive } from "@/lib/nav/derive"
 
 type BreadcrumbProps = {
   sections?: NavSection[]
@@ -22,7 +24,7 @@ type BreadcrumbProps = {
 
 type Crumb = {
   label: string
-  href?: string
+  href?: Route
   isCurrent?: boolean
 }
 
@@ -32,26 +34,47 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
     () => sections ?? buildNav(),
     [sections]
   )
-  const match = findBestMatch(navigation, pathname)
+  const currentSectionId = findSectionByPath(navigation, pathname)
+  const match = React.useMemo(() => {
+    let best: { section: NavSection; item: NavItem } | null = null
+    for (const section of navigation) {
+      for (const item of section.items) {
+        if (isActive(pathname, item.href)) {
+          if (!best || item.href.length > best.item.href.length) {
+            best = { section, item }
+          }
+        }
+      }
+    }
+    if (best) return best
+    if (currentSectionId) {
+      const section = navigation.find((s) => s.id === currentSectionId)
+      const item = section?.items[0]
+      if (section && item) return { section, item }
+    }
+    return null
+  }, [currentSectionId, navigation, pathname])
 
   const isInverted = variant === "inverted"
   const listClassName = isInverted
     ? "text-secondary-foreground [&>li>a]:text-secondary-foreground [&>li>a:hover]:text-secondary-foreground [&>li>span]:text-secondary-foreground"
     : undefined
 
+  const homeRoute = "/dashboard/overview" as Route
+
   const crumbs: Crumb[] = [
     {
       label: "Inicio",
-      href: "/dashboard/overview",
+      href: homeRoute,
       isCurrent:
-        pathname === "/dashboard/overview" &&
-        (!match || match.item.href === "/dashboard/overview"),
+        pathname === homeRoute &&
+        (!match || match.item.href === homeRoute),
     },
   ]
 
   if (match) {
     const defaultSectionItem = match.section.items[0]
-    const sectionHref = defaultSectionItem?.href ?? "/dashboard/overview"
+    const sectionHref = defaultSectionItem?.href ?? homeRoute
 
     if (defaultSectionItem && defaultSectionItem.href !== "/dashboard/overview") {
       crumbs.push({ label: match.section.label, href: sectionHref })
