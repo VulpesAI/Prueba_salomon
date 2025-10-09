@@ -70,7 +70,7 @@ interface KpiStripProps {
 
 export function KpiStrip({ kpis }: KpiStripProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {kpiConfig.map((item, index) => {
         const value = kpis[item.key]
         const delta = kpis[item.deltaKey]

@@ -131,7 +131,7 @@ export default function TransactionsClassificationPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>{t.stats.activeRules.label}</CardDescription>
