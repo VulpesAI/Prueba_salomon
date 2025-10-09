@@ -21,14 +21,27 @@ const config: Config = {
       },
     },
     extend: {
-      colors: {
-        brand: {
-          DEFAULT: "#007CF0",
-          green: "#22C55E",
-        },
-        app: {
-          light: "#F5F7FF",
-          dark: "#0B1943",
+        colors: {
+          brand: {
+            DEFAULT: "#007CF0",
+            green: "#22C55E",
+          },
+          app: {
+            DEFAULT: "var(--text)",
+            bg: "var(--bg)",
+            surface: "var(--surface)",
+            "surface-subtle": "var(--surface-subtle)",
+            card: "var(--card-surface)",
+          "card-subtle": "var(--card-subtle)",
+          border: "var(--border-color)",
+          "border-subtle": "var(--border-subtle)",
+          text: "var(--text)",
+          dim: "var(--text-muted)",
+          accent: "var(--accent)",
+          "accent-contrast": "var(--accent-contrast)",
+          success: "var(--success)",
+          warning: "var(--warning)",
+          danger: "var(--danger)",
         },
         surface: {
           dark: "#1F2937",

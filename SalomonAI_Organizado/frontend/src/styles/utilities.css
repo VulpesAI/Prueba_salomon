@@ -1,0 +1,69 @@
+@tailwind utilities;
+
+.text-display {
+  @apply text-3xl font-semibold tracking-tight md:text-4xl;
+  color: var(--text);
+}
+
+.text-title {
+  @apply text-2xl font-semibold;
+  color: var(--text);
+}
+
+.text-subtitle {
+  @apply text-lg font-medium;
+  color: var(--text-muted);
+}
+
+.text-body {
+  @apply text-base;
+  color: var(--text);
+}
+
+.text-caption {
+  @apply text-xs font-semibold uppercase tracking-wide;
+  color: var(--text-muted);
+}
+
+.elevated-card {
+  @apply transition-shadow duration-300;
+  box-shadow:
+    0 4px 12px color-mix(in srgb, var(--border-color) 38%, transparent),
+    0 2px 6px color-mix(in srgb, var(--border-color) 32%, transparent);
+}
+
+.elevated-card:hover {
+  box-shadow:
+    0 12px 28px color-mix(in srgb, var(--border-color) 36%, transparent),
+    0 6px 16px color-mix(in srgb, var(--border-color) 28%, transparent);
+}
+
+.glass-panel {
+  background: color-mix(in srgb, var(--bg) 38%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--border-color) 62%, transparent);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 24px 48px -32px color-mix(in srgb, var(--border-color) 45%, transparent),
+    0 18px 40px -28px color-mix(in srgb, var(--border-color) 28%, transparent);
+}
+
+.dark .glass-panel {
+  background: color-mix(in srgb, var(--bg) 22%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 38%, transparent);
+  box-shadow:
+    0 24px 48px -30px color-mix(in srgb, var(--border-color) 55%, transparent),
+    0 18px 40px -24px color-mix(in srgb, var(--border-color) 30%, transparent);
+}
+
+.soft-card {
+  box-shadow:
+    12px 16px 42px color-mix(in srgb, var(--border-color) 28%, transparent),
+    -8px -12px 32px color-mix(in srgb, var(--bg) 20%, transparent);
+}
+
+.dark .soft-card {
+  box-shadow:
+    12px 18px 44px color-mix(in srgb, var(--border-color) 46%, transparent),
+    -6px -10px 28px color-mix(in srgb, var(--bg) 28%, transparent);
+}
