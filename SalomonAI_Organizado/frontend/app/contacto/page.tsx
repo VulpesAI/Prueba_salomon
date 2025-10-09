@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent, type ReactNode } from 'react';
 
 type FormData = {
   name: string;
@@ -10,13 +10,7 @@ type FormData = {
   accept: boolean;
 };
 
-const INITIAL: FormData = {
-  name: "",
-  email: "",
-  subject: "",
-  message: "",
-  accept: false,
-};
+const INITIAL: FormData = { name: '', email: '', subject: '', message: '', accept: false };
 
 export default function ContactoPage() {
   const [form, setForm] = useState<FormData>(INITIAL);
@@ -26,138 +20,186 @@ export default function ContactoPage() {
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setOk(null);
-    setErr(null);
+    setOk(null); setErr(null);
 
+    // Validaciones mínimas
     if (!form.name || !form.email || !form.subject || !form.message) {
-      return setErr("Completa todos los campos.");
+      setErr('Completa todos los campos.'); return;
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      return setErr("Email inválido.");
+      setErr('Email inválido.'); return;
     }
-
     if (!form.accept) {
-      return setErr("Debes aceptar la política de privacidad.");
+      setErr('Debes aceptar la política de privacidad.'); return;
     }
 
     setSaving(true);
-
     try {
-      const res = await fetch("/api/contacto", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const res = await fetch('/api/contacto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-
-      if (!res.ok) {
-        throw new Error("No se pudo enviar el mensaje.");
-      }
-
-      setOk("Mensaje enviado. Te responderemos pronto.");
+      if (!res.ok) throw new Error('No se pudo enviar el mensaje.');
+      setOk('Mensaje enviado. Te responderemos pronto.');
       setForm(INITIAL);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al enviar.";
-      setErr(message);
+    } catch (e: any) {
+      setErr(e.message ?? 'Error al enviar.');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold">Contacto</h1>
-        <p className="text-sm text-muted-foreground">
+    <div className="mx-auto max-w-3xl p-6">
+      {/* Header */}
+      <header className="mb-6">
+        <h1 className="text-3xl font-semibold text-foreground">Contacto</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           ¿Tienes dudas o propuestas? Escríbenos con tus detalles.
         </p>
       </header>
 
+      {/* Card */}
       <form
         onSubmit={onSubmit}
-        className="space-y-4 rounded-2xl border bg-card p-6"
+        className="rounded-2xl border bg-card shadow-sm"
+        noValidate
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="text-sm">
-            Nombre
+        <div className="p-6 grid gap-6">
+          {/* fila nombre / email */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field
+              label="Nombre"
+              htmlFor="name"
+              error={null}
+            >
+              <input
+                id="name"
+                className="sal-input"
+                value={form.name}
+                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                required
+                autoComplete="name"
+              />
+            </Field>
+
+            <Field
+              label="Email"
+              htmlFor="email"
+              error={null}
+            >
+              <input
+                id="email"
+                type="email"
+                className="sal-input"
+                value={form.email}
+                onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                required
+                autoComplete="email"
+              />
+            </Field>
+          </div>
+
+          <Field label="Asunto" htmlFor="subject" error={null}>
             <input
-              className="mt-1 w-full rounded-lg border bg-background p-2"
-              value={form.name}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, name: event.target.value }))
-              }
+              id="subject"
+              className="sal-input"
+              value={form.subject}
+              onChange={(e) => setForm(f => ({ ...f, subject: e.target.value }))}
               required
             />
-          </label>
-          <label className="text-sm">
-            Email
-            <input
-              type="email"
-              className="mt-1 w-full rounded-lg border bg-background p-2"
-              value={form.email}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, email: event.target.value }))
-              }
+          </Field>
+
+          <Field label="Mensaje" htmlFor="message" error={null}>
+            <textarea
+              id="message"
+              className="sal-input min-h-40 resize-y"
+              value={form.message}
+              onChange={(e) => setForm(f => ({ ...f, message: e.target.value }))}
               required
             />
+          </Field>
+
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-input bg-background text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+              checked={form.accept}
+              onChange={(e) => setForm(f => ({ ...f, accept: e.target.checked }))}
+            />
+            <span className="text-foreground">
+              Acepto la{' '}
+              <a className="underline hover:text-primary" href="/legal/privacidad">
+                política de privacidad
+              </a>.
+            </span>
           </label>
+
+          {/* Mensajes */}
+          <div className="min-h-5" aria-live="polite">
+            {ok && <p className="text-xs text-emerald-500">{ok}</p>}
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
         </div>
-        <label className="text-sm block">
-          Asunto
-          <input
-            className="mt-1 w-full rounded-lg border bg-background p-2"
-            value={form.subject}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, subject: event.target.value }))
-            }
-            required
-          />
-        </label>
-        <label className="text-sm block">
-          Mensaje
-          <textarea
-            className="mt-1 w-full rounded-lg border bg-background p-2 min-h-32"
-            value={form.message}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, message: event.target.value }))
-            }
-            required
-          />
-        </label>
-        <label className="flex items-start gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.accept}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, accept: event.target.checked }))
-            }
-            required
-          />
-          <span>
-            Acepto la{' '}
-            <a className="underline" href="/legal/privacidad">
-              política de privacidad
-            </a>
-            .
-          </span>
-        </label>
-        <div className="flex items-center gap-3">
+
+        {/* Footer de card */}
+        <div className="flex items-center justify-end gap-3 border-t p-6">
           <button
             type="submit"
-            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
             disabled={saving}
+            className="sal-btn-primary"
+            aria-busy={saving}
           >
-            {saving ? "Enviando…" : "Enviar mensaje"}
+            {saving && <Spinner className="mr-2" />}
+            {saving ? 'Enviando…' : 'Enviar mensaje'}
           </button>
-          {ok ? (
-            <span className="text-xs text-emerald-600">{ok}</span>
-          ) : null}
-          {err ? <span className="text-xs text-red-600">{err}</span> : null}
         </div>
       </form>
+
+      {/* estilos locales del form (usar tokens del design system) */}
+      <style jsx>{`
+        .sal-input {
+          @apply w-full rounded-lg border border-input bg-background px-3 py-2
+                 text-foreground shadow-xs
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                 placeholder:text-muted-foreground/70;
+        }
+        .sal-btn-primary {
+          @apply inline-flex items-center justify-center gap-2 whitespace-nowrap
+                 rounded-lg px-5 py-2.5 text-sm font-medium
+                 text-white
+                 bg-gradient-to-r from-primary-from to-primary-to
+                 hover:from-primary-dark-from hover:to-primary-dark-to
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                 disabled:pointer-events-none disabled:opacity-60;
+        }
+      `}</style>
     </div>
+  );
+}
+
+/* ---------- UI MINIMA ---------- */
+
+function Field({
+  label, htmlFor, error, children,
+}: { label: string; htmlFor: string; error: string | null; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
+        {label}
+      </label>
+      {children}
+      {error ? <p className="text-xs text-red-500">{error}</p> : null}
+    </div>
+  );
+}
+
+function Spinner({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent ${className}`}
+      aria-hidden="true"
+    />
   );
 }
