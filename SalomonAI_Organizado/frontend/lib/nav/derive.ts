@@ -13,8 +13,9 @@ export function buildNav(): NavSection[] {
   for (const section of NAV_SECTIONS_BASE) {
     const items: NavItem[] = []
     for (const item of section.items) {
-      const href = String(item.href)
-      if (!href || href === "#") {
+      const href = item.href
+      const hrefString = href.toString()
+      if (!hrefString || hrefString === "#") {
         continue
       }
 
@@ -24,7 +25,7 @@ export function buildNav(): NavSection[] {
 
       seen.add(href)
 
-      const alias = NAV_ALIASES[item.href]
+      const alias = NAV_ALIASES[href]
       items.push({
         ...item,
         label: alias ?? item.label,
@@ -37,7 +38,6 @@ export function buildNav(): NavSection[] {
         items,
       })
     }
-    if (items.length) result.push({ ...section, items })
   }
   return result
 }
