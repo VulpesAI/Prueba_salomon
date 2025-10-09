@@ -15,8 +15,8 @@ import { TopbarActions } from "./topbar-actions"
 import { HeaderResumen } from "../HeaderResumen"
 
 const LoadingShell = () => (
-  <div className="flex min-h-screen flex-col bg-background text-foreground">
-    <header className="border-b border-border bg-background px-4 md:px-6">
+  <div className="flex min-h-screen flex-col bg-app-bg text-app">
+    <header className="border-b border-app-border bg-app-surface px-4 md:px-6">
       <div className="flex h-16 items-center justify-between">
         <div className="flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded-full" />
@@ -54,9 +54,9 @@ export function AuthenticatedShell({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b border-border bg-background">
-        <div className="flex h-16 items-center justify-between px-4 text-foreground md:px-6">
+    <div className="flex min-h-screen flex-col bg-app-bg text-app">
+      <header className="sticky top-0 z-30 border-b border-app-border bg-app-surface">
+        <div className="flex h-16 items-center justify-between px-4 text-app md:px-6">
           <div className="flex items-center gap-3">
             <Sheet>
               <SheetTrigger asChild>
@@ -64,26 +64,26 @@ export function AuthenticatedShell({
                   variant="ghost"
                   size="icon"
                   aria-label="Abrir navegación"
-                  className="group text-foreground hover:bg-gradient-primary hover:text-primary-foreground focus-visible:ring-primary-to"
+                  className="group text-app hover:bg-app-surface-subtle focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)]"
                 >
                   <Menu className="h-5 w-5 transition-colors group-hover:text-primary-foreground" />
                 </Button>
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-72 border-border bg-background p-0 text-foreground"
+                className="w-72 border-app-border bg-app-bg p-0 text-app"
               >
                 <Sidebar />
               </SheetContent>
             </Sheet>
-            <div className="hidden flex-col text-muted-foreground md:flex">
-              <span className="text-sm font-semibold text-muted-foreground">
+            <div className="hidden flex-col text-app-dim md:flex">
+              <span className="text-sm font-semibold text-app-dim">
                 Espacio financiero
               </span>
               <Breadcrumbs variant="inverted" />
             </div>
           </div>
-          <div className="flex items-center gap-4 text-foreground">
+          <div className="flex items-center gap-4 text-app">
             <div className="hidden md:block">
               <HeaderResumen />
             </div>

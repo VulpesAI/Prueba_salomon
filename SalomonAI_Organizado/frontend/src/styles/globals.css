@@ -1,4 +1,5 @@
 @import "./tokens.css";
+@import "./utilities.css";
 
 @tailwind base;
 @tailwind components;
@@ -10,8 +11,8 @@ body {
 }
 
 body {
-  background-color: var(--bg-app);
-  color: var(--text-app);
+  background-color: var(--bg);
+  color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Helvetica,
     Arial, "Apple Color Emoji", "Segoe UI Emoji";
   line-height: 1.6;
@@ -21,12 +22,12 @@ body {
   --bg-app: #F5F7FF;
   --text-app: #081134;
   --text-surface: #081134;
-  --text-muted: #475569;
+  --text-muted-legacy: #475569;
   --text-inverse: #F9FAFB;
   --border-neutral: #E2E8F0;
   --brand: #007CF0;
-  --accent: #22C55E;
-  --error: #EF4444;
+  --accent-legacy: #22C55E;
+  --error-legacy: #EF4444;
   --chart-axis: #475569;
   --chart-grid: rgba(226, 232, 240, 0.5);
   --chart-series-1: #007CF0;
@@ -59,6 +60,50 @@ body {
   --panel: var(--card);
   --panel-subtle: 215 24% 20%;
   --radius: 0.75rem;
+
+  /* Semantic tokens mapped to existing palette */
+  --bg-hsl: var(--background);
+  --surface-hsl: var(--muted);
+  --card-hsl: var(--card);
+  --border-hsl: var(--border);
+  --text-hsl: var(--foreground);
+  --text-muted-hsl: var(--muted-foreground);
+  --accent-hsl: var(--primary);
+  --accent-contrast-hsl: var(--primary-foreground);
+  --success-hsl: 142 72% 45%;
+  --warning-hsl: 38 92% 50%;
+  --danger-hsl: 0 84% 60%;
+
+  --bg: hsl(var(--bg-hsl));
+  --surface: hsl(var(--surface-hsl));
+  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 55%, transparent);
+  --card-surface: hsl(var(--card-hsl));
+  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 80%, transparent);
+  --border-color: hsl(var(--border-hsl));
+  --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 55%, transparent);
+  --text: hsl(var(--text-hsl));
+  --text-muted: hsl(var(--text-muted-hsl));
+  --accent: hsl(var(--accent-hsl));
+  --accent-contrast: hsl(var(--accent-contrast-hsl));
+  --success: hsl(var(--success-hsl));
+  --warning: hsl(var(--warning-hsl));
+  --danger: hsl(var(--danger-hsl));
+
+  /* Backwards-compat tokens */
+  --color-bg: var(--bg);
+  --color-card: var(--card-surface);
+  --color-border: var(--border-color);
+  --color-foreground: var(--text);
+  --color-muted: var(--surface);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --bg-app: var(--bg);
+  --text-app: var(--text);
+  --text-muted: var(--text-muted);
 }
 
 .dark {
@@ -69,8 +114,8 @@ body {
   --text-inverse: #081134;
   --border-neutral: #374151;
   --brand: #007CF0;
-  --accent: #22C55E;
-  --error: #EF4444;
+  --accent-legacy: #22C55E;
+  --error-legacy: #EF4444;
   --chart-axis: #94A3B8;
   --chart-grid: rgba(55, 65, 81, 0.5);
 
@@ -98,10 +143,48 @@ body {
   --icon-secondary: var(--muted-foreground);
   --panel: var(--card);
   --panel-subtle: 215 24% 20%;
+
+  --bg-hsl: var(--background);
+  --surface-hsl: var(--muted);
+  --card-hsl: var(--card);
+  --border-hsl: var(--border);
+  --text-hsl: var(--foreground);
+  --text-muted-hsl: var(--muted-foreground);
+  --accent-hsl: var(--primary);
+  --accent-contrast-hsl: var(--primary-foreground);
+  --success-hsl: 142 72% 40%;
+  --warning-hsl: 38 92% 50%;
+  --danger-hsl: 0 84% 58%;
+
+  --bg: hsl(var(--bg-hsl));
+  --surface: hsl(var(--surface-hsl));
+  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 48%, transparent);
+  --card-surface: hsl(var(--card-hsl));
+  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 76%, transparent);
+  --border-color: hsl(var(--border-hsl));
+  --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 50%, transparent);
+  --text: hsl(var(--text-hsl));
+  --text-muted: hsl(var(--text-muted-hsl));
+  --accent: hsl(var(--accent-hsl));
+  --accent-contrast: hsl(var(--accent-contrast-hsl));
+  --success: hsl(var(--success-hsl));
+  --warning: hsl(var(--warning-hsl));
+  --danger: hsl(var(--danger-hsl));
+
+  --color-bg: var(--bg);
+  --color-card: var(--card-surface);
+  --color-border: var(--border-color);
+  --color-foreground: var(--text);
+  --color-muted: var(--surface);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
 }
 
 * {
-  border-color: var(--border);
+  border-color: var(--border-color);
 }
 
 @layer base {
@@ -110,21 +193,21 @@ body {
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-app-bg text-app;
   }
 }
 
 
 .bg-app {
-  background-color: var(--bg-app);
+  background-color: var(--bg);
 }
 
 .text-app {
-  color: var(--text-app);
+  color: var(--text);
 }
 
 .text-surface {
-  color: var(--text-surface);
+  color: var(--surface);
 }
 
 .text-muted {
@@ -136,45 +219,119 @@ body {
 }
 
 .border-neutral {
-  border-color: var(--border-neutral);
+  border-color: var(--border-color);
+}
+
+.bg-app-bg {
+  background-color: var(--bg);
+}
+
+.bg-app-surface {
+  background-color: var(--surface);
+}
+
+.bg-app-surface-subtle {
+  background-color: var(--surface-subtle);
+}
+
+.bg-app-card {
+  background-color: var(--card-surface);
+}
+
+.bg-app-card-subtle {
+  background-color: var(--card-subtle);
+}
+
+.bg-app-accent {
+  background-color: var(--accent);
+}
+
+.bg-app-success {
+  background-color: var(--success);
+}
+
+.bg-app-warning {
+  background-color: var(--warning);
+}
+
+.bg-app-danger {
+  background-color: var(--danger);
+}
+
+.text-app-dim {
+  color: var(--text-muted);
+}
+
+.text-app-accent {
+  color: var(--accent);
+}
+
+.text-app-accent-contrast {
+  color: var(--accent-contrast);
+}
+
+.text-app-success {
+  color: var(--success);
+}
+
+.text-app-danger {
+  color: var(--danger);
+}
+
+.border-app-border {
+  border-color: var(--border-color);
+}
+
+.border-app-border-subtle {
+  border-color: var(--border-subtle);
 }
 
 .bg-gradient-card {
-  background-image: linear-gradient(180deg, rgba(0, 124, 240, 0.03) 0%, rgba(34, 197, 94, 0.04) 100%);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent) 0%, color-mix(in srgb, var(--success) 8%, transparent) 100%);
 }
 
 .dark .bg-gradient-card {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.03) 100%);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--accent) 6%, transparent) 100%);
 }
 
 .bg-section {
-  background-image: linear-gradient(180deg, #F5F7FF 0%, #E6F3FF 45%, #E9FFF4 100%);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--bg) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--bg) 85%, var(--success) 15%) 100%);
 }
 
 .dark .bg-section {
-  background-image: linear-gradient(180deg, #0B1943 0%, #0A3E7A 50%, #0F766E 100%);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--bg) 88%, var(--accent) 12%) 0%, color-mix(in srgb, var(--bg) 82%, var(--success) 18%) 100%);
 }
 
 .border-soft {
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-color: var(--border-subtle);
 }
 
-:root .border-soft {
-  border-color: rgba(8, 17, 52, 0.08);
-}
-
-.dark .border-soft {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.focus-brand {
-  outline: none;
-  box-shadow: var(--ring-shadow, 0 0 #0000), 0 0 0 2px rgba(0, 124, 240, 0.55);
-}
-
+.focus-brand,
 .focus-accent {
   outline: none;
-  box-shadow: var(--ring-shadow, 0 0 #0000), 0 0 0 2px rgba(34, 197, 94, 0.6);
+  box-shadow: var(--ring-shadow, 0 0 #0000), 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.elevation-0 {
+  box-shadow: none;
+}
+
+.elevation-1 {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--border-color) 45%, transparent),
+    0 1px 1px color-mix(in srgb, var(--border-color) 30%, transparent);
+}
+
+.elevation-2 {
+  box-shadow:
+    0 4px 12px color-mix(in srgb, var(--border-color) 38%, transparent),
+    0 2px 6px color-mix(in srgb, var(--border-color) 32%, transparent);
+}
+
+.elevation-3 {
+  box-shadow:
+    0 10px 24px color-mix(in srgb, var(--border-color) 42%, transparent),
+    0 4px 12px color-mix(in srgb, var(--border-color) 30%, transparent);
 }
 
 .dot-recording {
