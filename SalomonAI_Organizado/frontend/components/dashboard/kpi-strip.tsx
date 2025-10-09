@@ -15,21 +15,21 @@ const kpiConfig = [
     deltaKey: "incomeDelta" as const,
     label: "Ingresos",
     tone: "positive" as const,
-    icon: "TrendingUp",
+    icon: "TrendingUp" as const,
   },
   {
     key: "expensesCLP" as const,
     deltaKey: "expensesDelta" as const,
     label: "Gastos",
     tone: "negative" as const,
-    icon: "Wallet",
+    icon: "Wallet" as const,
   },
   {
     key: "netCLP" as const,
     deltaKey: "netDelta" as const,
     label: "Flujo neto",
     tone: "positive" as const,
-    icon: "Activity",
+    icon: "Activity" as const,
   },
 ]
 

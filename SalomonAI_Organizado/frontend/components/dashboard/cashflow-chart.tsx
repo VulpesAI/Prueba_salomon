@@ -45,7 +45,7 @@ export function CashflowChart({ data, range, onRangeChange }: CashflowChartProps
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <Icon name="LineChart" size="md" aria-hidden />
+              <Icon name="ChartLine" size="md" aria-hidden />
               <CardTitle>Flujo + Proyección</CardTitle>
             </div>
             <p className="text-sm text-app-dim">
