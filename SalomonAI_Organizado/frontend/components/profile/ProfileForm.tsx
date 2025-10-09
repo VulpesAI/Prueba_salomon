@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { getSettings, updateSettings } from '@/lib/settings/adapter';
 import { SettingsFormState, VoiceOption } from '@/lib/settings/types';
 import { Switch } from '@/components/ui/switch';
+import { applyTheme } from '@/lib/theme/applyTheme';
 
 const VOICES: Array<{ id: VoiceOption; name: string; desc: string }> = [
   { id: 'alloy', name: 'Alloy', desc: 'Equilibrada, clara y natural. Ideal para uso general y lectura prolongada.' },
@@ -66,6 +67,10 @@ export default function ProfileForm() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    applyTheme(form.theme);
+  }, [form.theme]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
