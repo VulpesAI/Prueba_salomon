@@ -9,7 +9,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-2xl border border-app-border bg-app-card text-app elevation-1 transition-shadow",
+      "group/card elevated-card relative overflow-hidden rounded-2xl border border-app-border-subtle bg-app-card/95 text-app transition-all duration-300 supports-[backdrop-filter]:backdrop-blur-xl",
+      "focus-within:outline-none focus-within:ring-2 focus-within:ring-app-accent/25 focus-within:ring-offset-2 focus-within:ring-offset-app-bg",
       className
     )}
     {...props}
@@ -51,7 +52,7 @@ const CardDescription = React.forwardRef<
   <p
     ref={ref}
     className={cn(
-      "text-sm text-muted-foreground",
+      "text-sm text-app-dim",
       className
     )}
     {...props}

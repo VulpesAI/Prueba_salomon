@@ -96,7 +96,7 @@ export default function AccountSynchronizationPage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             Sincronización de cuentas
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-app-dim">
             Monitorea el estado de cada enlace, los jobs ejecutados y los próximos pasos.
           </p>
         </div>
@@ -138,23 +138,23 @@ export default function AccountSynchronizationPage() {
                       >
                         {institution.name}
                       </Link>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-app-dim">
                         {institution.accounts.length} cuentas
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-app-dim">
                       {institution.provider}
                     </span>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-app-dim">
                       {formatDateTime(institution.nextSyncAt)}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-app-dim">
                       {formatDateTime(institution.lastSyncedAt)}
                     </span>
                   </TableCell>
@@ -202,7 +202,7 @@ export default function AccountSynchronizationPage() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">{job.accountName}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-app-dim">
                         {job.message}
                       </span>
                     </div>
@@ -210,13 +210,13 @@ export default function AccountSynchronizationPage() {
                   <TableCell className="hidden md:table-cell">
                     <Link
                       href={`/accounts/${encodeURIComponent(job.institutionId)}`}
-                      className="text-sm text-muted-foreground hover:underline"
+                      className="text-sm text-app-dim hover:text-app hover:underline"
                     >
                       {institutions.find((item) => item.id === job.institutionId)?.name ?? job.institutionId}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-app-dim">
                       {formatDateTime(job.startedAt)}
                     </span>
                   </TableCell>
@@ -248,7 +248,7 @@ export default function AccountSynchronizationPage() {
           {diagnostics.map((item) => (
             <div
               key={item.id}
-              className="flex flex-col justify-between rounded-lg border border-border/60 bg-muted/30 p-4"
+              className="surface-tile flex flex-col justify-between bg-app-card/85 p-5"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -269,7 +269,7 @@ export default function AccountSynchronizationPage() {
                         : "Pendiente"}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
+                <p className="text-sm text-app-dim">{item.description}</p>
               </div>
               {item.action && (
                 <Button

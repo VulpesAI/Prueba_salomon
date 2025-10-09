@@ -1,21 +1,9 @@
 import type React from "react"
-import type { JSX as ReactJSX } from "react"
+import type { ComponentPropsWithoutRef } from "react"
 import { forwardRef } from "react"
 
-type MotionExtras = {
-  whileHover?: unknown
-  whileTap?: unknown
-  transition?: unknown
-  animate?: unknown
-  initial?: unknown
-  exit?: unknown
-}
-
-type MotionProps<Tag extends keyof ReactJSX.IntrinsicElements> =
-  ReactJSX.IntrinsicElements[Tag] & MotionExtras
-
-function createMotionComponent<Tag extends keyof ReactJSX.IntrinsicElements>(tag: Tag) {
-  return forwardRef<HTMLElement, MotionProps<Tag>>(function MotionComponent(
+function createMotionComponent<Tag extends keyof JSX.IntrinsicElements>(tag: Tag) {
+  return forwardRef<HTMLElement, ComponentPropsWithoutRef<Tag>>(function MotionComponent(
     { children, whileHover, whileTap, transition, animate, initial, exit, ...props },
     ref
   ) {

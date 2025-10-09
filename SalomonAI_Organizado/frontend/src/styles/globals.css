@@ -74,7 +74,7 @@ body {
   --text-muted-hsl: var(--muted-foreground);
   --accent-hsl: var(--primary);
   --accent-contrast-hsl: var(--primary-foreground);
-  --success-hsl: 142 71% 45%;
+  --success-hsl: 142 72% 45%;
   --warning-hsl: 38 92% 50%;
   --danger-hsl: 0 84% 60%;
 
@@ -108,8 +108,6 @@ body {
   --bg-app: var(--bg);
   --text-app: var(--text);
   --text-muted: var(--text-muted);
-
-  --brand-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
 }
 
 .dark {
@@ -150,7 +148,7 @@ body {
   --icon-primary: var(--foreground);
   --icon-secondary: var(--muted-foreground);
   --panel: var(--card);
-  --panel-subtle: 212 70% 24%;
+  --panel-subtle: 215 24% 20%;
 
   --bg-hsl: var(--background);
   --surface-hsl: var(--muted);
@@ -160,9 +158,9 @@ body {
   --text-muted-hsl: var(--muted-foreground);
   --accent-hsl: var(--primary);
   --accent-contrast-hsl: var(--primary-foreground);
-  --success-hsl: 142 71% 45%;
+  --success-hsl: 142 72% 40%;
   --warning-hsl: 38 92% 50%;
-  --danger-hsl: 0 84% 60%;
+  --danger-hsl: 0 84% 58%;
 
   --bg: hsl(var(--bg-hsl));
   --surface: hsl(var(--surface-hsl));

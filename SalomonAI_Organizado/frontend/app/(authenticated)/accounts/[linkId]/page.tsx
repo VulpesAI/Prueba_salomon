@@ -104,7 +104,7 @@ export default async function AccountDetailPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             {institution.name}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-app-dim">
             Consulta información granular, conexiones y métricas históricas del enlace seleccionado.
           </p>
         </div>
@@ -138,12 +138,12 @@ export default async function AccountDetailPage({
               {institution.accounts.map((account) => (
                 <div
                   key={account.id}
-                  className="rounded-lg border border-border/70 bg-muted/40 p-4"
+                  className="surface-tile bg-app-card/88 p-5"
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">{account.name}</h3>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-app-dim">
                         {account.alias ?? "Sin alias"}
                       </p>
                     </div>
@@ -151,23 +151,23 @@ export default async function AccountDetailPage({
                   </div>
                   <dl className="mt-4 space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Número</dt>
+                      <dt className="text-app-dim">Número</dt>
                       <dd>{account.number}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Balance</dt>
+                      <dt className="text-app-dim">Balance</dt>
                       <dd>{formatCurrency(account.balance)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Disponible</dt>
+                      <dt className="text-app-dim">Disponible</dt>
                       <dd>{formatCurrency(account.availableBalance)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Última sync</dt>
+                      <dt className="text-app-dim">Última sync</dt>
                       <dd>{formatDateTime(account.lastSyncedAt)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Actualizado</dt>
+                      <dt className="text-app-dim">Actualizado</dt>
                       <dd>{formatDateTime(account.updatedAt)}</dd>
                     </div>
                   </dl>
@@ -185,9 +185,9 @@ export default async function AccountDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg border border-dashed border-border/70 p-4 text-sm">
+            <div className="surface-tile border-dashed border-app-border-subtle/80 bg-app-card/85 p-5 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Estado</span>
+                <span className="text-app-dim">Estado</span>
                 <Badge
                   variant={
                     institution.status === "degraded"
@@ -205,23 +205,23 @@ export default async function AccountDetailPage({
                 </Badge>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-muted-foreground">Última sync</span>
+                <span className="text-app-dim">Última sync</span>
                 <span>{formatDateTime(institution.lastSyncedAt)}</span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-muted-foreground">Próxima ejecución</span>
+                <span className="text-app-dim">Próxima ejecución</span>
                 <span>{formatDateTime(institution.nextSyncAt)}</span>
               </div>
             </div>
-            <div className="rounded-lg border border-dashed border-border/70 p-4 text-sm">
+            <div className="surface-tile border-dashed border-app-border-subtle/80 bg-app-card/85 p-5 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Cuentas</span>
+                <span className="text-app-dim">Cuentas</span>
                 <span className="font-semibold">
                   {institution.accounts.length}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-muted-foreground">Balance agregado</span>
+                <span className="text-app-dim">Balance agregado</span>
                 <span className="font-semibold">
                   {formatCurrency(totalBalance)}
                 </span>
@@ -282,14 +282,10 @@ export default async function AccountDetailPage({
                     {event.durationSeconds} seg
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    <span className="text-sm text-muted-foreground">
-                      {event.source}
-                    </span>
+                    <span className="text-sm text-app-dim">{event.source}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {event.details}
-                    </span>
+                    <span className="text-sm text-app-dim">{event.details}</span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -310,24 +306,24 @@ export default async function AccountDetailPage({
             {rules.map((rule) => (
               <div
                 key={rule.id}
-                className="rounded-lg border border-border/60 bg-muted/30 p-4"
+                className="surface-tile bg-app-card/85 p-5"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold">{rule.name}</h3>
-                    <p className="text-xs text-muted-foreground">{rule.target}</p>
+                    <p className="text-xs text-app-dim">{rule.target}</p>
                   </div>
                   <Badge variant={rule.status === "active" ? "default" : "outline"}>
                     {rule.status === "active" ? "Activa" : "Pausada"}
                   </Badge>
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground">
+                <p className="mt-3 text-sm text-app-dim">
                   {rule.description}
                 </p>
               </div>
             ))}
             {rules.length === 0 && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-app-dim">
                 Aún no se han configurado reglas para esta institución.
               </p>
             )}
