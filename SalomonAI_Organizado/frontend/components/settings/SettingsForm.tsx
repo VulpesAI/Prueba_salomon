@@ -80,17 +80,20 @@ export default function SettingsForm() {
         <h2 className="text-xl font-semibold">Apariencia</h2>
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium">Modo oscuro</p>
-            <p className="text-sm text-muted-foreground">Aplica a toda la interfaz</p>
+            <p className="font-medium">Modo claro</p>
+            <p className="text-sm text-muted-foreground">
+              Activa un fondo luminoso con paneles blancos. Desactívalo para volver al modo oscuro
+              predeterminado.
+            </p>
           </div>
           <label className="inline-flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               className="peer sr-only"
-              checked={form.theme === 'dark'}
-              onChange={(e) => setForm((f) => ({ ...f, theme: e.target.checked ? 'dark' : 'light' }))}
-              aria-checked={form.theme === 'dark'}
-              aria-label="Alternar modo oscuro"
+              checked={form.theme === 'light'}
+              onChange={(e) => setForm((f) => ({ ...f, theme: e.target.checked ? 'light' : 'dark' }))}
+              aria-checked={form.theme === 'light'}
+              aria-label="Alternar modo claro"
             />
             <span className="w-10 h-6 rounded-full bg-muted relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-background peer-checked:after:translate-x-4 transition-all" />
           </label>
