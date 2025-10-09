@@ -1,0 +1,226 @@
+@tailwind utilities;
+
+.text-display {
+  @apply text-3xl font-semibold tracking-tight md:text-4xl;
+  color: var(--text);
+}
+
+.text-title {
+  @apply text-2xl font-semibold;
+  color: var(--text);
+}
+
+.text-subtitle {
+  @apply text-lg font-medium;
+  color: var(--text-muted);
+}
+
+.text-body {
+  @apply text-base;
+  color: var(--text);
+}
+
+.text-caption {
+  @apply text-xs font-semibold uppercase tracking-wide;
+  color: var(--text-muted);
+}
+
+.elevated-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--card-surface) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 62%, transparent);
+  box-shadow:
+    0 14px 36px -26px color-mix(in srgb, var(--border-color) 48%, transparent),
+    0 4px 16px -12px color-mix(in srgb, var(--border-color) 38%, transparent);
+  transition:
+    transform 280ms ease,
+    box-shadow 280ms ease,
+    border-color 280ms ease,
+    background 280ms ease;
+  backdrop-filter: blur(16px);
+  will-change: transform, box-shadow;
+}
+
+.elevated-card::before,
+.elevated-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+.elevated-card::before {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 18%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 90%, transparent) 100%
+  );
+  mix-blend-mode: screen;
+}
+
+.elevated-card::after {
+  background:
+    radial-gradient(circle at 0% -10%, rgba(255, 255, 255, 0.28) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+}
+
+.elevated-card:hover,
+.elevated-card:focus-within {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--border-color) 78%, transparent);
+  background: color-mix(in srgb, var(--card-surface) 94%, transparent);
+  box-shadow:
+    0 26px 54px -34px color-mix(in srgb, var(--border-color) 60%, transparent),
+    0 12px 32px -18px color-mix(in srgb, var(--border-color) 46%, transparent);
+}
+
+.elevated-card:hover::before,
+.elevated-card:hover::after,
+.elevated-card:focus-within::before,
+.elevated-card:focus-within::after {
+  opacity: 1;
+}
+
+.dark .elevated-card {
+  background: color-mix(in srgb, var(--card-surface) 82%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 58%, transparent);
+  box-shadow:
+    0 18px 44px -32px color-mix(in srgb, var(--border-color) 62%, transparent),
+    0 10px 26px -18px color-mix(in srgb, var(--border-color) 46%, transparent);
+}
+
+.dark .elevated-card::before {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--accent) 26%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 86%, transparent) 100%
+  );
+}
+
+.dark .elevated-card::after {
+  background:
+    radial-gradient(circle at 0% -15%, rgba(255, 255, 255, 0.25) 0%, transparent 60%),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+}
+
+.dark .elevated-card:hover,
+.dark .elevated-card:focus-within {
+  border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+  background: color-mix(in srgb, var(--card-surface) 88%, transparent);
+  box-shadow:
+    0 34px 58px -34px color-mix(in srgb, var(--border-color) 72%, transparent),
+    0 16px 36px -20px color-mix(in srgb, var(--border-color) 54%, transparent);
+}
+
+.surface-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--card-surface) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+  backdrop-filter: blur(14px);
+  will-change: transform, box-shadow;
+}
+
+.surface-tile::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+
+.surface-tile:hover,
+.surface-tile:focus-within {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--border-color) 74%, transparent);
+  box-shadow:
+    0 20px 42px -28px color-mix(in srgb, var(--border-color) 56%, transparent),
+    0 10px 24px -18px color-mix(in srgb, var(--border-color) 44%, transparent);
+}
+
+.surface-tile:hover::after,
+.surface-tile:focus-within::after {
+  opacity: 1;
+}
+
+.dark .surface-tile {
+  background: color-mix(in srgb, var(--card-surface) 80%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 56%, transparent);
+}
+
+.dark .surface-tile:hover,
+.dark .surface-tile:focus-within {
+  border-color: color-mix(in srgb, var(--border-color) 68%, transparent);
+  box-shadow:
+    0 26px 46px -30px color-mix(in srgb, var(--border-color) 66%, transparent),
+    0 12px 28px -18px color-mix(in srgb, var(--border-color) 50%, transparent);
+}
+
+:where(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
+  background: color-mix(in srgb, var(--card-surface) 88%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 62%, transparent);
+  transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
+  backdrop-filter: blur(14px);
+}
+
+:where(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border):hover,
+:where(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border):focus-within {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--border-color) 76%, transparent);
+  box-shadow:
+    0 20px 42px -28px color-mix(in srgb, var(--border-color) 54%, transparent),
+    0 10px 26px -18px color-mix(in srgb, var(--border-color) 42%, transparent);
+}
+
+.dark :where(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
+  background: color-mix(in srgb, var(--card-surface) 80%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 58%, transparent);
+}
+
+.dark :where(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border):hover,
+.dark :where(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border):focus-within {
+  border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+  box-shadow:
+    0 26px 46px -30px color-mix(in srgb, var(--border-color) 64%, transparent),
+    0 12px 28px -18px color-mix(in srgb, var(--border-color) 48%, transparent);
+}
+
+.glass-panel {
+  background: color-mix(in srgb, var(--bg) 38%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--border-color) 62%, transparent);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 24px 48px -32px color-mix(in srgb, var(--border-color) 45%, transparent),
+    0 18px 40px -28px color-mix(in srgb, var(--border-color) 28%, transparent);
+}
+
+.dark .glass-panel {
+  background: color-mix(in srgb, var(--bg) 22%, transparent);
+  border-color: color-mix(in srgb, var(--border-color) 38%, transparent);
+  box-shadow:
+    0 24px 48px -30px color-mix(in srgb, var(--border-color) 55%, transparent),
+    0 18px 40px -24px color-mix(in srgb, var(--border-color) 30%, transparent);
+}
+
+.soft-card {
+  box-shadow:
+    12px 16px 42px color-mix(in srgb, var(--border-color) 28%, transparent),
+    -8px -12px 32px color-mix(in srgb, var(--bg) 20%, transparent);
+}
+
+.dark .soft-card {
+  box-shadow:
+    12px 18px 44px color-mix(in srgb, var(--border-color) 46%, transparent),
+    -6px -10px 28px color-mix(in srgb, var(--bg) 28%, transparent);
+}

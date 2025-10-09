@@ -77,7 +77,7 @@ export default function AccountBalancesPage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             Evolución de saldos
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-app-dim">
             Analiza tendencias de saldos y proyecciones por institución o cuenta.
           </p>
         </div>
@@ -142,18 +142,18 @@ export default function AccountBalancesPage() {
                         >
                           {account.name}
                         </Link>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-app-dim">
                           {account.institution}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-app-dim">
                         {getAccountTypeLabel(account.type)}
                       </span>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-app-dim">
                         {account.institution}
                       </span>
                     </TableCell>
@@ -164,8 +164,8 @@ export default function AccountBalancesPage() {
                       <span
                         className={
                           account.change30d >= 0
-                            ? "text-sm font-medium text-emerald-600"
-                            : "text-sm font-medium text-destructive"
+                            ? "text-sm font-semibold text-app-success"
+                            : "text-sm font-semibold text-app-danger"
                         }
                       >
                         {account.change30d >= 0 ? "+" : ""}
@@ -194,7 +194,7 @@ export default function AccountBalancesPage() {
               return (
                 <div
                   key={item.type}
-                  className="flex items-center justify-between rounded-lg border border-dashed border-border/60 px-3 py-2"
+                  className="surface-tile flex items-center justify-between border-dashed border-app-border-subtle/80 px-4 py-3"
                 >
                   <span className="inline-flex items-center gap-2">
                     <span
@@ -208,7 +208,7 @@ export default function AccountBalancesPage() {
                     <p className="text-sm font-semibold">
                       {formatCurrency(item.balance)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-app-dim">
                       {item.accounts} cuentas
                     </p>
                   </div>
@@ -230,7 +230,7 @@ export default function AccountBalancesPage() {
           {alerts.map((alert) => (
             <div
               key={alert.id}
-              className="flex flex-col justify-between rounded-lg border border-border/60 bg-muted/30 p-4"
+              className="surface-tile flex flex-col justify-between bg-app-card/85 p-5"
             >
               <div className="space-y-2">
                 <Badge variant={getSeverityVariant(alert.severity)}>
@@ -241,7 +241,7 @@ export default function AccountBalancesPage() {
                       : "Baja"}
                 </Badge>
                 <h3 className="text-sm font-semibold">{alert.title}</h3>
-                <p className="text-sm text-muted-foreground">{alert.description}</p>
+                <p className="text-sm text-app-dim">{alert.description}</p>
               </div>
               <Button asChild variant="link" className="mt-3 h-auto justify-start px-0 text-sm">
                 <Link href={alert.href}>

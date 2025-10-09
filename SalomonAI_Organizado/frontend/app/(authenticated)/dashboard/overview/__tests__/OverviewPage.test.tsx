@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -92,10 +92,11 @@ describe("OverviewPage", () => {
     const user = userEvent.setup();
     render(<OverviewPage />);
 
-    const select = screen.getByLabelText(/Rango/i);
-    expect(select).toHaveValue("30");
+    const group = screen.getByRole("group", { name: /rango de días/i });
+    const option7 = within(group).getByRole("button", { name: /7 días/i });
+    expect(option7).toHaveAttribute("aria-pressed", "false");
 
-    await user.selectOptions(select, "7");
-    expect(select).toHaveValue("7");
+    await user.click(option7);
+    expect(option7).toHaveAttribute("aria-pressed", "true");
   });
 });

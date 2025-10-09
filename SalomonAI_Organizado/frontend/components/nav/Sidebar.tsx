@@ -35,15 +35,15 @@ export default function Sidebar() {
                           href={item.href}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+                            "group flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg",
                             active
-                              ? "bg-gradient-primary text-primary-foreground shadow-sm"
-                              : "text-muted-foreground hover:bg-gradient-primary hover:text-primary-foreground hover:shadow-sm"
+                              ? "border-app-accent bg-[color:color-mix(in_srgb,var(--accent)_16%,transparent)] text-app shadow-sm"
+                              : "border-transparent text-app-dim hover:border-app-border-subtle hover:bg-app-surface-subtle hover:text-app"
                           )}
                         >
                           <span className="flex-1 truncate">{item.label}</span>
                           {item.id === "insights" && (
-                            <div className="ml-auto inline-flex flex-shrink-0 items-center rounded-full border border-transparent bg-card px-2.5 py-0.5 text-xs font-semibold transition-colors hover:bg-card/80">
+                            <div className="ml-auto inline-flex flex-shrink-0 items-center rounded-full border border-transparent bg-app-card px-2.5 py-0.5 text-xs font-semibold text-app-dim transition-colors hover:bg-app-card-subtle">
                               IA
                             </div>
                           )}

@@ -94,7 +94,7 @@ export default function AccountsPage() {
             <div className="text-2xl font-semibold">
               {summary.totalInstitutions}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-app-dim">
               Bancos, wallets y emisores gestionados desde el espacio financiero.
             </p>
           </CardContent>
@@ -106,7 +106,7 @@ export default function AccountsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">{summary.totalAccounts}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-app-dim">
               Incluye cuentas corrientes, ahorro, crédito y productos de inversión.
             </p>
           </CardContent>
@@ -120,7 +120,7 @@ export default function AccountsPage() {
             <div className="text-2xl font-semibold">
               {formatCurrency(summary.totalBalance)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-app-dim">
               Actualizado según la última sincronización registrada en cada institución.
             </p>
           </CardContent>
@@ -162,23 +162,23 @@ export default function AccountsPage() {
                         >
                           {institution.name}
                         </Link>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-app-dim">
                           {institution.institutionType}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-app-dim">
                         {institution.provider}
                       </span>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-app-dim">
                         {formatDateTime(institution.lastSyncedAt)}
                       </span>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-app-dim">
                         {formatDateTime(institution.nextSyncAt)}
                       </span>
                     </TableCell>
@@ -191,7 +191,7 @@ export default function AccountsPage() {
                               ? "Atención"
                               : "En curso"}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-app-dim">
                           {institution.accounts.length} cuentas
                         </span>
                       </div>
@@ -214,7 +214,7 @@ export default function AccountsPage() {
             {distributionData.length > 0 ? (
               <AccountTypeMiniDonut data={distributionData} />
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-app-dim">
                 Aún no hay datos suficientes para mostrar el resumen por tipo.
               </p>
             )}
@@ -227,7 +227,7 @@ export default function AccountsPage() {
                 return (
                   <div
                     key={item.type}
-                    className="flex items-center justify-between rounded-lg border border-dashed border-border/60 px-3 py-2"
+                    className="surface-tile border-dashed border-app-border-subtle/80 px-4 py-3"
                   >
                     <div className="flex items-center gap-2">
                       <span
@@ -239,7 +239,7 @@ export default function AccountsPage() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium">{formatCurrency(item.balance)}</div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-app-dim">
                         {item.accounts} cuentas
                       </p>
                     </div>
@@ -262,11 +262,11 @@ export default function AccountsPage() {
           {actions.map((action) => (
             <div
               key={action.id}
-              className="flex flex-col justify-between rounded-lg border border-border/70 bg-muted/40 p-4"
+              className="surface-tile flex flex-col justify-between bg-app-card/85 p-5"
             >
               <div className="space-y-2">
                 <h3 className="text-sm font-medium">{action.title}</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-app-dim">
                   {action.description}
                 </p>
               </div>

@@ -23,19 +23,19 @@ type Severity = "critical" | "high" | "medium" | "low"
 const severityStyles: Record<Severity, { label: string; className: string }> = {
   critical: {
     label: esCL.alerts.severities.critical,
-    className: "bg-destructive/15 text-destructive border-destructive/40",
+    className: "border-app-danger/50 bg-app-danger/15 text-app-danger",
   },
   high: {
     label: esCL.alerts.severities.high,
-    className: "bg-amber-100 text-amber-700 border-amber-300",
+    className: "border-app-warning/40 bg-app-warning/12 text-app-warning",
   },
   medium: {
     label: esCL.alerts.severities.medium,
-    className: "bg-sky-100 text-sky-700 border-sky-300",
+    className: "border-app-accent/35 bg-app-accent/10 text-app-accent",
   },
   low: {
     label: esCL.alerts.severities.low,
-    className: "bg-emerald-100 text-emerald-700 border-emerald-300",
+    className: "border-app-success/40 bg-app-success/12 text-app-success",
   },
 }
 
@@ -112,7 +112,7 @@ export default function AlertsPage() {
                 return (
                   <div
                     key={alert.id}
-                    className="rounded-lg border border-border/60 bg-card p-4 shadow-sm"
+                    className="elevated-card rounded-2xl border border-app-border-subtle bg-app-card/92 p-5 transition-all duration-300"
                   >
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="space-y-1">
@@ -123,20 +123,20 @@ export default function AlertsPage() {
                           >
                             {severity.label}
                           </Badge>
-                          <span className="text-xs font-medium text-muted-foreground">
+                          <span className="text-xs font-medium text-app-dim">
                             {alert.id}
                           </span>
                         </div>
                         <h3 className="text-base font-semibold leading-tight">
                           {alert.title}
                         </h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-app-dim">
                           {alert.helper}
                         </p>
                       </div>
                       <div className="flex flex-col items-start gap-3 text-sm lg:items-end">
                         <div className="text-right">
-                          <p className="font-medium text-muted-foreground">
+                          <p className="font-medium text-app-dim">
                             {alert.dueLabel}
                           </p>
                         </div>
@@ -153,7 +153,7 @@ export default function AlertsPage() {
                           >
                             {alert.primaryCta}
                           </Button>
-                          <Button size="sm" variant="ghost" className="px-0 text-muted-foreground">
+                          <Button size="sm" variant="ghost" className="px-0 text-app-dim hover:text-app">
                             {alert.secondaryCta}
                           </Button>
                         </div>
@@ -174,11 +174,11 @@ export default function AlertsPage() {
             <CardDescription>{esCL.alerts.response.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <ol className="relative space-y-6 border-l border-dashed border-border pl-6">
+            <ol className="relative space-y-6 border-l border-dashed border-app-border-subtle pl-6">
               {esCL.alerts.response.steps.map((step, index) => (
                 <li key={step.title} className="space-y-2">
-                  <span className="absolute -left-[9px] mt-2 h-4 w-4 rounded-full border border-border bg-background" />
-                  <p className="text-sm text-muted-foreground">
+                  <span className="absolute -left-[9px] mt-2 h-4 w-4 rounded-full border border-app-border-subtle bg-app-card/80" />
+                  <p className="text-sm text-app-dim">
                     Paso {index + 1}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -187,7 +187,7 @@ export default function AlertsPage() {
                     </h3>
                     <Badge variant="secondary">{step.status}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-app-dim">
                     {step.description}
                   </p>
                 </li>
