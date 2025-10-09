@@ -5,33 +5,40 @@ import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Icon } from "@/components/ui/icon"
+import type { IconName } from "@/components/ui/icon"
 import type { Kpis } from "@/hooks/useDashboardOverview"
 import { formatCurrencyCLP, formatPercentDelta } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
 
 const kpiConfig = [
   {
-    key: "incomeCLP" as const,
-    deltaKey: "incomeDelta" as const,
+    key: "incomeCLP",
+    deltaKey: "incomeDelta",
     label: "Ingresos",
-    tone: "positive" as const,
+    tone: "positive",
     icon: "TrendingUp",
   },
   {
-    key: "expensesCLP" as const,
-    deltaKey: "expensesDelta" as const,
+    key: "expensesCLP",
+    deltaKey: "expensesDelta",
     label: "Gastos",
-    tone: "negative" as const,
+    tone: "negative",
     icon: "Wallet",
   },
   {
-    key: "netCLP" as const,
-    deltaKey: "netDelta" as const,
+    key: "netCLP",
+    deltaKey: "netDelta",
     label: "Flujo neto",
-    tone: "positive" as const,
+    tone: "positive",
     icon: "Activity",
   },
-]
+] satisfies Array<{
+  key: keyof Pick<Kpis, "incomeCLP" | "expensesCLP" | "netCLP">;
+  deltaKey: keyof Pick<Kpis, "incomeDelta" | "expensesDelta" | "netDelta">;
+  label: string;
+  tone: TrendTone;
+  icon: IconName;
+}>
 
 type TrendTone = "positive" | "negative"
 

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "./button"
 
 interface EmptyStateProps {
-  title: string
+  title?: string
   description?: string
   action?: ReactNode
   ctaLabel?: string
@@ -21,6 +21,7 @@ export function EmptyState({
   onCta,
   className,
 }: EmptyStateProps) {
+  const resolvedTitle = title ?? "Sin información disponible"
   const fallbackAction = ctaLabel && onCta ? (
     <Button onClick={onCta} variant="secondary">
       {ctaLabel}
@@ -36,7 +37,7 @@ export function EmptyState({
         className
       )}
     >
-      <div className="text-title leading-tight">{title}</div>
+      <div className="text-title leading-tight">{resolvedTitle}</div>
       {description ? (
         <p className="text-sm text-app-dim">{description}</p>
       ) : null}
