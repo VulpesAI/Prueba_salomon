@@ -139,7 +139,8 @@ module.exports = {
         skeleton: "var(--skeleton)",
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, #007CF0 0%, #06B6D4 100%)",
+        "gradient-primary":
+          "linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%)",
         "gradient-hero": "linear-gradient(135deg, rgba(11, 25, 67, 0.85) 0%, rgba(6, 182, 212, 0.35) 100%)",
         "gradient-card": "linear-gradient(135deg, rgba(18, 58, 104, 0.35) 0%, rgba(42, 58, 85, 0.15) 100%)",
       },

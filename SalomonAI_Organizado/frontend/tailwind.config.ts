@@ -133,13 +133,14 @@ const config: Config = {
       },
       gradientColorStops: {
         "primary-from": "hsl(var(--primary-from))",
+        "primary-via": "hsl(var(--primary-via))",
         "primary-to": "hsl(var(--primary-to))",
         "primary-dark-from": "hsl(var(--primary-dark-from))",
         "primary-dark-to": "hsl(var(--primary-dark-to))",
       },
       backgroundImage: {
         "gradient-primary":
-          "linear-gradient(90deg, hsl(var(--primary-from)) 0%, hsl(var(--primary-to)) 100%)",
+          "linear-gradient(90deg, hsl(var(--primary-from)) 0%, hsl(var(--primary-via)) 50%, hsl(var(--primary-to)) 100%)",
         "gradient-card-light":
           "linear-gradient(180deg, rgba(0,124,240,0.03) 0%, rgba(6,182,212,0.04) 100%)",
         "gradient-card-dark":
