@@ -1,12 +1,12 @@
 {
-  "vivienda": "#4F46E5",
-  "alimentacion": "#F97316",
-  "transporte": "#22D3EE",
-  "servicios": "#0EA5E9",
-  "suscripciones": "#8B5CF6",
-  "salud": "#F43F5E",
+  "vivienda": "#007CF0",
+  "alimentacion": "#06B6D4",
+  "transporte": "#3B82F6",
+  "servicios": "#123A68",
+  "suscripciones": "#2A3A55",
+  "salud": "#22C55E",
   "ingresos": "#22C55E",
-  "educacion": "#FBBF24",
-  "entretenimiento": "#EC4899",
-  "ahorro": "#14B8A6"
+  "educacion": "#F59E0B",
+  "entretenimiento": "#06B6D4",
+  "ahorro": "#007CF0"
 }
