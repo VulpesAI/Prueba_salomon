@@ -19,102 +19,10 @@ body {
 }
 
 :root {
-  --bg-app: #F5F7FF;
-  --text-app: #081134;
-  --text-surface: #081134;
-  --text-muted-legacy: #475569;
-  --text-inverse: #F5F7FF;
-  --border-neutral: #E2E8F0;
-  --brand: #007CF0;
-  --accent-legacy: #22C55E;
-  --error-legacy: #EF4444;
-  --chart-axis: #475569;
-  --chart-grid: rgba(148, 163, 184, 0.25);
-  --chart-series-1: #007CF0;
-  --chart-series-2: #3B82F6;
-  --chart-series-3: #06B6D4;
-  --chart-series-4: #22C55E;
-  --chart-series-5: #F59E0B;
-  --chart-series-6: #EF4444;
-
-  --background: 228 100% 98%;
-  --foreground: 228 73% 12%;
-  --card: 0 0% 100%;
-  --card-foreground: var(--foreground);
-  --input: 214 32% 91%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 20% 35%;
-  --border: 214 32% 91%;
-  --primary: 209 100% 47%;
-  --primary-foreground: 228 100% 98%;
-  --primary-from: 257 100% 62%;
-  --primary-via: 248 87% 61%;
-  --primary-to: 209 100% 47%;
-  --primary-dark-from: 257 68% 50%;
-  --primary-dark-to: 212 100% 41%;
-  --primary-gradient-from: var(--primary-from);
-  --primary-gradient-via: var(--primary-via);
-  --primary-gradient-to: var(--primary-to);
-  --secondary: 228 73% 12%;
-  --secondary-foreground: 228 100% 98%;
-  --text-primary: var(--foreground);
-  --text-secondary: var(--muted-foreground);
-  --icon-primary: var(--foreground);
-  --icon-secondary: var(--muted-foreground);
-  --panel: 0 0% 100%;
-  --panel-subtle: 222 100% 96%;
-  --radius: 0.75rem;
-
-  /* Semantic tokens mapped to existing palette */
-  --bg-hsl: var(--background);
-  --surface-hsl: var(--muted);
-  --card-hsl: var(--card);
-  --border-hsl: var(--border);
-  --text-hsl: var(--foreground);
-  --text-muted-hsl: var(--muted-foreground);
-  --accent-hsl: var(--primary);
-  --accent-contrast-hsl: var(--primary-foreground);
-  --success-hsl: 142 72% 45%;
-  --warning-hsl: 38 92% 50%;
-  --danger-hsl: 0 84% 60%;
-
-  --bg: hsl(var(--bg-hsl));
-  --surface: hsl(var(--surface-hsl));
-  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 65%, transparent);
-  --card-surface: hsl(var(--card-hsl));
-  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 85%, transparent);
-  --border-color: hsl(var(--border-hsl));
-  --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 55%, transparent);
-  --text: hsl(var(--text-hsl));
-  --text-muted: hsl(var(--text-muted-hsl));
-  --accent: hsl(var(--accent-hsl));
-  --accent-contrast: hsl(var(--accent-contrast-hsl));
-  --success: hsl(var(--success-hsl));
-  --warning: hsl(var(--warning-hsl));
-  --danger: hsl(var(--danger-hsl));
-
-  /* Backwards-compat tokens */
-  --color-bg: var(--bg);
-  --color-card: var(--card-surface);
-  --color-border: var(--border-color);
-  --color-foreground: var(--text);
-  --color-muted: var(--surface);
-  --color-muted-foreground: var(--text-muted);
-  --color-accent: var(--accent);
-  --color-success: var(--success);
-  --color-danger: var(--danger);
-  --color-warning: var(--warning);
-
-  --bg-app: var(--bg);
-  --text-app: var(--text);
-  --text-muted: var(--text-muted);
-}
-
-.dark {
   --bg-app: #0B1943;
   --text-app: #F5F7FF;
   --text-surface: #F5F7FF;
-  --text-muted: #94A3B8;
+  --text-muted-legacy: #94A3B8;
   --text-inverse: #081134;
   --border-neutral: #374151;
   --brand: #007CF0;
@@ -122,6 +30,12 @@ body {
   --error-legacy: #EF4444;
   --chart-axis: #94A3B8;
   --chart-grid: rgba(55, 65, 81, 0.45);
+  --chart-series-1: #007CF0;
+  --chart-series-2: #3B82F6;
+  --chart-series-3: #06B6D4;
+  --chart-series-4: #22C55E;
+  --chart-series-5: #F59E0B;
+  --chart-series-6: #EF4444;
 
   --background: 225 72% 15%;
   --foreground: 210 20% 98%;
@@ -149,7 +63,9 @@ body {
   --icon-secondary: var(--muted-foreground);
   --panel: 215 28% 17%;
   --panel-subtle: 217 19% 27%;
+  --radius: 0.75rem;
 
+  /* Semantic tokens mapped to existing palette */
   --bg-hsl: var(--background);
   --surface-hsl: var(--muted);
   --card-hsl: var(--card);
@@ -177,6 +93,7 @@ body {
   --warning: hsl(var(--warning-hsl));
   --danger: hsl(var(--danger-hsl));
 
+  /* Backwards-compat tokens */
   --color-bg: var(--bg);
   --color-card: var(--card-surface);
   --color-border: var(--border-color);
@@ -188,7 +105,60 @@ body {
   --color-danger: var(--danger);
   --color-warning: var(--warning);
 
+  --bg-app: var(--bg);
+  --text-app: var(--text);
+  --text-muted: var(--text-muted);
   --brand-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+}
+
+.light {
+  --bg-app: #F5F7FF;
+  --text-surface: #081134;
+  --text-muted-legacy: #475569;
+  --text-inverse: #F5F7FF;
+  --border-neutral: #E2E8F0;
+  --brand: #007CF0;
+  --accent-legacy: #22C55E;
+  --error-legacy: #EF4444;
+  --chart-axis: #475569;
+  --chart-grid: rgba(148, 163, 184, 0.25);
+
+  --background: 228 100% 98%;
+  --foreground: 228 73% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: var(--foreground);
+  --input: 214 32% 91%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 20% 35%;
+  --border: 214 32% 91%;
+  --primary: 209 100% 47%;
+  --primary-foreground: 228 100% 98%;
+  --primary-from: 257 100% 62%;
+  --primary-via: 248 87% 61%;
+  --primary-to: 209 100% 47%;
+  --primary-dark-from: 257 68% 50%;
+  --primary-dark-to: 212 100% 41%;
+  --primary-gradient-from: var(--primary-from);
+  --primary-gradient-via: var(--primary-via);
+  --primary-gradient-to: var(--primary-to);
+  --secondary: 228 73% 12%;
+  --secondary-foreground: 228 100% 98%;
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --icon-primary: var(--foreground);
+  --icon-secondary: var(--muted-foreground);
+  --panel: 0 0% 100%;
+  --panel-subtle: 222 100% 96%;
+
+  --success-hsl: 142 72% 45%;
+  --warning-hsl: 38 92% 50%;
+  --danger-hsl: 0 84% 60%;
+
+  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 65%, transparent);
+  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 85%, transparent);
+  --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 55%, transparent);
+
+  --brand-gradient: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
 }
 
 * {
@@ -308,19 +278,19 @@ body {
 }
 
 .bg-gradient-card {
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
-}
-
-.dark .bg-gradient-card {
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
 }
 
-.bg-section {
-  background-image: linear-gradient(180deg, rgba(245, 247, 255, 0.85) 0%, rgba(232, 237, 255, 0.9) 50%, rgba(255, 255, 255, 0.92) 100%);
+.light .bg-gradient-card {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 
-.dark .bg-section {
+.bg-section {
   background-image: linear-gradient(180deg, rgba(11, 25, 67, 0.9) 0%, rgba(18, 58, 104, 0.8) 60%, rgba(17, 24, 39, 0.9) 100%);
+}
+
+.light .bg-section {
+  background-image: linear-gradient(180deg, rgba(245, 247, 255, 0.85) 0%, rgba(232, 237, 255, 0.9) 50%, rgba(255, 255, 255, 0.92) 100%);
 }
 
 .border-soft {
@@ -377,11 +347,11 @@ body {
 }
 
 .bg-gradient-hero {
-  background: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(116, 61, 255, 0.32) 100%);
 }
 
-.dark .bg-gradient-hero {
-  background: linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(116, 61, 255, 0.32) 100%);
+.light .bg-gradient-hero {
+  background: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
 }
 
 .bg-gradient-primary {
