@@ -108,7 +108,7 @@ body {
   --bg-app: var(--bg);
   --text-app: var(--text);
   --text-muted: var(--text-muted);
-  --brand-gradient: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
+  --brand-gradient: linear-gradient(135deg, #007CF0 0%, #8B5CF6 50%, #06B6D4 100%);
 }
 
 
