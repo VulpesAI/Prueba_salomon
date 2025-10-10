@@ -21,7 +21,7 @@
   --bg: #0B1943;
   --bg-muted: #1F2937;
 
-  --text: #F9FAFB;
+  --text: #F5F7FF;
   --text-muted: #94A3B8;
 
   --accent: #007CF0;
@@ -31,7 +31,7 @@
   --negative: #EF4444;
   --warning: #F59E0B;
 
-  --border: #374151;
+  --border: #123A68;
   --card: #1F2937;
   --skeleton: #2A3A55;
 }
