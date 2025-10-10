@@ -33,8 +33,8 @@ export function TopCategoriesDonut({ data, range = "30" }: TopCategoriesDonutPro
           </div>
           <div>
             <ul className="space-y-4" role="list">
-              {data.slice(0, 3).map((category) => {
-                const color = getCategoryColor(category.name)
+              {data.slice(0, 3).map((category, index) => {
+                const color = getCategoryColor(category.name, index)
                 const safePercent = Math.min(100, Math.max(0, category.percent))
                 return (
                   <li key={category.name} className="rounded-2xl border border-app-border-subtle bg-app-surface-subtle p-4" role="listitem">

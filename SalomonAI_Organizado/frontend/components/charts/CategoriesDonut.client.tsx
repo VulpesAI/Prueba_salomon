@@ -17,9 +17,9 @@ const tooltipFormatter: TooltipProps<number, string>["formatter"] = (value, name
 };
 
 export default function CategoriesDonut({ data }: CategoriesDonutProps) {
-  const pieData = data.map((item) => ({
+  const pieData = data.map((item, index) => ({
     ...item,
-    fill: getCategoryColor(item.name),
+    fill: getCategoryColor(item.name, index),
   }));
 
   return (

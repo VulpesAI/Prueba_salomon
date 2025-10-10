@@ -1,13 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import type { TooltipProps } from "recharts";
 import { Area, AreaChart, CartesianGrid, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import type { FluxPoint } from "@/hooks/useDashboardOverview";
 import { formatCurrencyCLP, formatDateCL } from "@/lib/formatters";
 import { formatDateLabel } from "@/lib/dates";
-const HIST_COLOR = "var(--accent)";
-const PROJ_COLOR = "var(--success)";
+import { useCssVariables } from "@/lib/ui/use-css-variables";
 
 type ChartDatum = {
   date: string;
@@ -63,6 +63,12 @@ function FluxTooltip(props: TooltipProps<number, string>) {
 
 export default function FluxChart({ data }: { data: FluxPoint[] }) {
   const chartData = mapToChartData(data);
+  const mapping = useMemo(() => ({ accent: "--accent", dim: "--text-muted", success: "--success" }), []);
+  const { accent, dim, success } = useCssVariables(mapping, {
+    accent: "var(--accent)",
+    dim: "var(--text-muted)",
+    success: "var(--success)",
+  });
 
   return (
     <div className="h-72 w-full">
@@ -70,8 +76,8 @@ export default function FluxChart({ data }: { data: FluxPoint[] }) {
         <AreaChart data={chartData} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="cashflowGradient" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.05} />
+              <stop offset="0%" stopColor={accent} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={accent} stopOpacity={0.05} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in srgb, var(--border-color) 45%, transparent)" />
@@ -96,16 +102,16 @@ export default function FluxChart({ data }: { data: FluxPoint[] }) {
           <Legend
             formatter={(value) => value}
             iconType="circle"
-            wrapperStyle={{ paddingTop: 16, fontSize: 12, color: "var(--text-muted)" }}
+            wrapperStyle={{ paddingTop: 16, fontSize: 12, color: dim }}
           />
           <Area
             type="monotone"
             dataKey="histAmount"
             name="Histórico"
             fill="url(#cashflowGradient)"
-            stroke={HIST_COLOR}
+            stroke={accent}
             strokeWidth={2}
-            dot={{ r: 2.4, strokeWidth: 1.2, stroke: HIST_COLOR, fill: "var(--bg)" }}
+            dot={{ r: 2.4, strokeWidth: 1.2, stroke: accent, fill: "var(--bg)" }}
             activeDot={{ r: 4 }}
             connectNulls
           />
@@ -113,10 +119,10 @@ export default function FluxChart({ data }: { data: FluxPoint[] }) {
             type="monotone"
             dataKey="projAmount"
             name="Proyección"
-            stroke={PROJ_COLOR}
+            stroke={success}
             strokeDasharray="6 6"
             strokeWidth={2.4}
-            dot={{ r: 3, strokeWidth: 1, stroke: PROJ_COLOR, fill: "var(--bg)" }}
+            dot={{ r: 3, strokeWidth: 1, stroke: success, fill: "var(--bg)" }}
             connectNulls
           />
         </AreaChart>

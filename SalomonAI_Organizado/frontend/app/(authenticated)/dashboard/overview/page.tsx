@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 
 import { ChatFab } from "@/components/assistant/chat-fab"
 import { CashflowChart } from "@/components/dashboard/cashflow-chart"
+import { DashboardCta } from "@/components/dashboard/dashboard-cta"
 import { InsightsList } from "@/components/dashboard/insights-list"
 import { KpiStrip } from "@/components/dashboard/kpi-strip"
 import { ChartSkeleton, DonutSkeleton, ErrorState, InsightsSkeleton, KpiSkeleton } from "@/components/dashboard/skeletons"
@@ -59,6 +60,7 @@ export default function OverviewPage() {
             <InsightsList items={data.insights} />
           </div>
         </div>
+        <DashboardCta />
       </div>
       <ChatFab />
     </>

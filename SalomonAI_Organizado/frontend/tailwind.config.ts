@@ -21,27 +21,27 @@ const config: Config = {
       },
     },
     extend: {
-        colors: {
-          brand: {
-            DEFAULT: "#007CF0",
-            green: "#22C55E",
-          },
-          app: {
-            DEFAULT: "var(--text)",
-            bg: "var(--bg)",
-            surface: "var(--surface)",
-            "surface-subtle": "var(--surface-subtle)",
-            card: "var(--card-surface)",
-          "card-subtle": "var(--card-subtle)",
-          border: "var(--border-color)",
-          "border-subtle": "var(--border-subtle)",
-          text: "var(--text)",
-          dim: "var(--text-muted)",
-          accent: "var(--accent)",
-          "accent-contrast": "var(--accent-contrast)",
-          success: "var(--success)",
-          warning: "var(--warning)",
-          danger: "var(--danger)",
+      colors: {
+        brand: {
+          DEFAULT: "#007CF0",
+          green: "#22C55E",
+        },
+        app: {
+          DEFAULT: "var(--app-text)",
+          bg: "var(--app-bg)",
+          surface: "var(--app-surface)",
+          "surface-subtle": "var(--app-surface-subtle)",
+          card: "var(--app-card)",
+          "card-subtle": "var(--app-card-subtle)",
+          border: "var(--app-border)",
+          "border-subtle": "var(--app-border-subtle)",
+          text: "var(--app-text)",
+          dim: "var(--app-dim)",
+          accent: "var(--app-accent)",
+          "accent-contrast": "var(--app-accent-contrast)",
+          success: "var(--app-success)",
+          warning: "var(--app-warning)",
+          danger: "var(--app-danger)",
         },
         surface: {
           dark: "#1F2937",
@@ -52,7 +52,7 @@ const config: Config = {
           dark: "#123A68",
         },
         error: {
-          DEFAULT: "#EF4444",
+          DEFAULT: "var(--app-danger)",
           foreground: "#450A0A",
         },
         textpal: {
@@ -114,15 +114,15 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground) / <alpha-value>)",
         },
         destructive: {
-          DEFAULT: "#EF4444",
+          DEFAULT: "var(--app-danger)",
           foreground: "#450A0A",
         },
         success: {
-          DEFAULT: "#22C55E",
+          DEFAULT: "var(--app-success)",
           foreground: "#052E16",
         },
         warning: {
-          DEFAULT: "#F59E0B",
+          DEFAULT: "var(--app-warning)",
           foreground: "#451A03",
         },
         categories: CATEGORY_COLOR_MAP,
@@ -161,8 +161,8 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
         DEFAULT: "var(--radius)",
         xl: "calc(var(--radius) + 4px)",
-        "2xl": "calc(var(--radius) + 8px)",
-        card: "0.75rem",
+        "2xl": "1.25rem",
+        card: "1.25rem",
       },
       keyframes: {
         "accordion-down": {

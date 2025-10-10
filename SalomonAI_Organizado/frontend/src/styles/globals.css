@@ -28,14 +28,6 @@ body {
   --brand: #007CF0;
   --accent-legacy: #22C55E;
   --error-legacy: #EF4444;
-  --chart-axis: #475569;
-  --chart-grid: rgba(148, 163, 184, 0.25);
-  --chart-series-1: #007CF0;
-  --chart-series-2: #3B82F6;
-  --chart-series-3: #06B6D4;
-  --chart-series-4: #22C55E;
-  --chart-series-5: #F59E0B;
-  --chart-series-6: #EF4444;
 
   --background: 228 100% 98%;
   --foreground: 228 73% 12%;
@@ -80,11 +72,11 @@ body {
 
   --bg: hsl(var(--bg-hsl));
   --surface: hsl(var(--surface-hsl));
-  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 65%, transparent);
-  --card-surface: hsl(var(--card-hsl));
-  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 85%, transparent);
-  --border-color: hsl(var(--border-hsl));
-  --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 55%, transparent);
+  --surface-subtle: color-mix(in srgb, var(--surface) 82%, transparent);
+  --card: hsl(var(--card-hsl));
+  --card-subtle: color-mix(in srgb, var(--card) 88%, transparent);
+  --border: hsl(var(--border-hsl));
+  --border-subtle: color-mix(in srgb, var(--border) 58%, transparent);
   --text: hsl(var(--text-hsl));
   --text-muted: hsl(var(--text-muted-hsl));
   --accent: hsl(var(--accent-hsl));
@@ -93,10 +85,29 @@ body {
   --warning: hsl(var(--warning-hsl));
   --danger: hsl(var(--danger-hsl));
 
+  --app-bg: var(--bg);
+  --app-surface: var(--surface);
+  --app-surface-subtle: var(--surface-subtle);
+  --app-card: var(--card);
+  --app-card-subtle: var(--card-subtle);
+  --app-border: var(--border);
+  --app-border-subtle: var(--border-subtle);
+  --app-text: var(--text);
+  --app-dim: var(--text-muted);
+  --app-accent: var(--accent);
+  --app-accent-contrast: var(--accent-contrast);
+  --app-success: var(--success);
+  --app-warning: var(--warning);
+  --app-danger: var(--danger);
+
+  --border-color: var(--app-border);
+  --border-subtle: var(--app-border-subtle);
+  --card-surface: var(--app-card);
+
   /* Backwards-compat tokens */
   --color-bg: var(--bg);
-  --color-card: var(--card-surface);
-  --color-border: var(--border-color);
+  --color-card: var(--card);
+  --color-border: var(--border);
   --color-foreground: var(--text);
   --color-muted: var(--surface);
   --color-muted-foreground: var(--text-muted);
@@ -105,9 +116,22 @@ body {
   --color-danger: var(--danger);
   --color-warning: var(--warning);
 
-  --bg-app: var(--bg);
-  --text-app: var(--text);
-  --text-muted: var(--text-muted);
+  /* Chart palette derived from semantic tokens */
+  --chart-axis: color-mix(in srgb, var(--text-muted) 76%, transparent);
+  --chart-grid: color-mix(in srgb, var(--border) 62%, transparent);
+  --chart-accent-1: var(--accent);
+  --chart-accent-2: color-mix(in srgb, var(--accent) 78%, var(--success) 22%);
+  --chart-accent-3: color-mix(in srgb, var(--accent) 70%, var(--warning) 30%);
+  --chart-accent-4: color-mix(in srgb, var(--success) 85%, var(--accent) 15%);
+  --chart-accent-5: color-mix(in srgb, var(--warning) 85%, var(--accent) 15%);
+  --chart-accent-6: color-mix(in srgb, var(--danger) 88%, var(--accent) 12%);
+  --chart-series-1: var(--chart-accent-1);
+  --chart-series-2: var(--chart-accent-2);
+  --chart-series-3: var(--chart-accent-3);
+  --chart-series-4: var(--chart-accent-4);
+  --chart-series-5: var(--chart-accent-5);
+  --chart-series-6: var(--chart-accent-6);
+
   --brand-gradient: linear-gradient(135deg, #007CF0 0%, #8B5CF6 50%, #06B6D4 100%);
 }
 
@@ -122,8 +146,6 @@ body {
   --brand: #007CF0;
   --accent-legacy: #22C55E;
   --error-legacy: #EF4444;
-  --chart-axis: #94A3B8;
-  --chart-grid: rgba(55, 65, 81, 0.5);
 
   --background: 225 72% 15%;
   --foreground: 228 100% 98%;
@@ -164,9 +186,52 @@ body {
   --warning-hsl: 38 92% 50%;
   --danger-hsl: 0 84% 58%;
 
-  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 48%, transparent);
-  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 76%, transparent);
-  --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 50%, transparent);
+  --surface: hsl(var(--surface-hsl));
+  --surface-subtle: color-mix(in srgb, var(--surface) 60%, transparent);
+  --card: hsl(var(--card-hsl));
+  --card-subtle: color-mix(in srgb, var(--card) 68%, transparent);
+  --border: hsl(var(--border-hsl));
+  --border-subtle: color-mix(in srgb, var(--border) 52%, transparent);
+  --text: hsl(var(--text-hsl));
+  --text-muted: hsl(var(--text-muted-hsl));
+  --accent: hsl(var(--accent-hsl));
+  --accent-contrast: hsl(var(--accent-contrast-hsl));
+  --success: hsl(var(--success-hsl));
+  --warning: hsl(var(--warning-hsl));
+  --danger: hsl(var(--danger-hsl));
+
+  --app-bg: var(--bg);
+  --app-surface: var(--surface);
+  --app-surface-subtle: var(--surface-subtle);
+  --app-card: var(--card);
+  --app-card-subtle: var(--card-subtle);
+  --app-border: var(--border);
+  --app-border-subtle: var(--border-subtle);
+  --app-text: var(--text);
+  --app-dim: var(--text-muted);
+  --app-accent: var(--accent);
+  --app-accent-contrast: var(--accent-contrast);
+  --app-success: var(--success);
+  --app-warning: var(--warning);
+  --app-danger: var(--danger);
+
+  --border-color: var(--app-border);
+  --card-surface: var(--app-card);
+
+  --chart-axis: color-mix(in srgb, var(--text-muted) 66%, transparent);
+  --chart-grid: color-mix(in srgb, var(--border) 54%, transparent);
+  --chart-accent-1: var(--accent);
+  --chart-accent-2: color-mix(in srgb, var(--accent) 68%, var(--success) 32%);
+  --chart-accent-3: color-mix(in srgb, var(--accent) 62%, var(--warning) 38%);
+  --chart-accent-4: color-mix(in srgb, var(--success) 80%, var(--accent) 20%);
+  --chart-accent-5: color-mix(in srgb, var(--warning) 80%, var(--accent) 20%);
+  --chart-accent-6: color-mix(in srgb, var(--danger) 82%, var(--accent) 18%);
+  --chart-series-1: var(--chart-accent-1);
+  --chart-series-2: var(--chart-accent-2);
+  --chart-series-3: var(--chart-accent-3);
+  --chart-series-4: var(--chart-accent-4);
+  --chart-series-5: var(--chart-accent-5);
+  --chart-series-6: var(--chart-accent-6);
 
   --brand-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
 }
