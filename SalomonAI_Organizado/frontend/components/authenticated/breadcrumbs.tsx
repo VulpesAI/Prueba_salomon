@@ -57,8 +57,8 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
 
   const isInverted = variant === "inverted"
   const listClassName = isInverted
-    ? "text-secondary-foreground [&>li>a]:text-secondary-foreground [&>li>a:hover]:text-secondary-foreground [&>li>span]:text-secondary-foreground"
-    : undefined
+    ? "text-primary-foreground/90 [&>li>a]:text-primary-foreground [&>li>a:hover]:text-primary-foreground [&>li>span]:text-primary-foreground"
+    : "text-app/70 [&>li>a]:text-app [&>li>a:hover]:text-app [&>li>span]:text-app"
 
   const homeRoute = "/dashboard/overview" as Route
 
@@ -89,11 +89,14 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1
           const linkClassName = isInverted
-            ? "text-secondary-foreground hover:text-secondary-foreground"
-            : undefined
+            ? "text-primary-foreground hover:text-primary-foreground"
+            : "text-app hover:text-app"
           const pageClassName = isInverted
-            ? "text-secondary-foreground"
-            : undefined
+            ? "text-primary-foreground"
+            : "text-app"
+          const separatorClassName = isInverted
+            ? "text-primary-foreground/70"
+            : "text-app/50"
 
           return (
             <React.Fragment key={`${crumb.label}-${index}`}>
@@ -114,14 +117,16 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
                 ) : (
                   <span
                     className={
-                      isInverted ? "text-secondary-foreground" : "text-muted-foreground"
+                      isInverted ? "text-primary-foreground" : "text-app"
                     }
                   >
                     {crumb.label}
                   </span>
                 )}
               </BreadcrumbItem>
-              {!isLast ? <BreadcrumbSeparator /> : null}
+              {!isLast ? (
+                <BreadcrumbSeparator className={separatorClassName} />
+              ) : null}
             </React.Fragment>
           )
         })}

@@ -66,7 +66,7 @@ export function AuthenticatedShell({
                   aria-label={isSidebarOpen ? "Cerrar navegación" : "Abrir navegación"}
                   className="group flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-app-border-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg"
                 >
-                  <div className="brand-gradient-bg rounded-xl p-2 text-primary-foreground shadow-sm">
+                  <div className="brand-gradient-bg rounded-xl p-2 text-primary-foreground shadow-sm ring-1 ring-primary/15">
                     <Brain className="h-5 w-5 text-primary-foreground" aria-hidden />
                   </div>
                   <div className="flex flex-col">
@@ -75,12 +75,12 @@ export function AuthenticatedShell({
                     </span>
                     <Badge
                       variant="outline"
-                      className="mt-0.5 w-fit border-primary/30 px-2 py-0 text-[10px] uppercase tracking-wide text-primary"
+                      className="mt-0.5 w-fit border-primary/40 bg-primary/[0.06] px-2 py-0 text-[10px] uppercase tracking-wide text-primary"
                     >
                       Beta
                     </Badge>
                   </div>
-                  <span className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl border border-primary/30 bg-app-surface-subtle text-primary transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                  <span className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl border border-primary/40 bg-primary/[0.05] text-primary transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
                     {isSidebarOpen ? (
                       <X className="h-4 w-4" aria-hidden />
                     ) : (
