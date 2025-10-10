@@ -1,23 +1,4 @@
 :root {
-  --bg: #0B1943;
-  --bg-muted: #1F2937;
-
-  --text: #F9FAFB;
-  --text-muted: #94A3B8;
-
-  --accent: #007CF0;
-  --accent-muted: #123A68;
-
-  --positive: #22C55E;
-  --negative: #EF4444;
-  --warning: #F59E0B;
-
-  --border: #374151;
-  --card: #1F2937;
-  --skeleton: #2A3A55;
-}
-
-.light {
   --bg: #F5F7FF;
   --bg-muted: #E8EDFF;
 
@@ -56,6 +37,6 @@
 }
 
 /* Utilidades opcionales */
-:root, .dark, .light {
+:root, .dark {
   --radius: 12px;
 }
