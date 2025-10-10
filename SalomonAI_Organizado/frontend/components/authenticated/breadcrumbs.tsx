@@ -57,7 +57,7 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
 
   const isInverted = variant === "inverted"
   const listClassName = isInverted
-    ? "text-secondary-foreground [&>li>a]:text-secondary-foreground [&>li>a:hover]:text-secondary-foreground [&>li>span]:text-secondary-foreground"
+    ? "text-primary-foreground/90 [&>li>a]:text-primary-foreground [&>li>a:hover]:text-primary-foreground [&>li>span]:text-primary-foreground"
     : undefined
 
   const homeRoute = "/dashboard/overview" as Route
@@ -89,10 +89,10 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1
           const linkClassName = isInverted
-            ? "text-secondary-foreground hover:text-secondary-foreground"
+            ? "text-primary-foreground hover:text-primary-foreground"
             : undefined
           const pageClassName = isInverted
-            ? "text-secondary-foreground"
+            ? "text-primary-foreground"
             : undefined
 
           return (
@@ -114,7 +114,7 @@ export function Breadcrumbs({ sections, variant = "default" }: BreadcrumbProps) 
                 ) : (
                   <span
                     className={
-                      isInverted ? "text-secondary-foreground" : "text-muted-foreground"
+                      isInverted ? "text-primary-foreground" : "text-muted-foreground"
                     }
                   >
                     {crumb.label}
