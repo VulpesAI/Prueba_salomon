@@ -27,6 +27,7 @@ export default function RootLayout({
     const t = s ? JSON.parse(s).theme : 'dark';
     if (t === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
+    document.documentElement.dataset.theme = t;
   } catch {}
 `,
           }}

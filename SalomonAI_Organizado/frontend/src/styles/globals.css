@@ -23,13 +23,13 @@ body {
   --text-app: #081134;
   --text-surface: #081134;
   --text-muted-legacy: #475569;
-  --text-inverse: #F9FAFB;
+  --text-inverse: #F5F7FF;
   --border-neutral: #E2E8F0;
   --brand: #007CF0;
   --accent-legacy: #22C55E;
   --error-legacy: #EF4444;
   --chart-axis: #475569;
-  --chart-grid: rgba(226, 232, 240, 0.5);
+  --chart-grid: rgba(148, 163, 184, 0.25);
   --chart-series-1: #007CF0;
   --chart-series-2: #3B82F6;
   --chart-series-3: #06B6D4;
@@ -37,32 +37,32 @@ body {
   --chart-series-5: #F59E0B;
   --chart-series-6: #EF4444;
 
-  --background: 222 47% 11%;
-  --foreground: 228 100% 98%;
-  --card: 215 28% 17%;
+  --background: 228 100% 98%;
+  --foreground: 228 73% 12%;
+  --card: 0 0% 100%;
   --card-foreground: var(--foreground);
-  --input: 212 70% 24%;
-  --muted: 218 34% 25%;
-  --muted-foreground: 215 20% 65%;
-  --border: 212 70% 24%;
-  --primary: var(--primary-from);
+  --input: 214 32% 91%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 19% 35%;
+  --border: 214 32% 91%;
+  --primary: 209 100% 47%;
   --primary-foreground: 228 100% 98%;
-  --primary-from: 209 100% 47%;
-  --primary-via: 262 89% 66%;
-  --primary-to: 189 94% 43%;
-  --primary-dark-from: 212 70% 24%;
-  --primary-dark-to: 189 94% 43%;
+  --primary-from: 257 100% 62%;
+  --primary-via: 248 87% 61%;
+  --primary-to: 209 100% 47%;
+  --primary-dark-from: 257 68% 50%;
+  --primary-dark-to: 212 100% 41%;
   --primary-gradient-from: var(--primary-from);
   --primary-gradient-via: var(--primary-via);
   --primary-gradient-to: var(--primary-to);
-  --secondary: 222 47% 11%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 228 73% 12%;
+  --secondary-foreground: 228 100% 98%;
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --icon-primary: var(--foreground);
   --icon-secondary: var(--muted-foreground);
-  --panel: var(--card);
-  --panel-subtle: 212 70% 24%;
+  --panel: 0 0% 100%;
+  --panel-subtle: 210 40% 96%;
   --radius: 0.75rem;
 
   /* Semantic tokens mapped to existing palette */
@@ -80,9 +80,9 @@ body {
 
   --bg: hsl(var(--bg-hsl));
   --surface: hsl(var(--surface-hsl));
-  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 55%, transparent);
+  --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 65%, transparent);
   --card-surface: hsl(var(--card-hsl));
-  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 80%, transparent);
+  --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 85%, transparent);
   --border-color: hsl(var(--border-hsl));
   --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 55%, transparent);
   --text: hsl(var(--text-hsl));
@@ -108,7 +108,9 @@ body {
   --bg-app: var(--bg);
   --text-app: var(--text);
   --text-muted: var(--text-muted);
+  --brand-gradient: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
 }
+
 
 .dark {
   --bg-app: #0B1943;
@@ -162,34 +164,13 @@ body {
   --warning-hsl: 38 92% 50%;
   --danger-hsl: 0 84% 58%;
 
-  --bg: hsl(var(--bg-hsl));
-  --surface: hsl(var(--surface-hsl));
   --surface-subtle: color-mix(in srgb, hsl(var(--surface-hsl)) 48%, transparent);
-  --card-surface: hsl(var(--card-hsl));
   --card-subtle: color-mix(in srgb, hsl(var(--card-hsl)) 76%, transparent);
-  --border-color: hsl(var(--border-hsl));
   --border-subtle: color-mix(in srgb, hsl(var(--border-hsl)) 50%, transparent);
-  --text: hsl(var(--text-hsl));
-  --text-muted: hsl(var(--text-muted-hsl));
-  --accent: hsl(var(--accent-hsl));
-  --accent-contrast: hsl(var(--accent-contrast-hsl));
-  --success: hsl(var(--success-hsl));
-  --warning: hsl(var(--warning-hsl));
-  --danger: hsl(var(--danger-hsl));
-
-  --color-bg: var(--bg);
-  --color-card: var(--card-surface);
-  --color-border: var(--border-color);
-  --color-foreground: var(--text);
-  --color-muted: var(--surface);
-  --color-muted-foreground: var(--text-muted);
-  --color-accent: var(--accent);
-  --color-success: var(--success);
-  --color-danger: var(--danger);
-  --color-warning: var(--warning);
 
   --brand-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
 }
+
 
 * {
   border-color: var(--border-color);
@@ -228,7 +209,7 @@ body {
 }
 
 .text-surface {
-  color: var(--surface);
+  color: var(--text-surface);
 }
 
 .text-muted {
@@ -308,19 +289,27 @@ body {
 }
 
 .bg-gradient-card {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent) 0%, color-mix(in srgb, var(--success) 8%, transparent) 100%);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
 }
 
 .dark .bg-gradient-card {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--accent) 6%, transparent) 100%);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 14%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 6%, transparent) 100%
+  );
 }
 
 .bg-section {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--bg) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--bg) 85%, var(--success) 15%) 100%);
+  background-image: linear-gradient(180deg, rgba(245, 247, 255, 0.85) 0%, rgba(232, 237, 255, 0.9) 50%, rgba(255, 255, 255, 0.92) 100%);
 }
 
 .dark .bg-section {
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--bg) 88%, var(--accent) 12%) 0%, color-mix(in srgb, var(--bg) 82%, var(--success) 18%) 100%);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg) 88%, var(--accent) 12%) 0%,
+    color-mix(in srgb, var(--bg) 82%, var(--success) 18%) 100%
+  );
 }
 
 .border-soft {
@@ -376,7 +365,12 @@ body {
   }
 }
 
+
 .bg-gradient-hero {
+  background: linear-gradient(135deg, rgba(8, 17, 52, 0.08) 0%, rgba(116, 61, 255, 0.08) 100%);
+}
+
+.dark .bg-gradient-hero {
   background: linear-gradient(135deg, rgba(11, 25, 67, 0.6) 0%, rgba(34, 197, 94, 0.24) 100%);
 }
 
