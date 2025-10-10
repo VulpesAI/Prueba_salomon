@@ -5,13 +5,16 @@ import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Icon } from "@/components/ui/icon"
+import { Icon, type IconName } from "@/components/ui/icon"
 
 interface DashboardCtaProps {
   variant?: "connect" | "upload"
 }
 
-const CTA_COPY: Record<NonNullable<DashboardCtaProps["variant"]>, { title: string; description: string; action: string; icon: "Link" | "UploadCloud" }> = {
+const CTA_COPY: Record<
+  NonNullable<DashboardCtaProps["variant"]>,
+  { title: string; description: string; action: string; icon: IconName }
+> = {
   connect: {
     title: "Conecta tu banco",
     description: "Sincroniza tus cuentas para mantener el flujo actualizado automáticamente.",
@@ -22,7 +25,7 @@ const CTA_COPY: Record<NonNullable<DashboardCtaProps["variant"]>, { title: strin
     title: "Sube tu cartola",
     description: "Carga el archivo de tu banco para proyectar el próximo mes en segundos.",
     action: "Subir cartola",
-    icon: "UploadCloud",
+    icon: "CloudUpload",
   },
 }
 
