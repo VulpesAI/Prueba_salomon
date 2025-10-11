@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode,
   type RefObject,
 } from "react"
@@ -30,7 +31,9 @@ type SidebarDrawerProps = {
   onOpenChange: (open: boolean) => void
   children: ReactNode
   labelledBy?: string
-  triggerRef?: RefObject<HTMLButtonElement>
+  triggerRef?:
+    | RefObject<HTMLButtonElement>
+    | MutableRefObject<HTMLButtonElement | null>
 }
 
 export function SidebarDrawer({

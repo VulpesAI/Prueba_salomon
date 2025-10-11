@@ -1,6 +1,11 @@
 "use client"
 
-import { useMemo, type ReactNode, type RefObject } from "react"
+import {
+  useMemo,
+  type MutableRefObject,
+  type ReactNode,
+  type RefObject,
+} from "react"
 import { usePathname } from "next/navigation"
 
 import { buildNav, findSectionByPath, isActive } from "@/lib/nav/derive"
@@ -11,7 +16,9 @@ type AppHeaderProps = {
   navigationOpen: boolean
   onNavigationToggle: () => void
   navigationId: string
-  triggerRef: RefObject<HTMLButtonElement>
+  triggerRef:
+    | RefObject<HTMLButtonElement>
+    | MutableRefObject<HTMLButtonElement | null>
   actions?: ReactNode
 }
 
