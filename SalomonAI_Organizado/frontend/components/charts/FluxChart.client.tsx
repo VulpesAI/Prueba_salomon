@@ -1,13 +1,20 @@
 "use client";
 
+import { useId, useMemo } from "react";
 import type { TooltipProps } from "recharts";
 import { Area, AreaChart, CartesianGrid, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import type { FluxPoint } from "@/hooks/useDashboardOverview";
 import { formatCurrencyCLP, formatDateCL } from "@/lib/formatters";
 import { formatDateLabel } from "@/lib/dates";
-const HIST_COLOR = "var(--accent)";
-const PROJ_COLOR = "var(--success)";
+const FALLBACK_TOKENS = {
+  accent: "#007CF0",
+  success: "#22C55E",
+  dim: "#94A3B8",
+  text: "#081134",
+  border: "rgba(148, 163, 184, 0.32)",
+  card: "#FFFFFF",
+};
 
 type ChartDatum = {
   date: string;
@@ -39,9 +46,9 @@ function FluxTooltip(props: TooltipProps<number, string>) {
   const meta = payload.find((item) => item.payload?.model_type);
 
   return (
-    <div className="min-w-[220px] rounded-xl border border-app-border-subtle bg-app-card p-3 text-xs text-app shadow-lg">
+    <div className="min-w-[220px] rounded-xl border border-app-border-subtle bg-app-card p-4 text-xs text-app shadow-sm">
       <div className="text-sm font-semibold text-app">{formatDateCL(String(label))}</div>
-      <ul className="mt-2 space-y-1">
+      <ul className="mt-3 space-y-1.5">
         {payload.map((entry) => (
           <li key={entry.dataKey as string} className="flex items-center justify-between gap-4">
             <span className="capitalize opacity-80">{entry.name}</span>
@@ -50,7 +57,7 @@ function FluxTooltip(props: TooltipProps<number, string>) {
         ))}
       </ul>
       {meta?.payload?.model_type ? (
-        <div className="mt-2 space-y-1 border-t border-app-border-subtle pt-2 text-app-dim">
+        <div className="mt-3 space-y-1 border-t border-app-border-subtle pt-3 text-app-dim">
           <div>Modelo: {meta.payload.model_type}</div>
           {meta.payload.calculated_at ? (
             <div>Calculado: {new Date(meta.payload.calculated_at).toLocaleString("es-CL")}</div>
@@ -62,50 +69,86 @@ function FluxTooltip(props: TooltipProps<number, string>) {
 }
 
 export default function FluxChart({ data }: { data: FluxPoint[] }) {
-  const chartData = mapToChartData(data);
+  const gradientId = useId();
+  const chartData = useMemo(() => mapToChartData(data), [data]);
+  const palette = useMemo(() => {
+    if (typeof window === "undefined") {
+      return FALLBACK_TOKENS;
+    }
+    const styles = getComputedStyle(document.documentElement);
+    return {
+      accent: styles.getPropertyValue("--accent").trim() || FALLBACK_TOKENS.accent,
+      success: styles.getPropertyValue("--success").trim() || FALLBACK_TOKENS.success,
+      dim: styles.getPropertyValue("--text-muted").trim() || FALLBACK_TOKENS.dim,
+      text: styles.getPropertyValue("--text").trim() || FALLBACK_TOKENS.text,
+      border: styles.getPropertyValue("--border-color").trim() || FALLBACK_TOKENS.border,
+      card: styles.getPropertyValue("--card-surface").trim() || FALLBACK_TOKENS.card,
+    };
+  }, []);
+
+  const ticks = useMemo(() => {
+    if (chartData.length <= 4) {
+      return chartData.map((point) => point.date);
+    }
+    const step = Math.max(1, Math.floor(chartData.length / 4));
+    const result: string[] = [];
+    for (let index = 0; index < chartData.length; index += step) {
+      result.push(chartData[index]?.date ?? "");
+    }
+    if (!result.includes(chartData[chartData.length - 1]?.date ?? "")) {
+      result.push(chartData[chartData.length - 1]?.date ?? "");
+    }
+    return result;
+  }, [chartData]);
 
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer>
         <AreaChart data={chartData} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
           <defs>
-            <linearGradient id="cashflowGradient" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.05} />
+            <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={palette.accent} stopOpacity={0.24} />
+              <stop offset="100%" stopColor={palette.accent} stopOpacity={0.06} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in srgb, var(--border-color) 45%, transparent)" />
+          <CartesianGrid strokeDasharray="3 3" stroke={`color-mix(in srgb, ${palette.border} 45%, transparent)`} />
           <XAxis
             dataKey="date"
             tickFormatter={formatDateLabel}
-            stroke="color-mix(in srgb, var(--text-muted) 90%, transparent)"
+            stroke={palette.dim}
             fontSize={12}
             tickLine={false}
             axisLine={false}
             dy={8}
+            ticks={ticks}
+            minTickGap={16}
+            interval={0}
           />
           <YAxis
-            stroke="color-mix(in srgb, var(--text-muted) 90%, transparent)"
+            stroke={palette.dim}
             fontSize={12}
             tickFormatter={(value) => formatCurrencyCLP(Number(value))}
             tickLine={false}
             axisLine={false}
             width={120}
           />
-          <Tooltip cursor={{ strokeDasharray: "4 4", stroke: "color-mix(in srgb, var(--border-color) 65%, transparent)" }} content={<FluxTooltip />} />
+          <Tooltip
+            cursor={{ strokeDasharray: "4 4", stroke: `color-mix(in srgb, ${palette.border} 60%, transparent)` }}
+            content={<FluxTooltip />}
+          />
           <Legend
             formatter={(value) => value}
             iconType="circle"
-            wrapperStyle={{ paddingTop: 16, fontSize: 12, color: "var(--text-muted)" }}
+            wrapperStyle={{ paddingTop: 16, fontSize: 12, color: palette.dim }}
           />
           <Area
             type="monotone"
             dataKey="histAmount"
             name="Histórico"
-            fill="url(#cashflowGradient)"
-            stroke={HIST_COLOR}
-            strokeWidth={2}
-            dot={{ r: 2.4, strokeWidth: 1.2, stroke: HIST_COLOR, fill: "var(--bg)" }}
+            fill={`url(#${gradientId})`}
+            stroke={palette.accent}
+            strokeWidth={2.4}
+            dot={{ r: 2.4, strokeWidth: 1.2, stroke: palette.accent, fill: "var(--bg)" }}
             activeDot={{ r: 4 }}
             connectNulls
           />
@@ -113,10 +156,10 @@ export default function FluxChart({ data }: { data: FluxPoint[] }) {
             type="monotone"
             dataKey="projAmount"
             name="Proyección"
-            stroke={PROJ_COLOR}
+            stroke={palette.success}
             strokeDasharray="6 6"
-            strokeWidth={2.4}
-            dot={{ r: 3, strokeWidth: 1, stroke: PROJ_COLOR, fill: "var(--bg)" }}
+            strokeWidth={2.2}
+            dot={{ r: 3, strokeWidth: 1, stroke: palette.success, fill: "var(--bg)" }}
             connectNulls
           />
         </AreaChart>

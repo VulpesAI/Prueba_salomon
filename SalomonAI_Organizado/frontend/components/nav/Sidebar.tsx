@@ -26,7 +26,11 @@ export default function Sidebar() {
   }, [currentSectionId])
 
   return (
-    <nav aria-label="Navegación lateral" className="space-y-6 pt-4" data-orientation="vertical">
+    <nav
+      aria-label="Navegación lateral"
+      className="space-y-6 pt-2"
+      data-orientation="vertical"
+    >
       <Accordion
         type="single"
         collapsible
@@ -35,12 +39,12 @@ export default function Sidebar() {
       >
         {sections.map((section) => (
           <AccordionItem key={section.id} value={section.id} className="border-none">
-            <AccordionTrigger className="px-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:no-underline [&>svg]:text-muted-foreground data-[state=open]:text-foreground data-[state=open]>svg:text-foreground">
+            <AccordionTrigger className="px-2 text-left text-xs font-semibold uppercase tracking-wide text-app-dim hover:no-underline [&>svg]:text-app-dim data-[state=open]:text-app data-[state=open]>svg:text-app">
               {section.label}
             </AccordionTrigger>
             <AccordionContent className="overflow-hidden text-sm">
-              <div className="px-0 pb-1 pt-2">
-                <ul className="space-y-1">
+              <div className="px-0 pb-2 pt-1">
+                <ul className="space-y-1.5">
                   {section.items.map((item) => {
                     const active = isActive(pathname, item.href)
                     return (
@@ -49,12 +53,20 @@ export default function Sidebar() {
                           href={item.href}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "group flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg",
+                            "touch-feedback relative flex items-center gap-3 rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-app-dim transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg",
                             active
-                              ? "border-app-accent bg-[color:color-mix(in_srgb,var(--accent)_16%,transparent)] text-app shadow-sm"
-                              : "border-transparent text-app-dim hover:border-app-border-subtle hover:bg-app-surface-subtle hover:text-app"
+                              ? "bg-[color:color-mix(in_srgb,var(--accent)_12%,transparent)] text-app"
+                              : "hover:border-app-border-subtle hover:bg-app-surface-subtle hover:text-app"
                           )}
                         >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "absolute left-1 top-2 bottom-2 w-1 rounded-full bg-transparent transition",
+                              active &&
+                                "bg-[color:color-mix(in_srgb,var(--accent)_65%,transparent)]"
+                            )}
+                          />
                           <span className="flex-1 truncate">{item.label}</span>
                           {item.id === "insights" && (
                             <div className="ml-auto inline-flex flex-shrink-0 items-center rounded-full border border-transparent bg-app-card px-2.5 py-0.5 text-xs font-semibold text-app-dim transition-colors hover:bg-app-card-subtle">
