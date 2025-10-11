@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { Route } from "next"
 import { usePathname } from "next/navigation"
 
 import { Icon, type IconName } from "@/components/ui/icon"
@@ -9,7 +10,7 @@ import { cn } from "@/lib/utils"
 type RailItem = {
   id: string
   label: string
-  href: string
+  href: Route
   icon: IconName
 }
 
