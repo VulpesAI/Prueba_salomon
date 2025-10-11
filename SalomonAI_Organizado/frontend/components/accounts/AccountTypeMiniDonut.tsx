@@ -47,7 +47,14 @@ function MiniTooltip({ active, payload }: TooltipProps<number, string>) {
   if (!slice) return null;
 
   return (
-    <div className="rounded-md border bg-popover px-2 py-1 text-xs shadow">
+    <div
+      className="rounded-md border px-2 py-1 text-xs shadow"
+      style={{
+        background: "hsl(var(--card))",
+        borderColor: "hsl(var(--border))",
+        color: "hsl(var(--foreground))",
+      }}
+    >
       <div className="flex items-center gap-2">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full"
@@ -99,7 +106,18 @@ export function AccountTypeMiniDonut({ data }: { data: AccountTypeSummary[] }) {
                 <Cell key={slice.key} fill={colorFromVar(slice.colorVar)} />
               ))}
             </Pie>
-            <Tooltip content={<MiniTooltip />} />
+            <Tooltip
+              content={<MiniTooltip />}
+              contentStyle={{
+                background: "hsl(var(--card))",
+                borderColor: "hsl(var(--border))",
+                borderRadius: "0.75rem",
+                color: "hsl(var(--foreground))",
+              }}
+              labelStyle={{ color: "hsl(var(--foreground))" }}
+              itemStyle={{ color: "hsl(var(--foreground))" }}
+              wrapperStyle={{ outline: "none" }}
+            />
           </PieChart>
         </ResponsiveContainer>
       </div>

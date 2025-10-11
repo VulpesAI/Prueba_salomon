@@ -53,7 +53,14 @@ function HistTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-md border bg-popover px-2 py-1 text-xs shadow">
+    <div
+      className="rounded-md border px-2 py-1 text-xs shadow"
+      style={{
+        background: "hsl(var(--card))",
+        borderColor: "hsl(var(--border))",
+        color: "hsl(var(--foreground))",
+      }}
+    >
       <div className="mb-1 font-medium">{formatDateLabel(String(label))}</div>
       <div className="space-y-0.5">
         {payload.map((item) => {
@@ -83,14 +90,29 @@ export function HistoricalSeries({ data }: HistoricalSeriesProps) {
       <ResponsiveContainer>
         <AreaChart data={data} margin={{ top: 5, right: 5, left: 65, bottom: 28 }}>
           <CartesianGrid strokeDasharray="4 4" className="stroke-border/50" />
-          <XAxis dataKey="date" tickFormatter={formatDateLabel} tick={{ fill: "var(--muted-foreground, #666)" }} />
+          <XAxis
+            dataKey="date"
+            tickFormatter={formatDateLabel}
+            tick={{ fill: "hsl(var(--muted-foreground))" }}
+          />
           <YAxis
             tickFormatter={(value) =>
               new Intl.NumberFormat("es-CL", { notation: "compact" }).format(Number(value))
             }
-            tick={{ fill: "var(--muted-foreground, #666)" }}
+            tick={{ fill: "hsl(var(--muted-foreground))" }}
           />
-          <Tooltip content={<HistTooltip />} />
+          <Tooltip
+            content={<HistTooltip />}
+            contentStyle={{
+              background: "hsl(var(--card))",
+              borderColor: "hsl(var(--border))",
+              borderRadius: "0.75rem",
+              color: "hsl(var(--foreground))",
+            }}
+            labelStyle={{ color: "hsl(var(--foreground))" }}
+            itemStyle={{ color: "hsl(var(--foreground))" }}
+            wrapperStyle={{ outline: "none" }}
+          />
           <Legend content={<HistLegend />} />
           <Area
             type="monotone"

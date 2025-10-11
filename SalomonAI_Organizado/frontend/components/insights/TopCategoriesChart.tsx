@@ -41,7 +41,14 @@ function CategoriesTooltip({ active, payload }: TooltipProps<number, string>) {
   });
 
   return (
-    <div className="rounded-lg border border-border/60 bg-popover px-3 py-2 text-xs shadow-lg">
+    <div
+      className="rounded-lg border px-3 py-2 text-xs shadow-lg"
+      style={{
+        background: "hsl(var(--card))",
+        borderColor: "hsl(var(--border))",
+        color: "hsl(var(--foreground))",
+      }}
+    >
       <div className="flex items-center gap-2 font-medium" style={{ color }}>
         <span className="inline-flex h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
         {category}
@@ -106,7 +113,18 @@ export function TopCategoriesChart({ data, formatCurrency, formatPercent }: TopC
                     return <Cell key={entry.category} fill={color} stroke="transparent" />;
                   })}
                 </Pie>
-                <Tooltip content={<CategoriesTooltip />} />
+                <Tooltip
+                  content={<CategoriesTooltip />}
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    borderColor: "hsl(var(--border))",
+                    borderRadius: "0.75rem",
+                    color: "hsl(var(--foreground))",
+                  }}
+                  labelStyle={{ color: "hsl(var(--foreground))" }}
+                  itemStyle={{ color: "hsl(var(--foreground))" }}
+                  wrapperStyle={{ outline: "none" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

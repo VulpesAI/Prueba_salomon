@@ -4,9 +4,7 @@ import { useEffect, useRef } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Icon } from "@/components/ui/icon"
-import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 
 interface ChatPanelProps {
@@ -40,23 +38,21 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
   return (
     <AnimatePresence>
       {open ? (
-        <motion.div
+        <motion.aside
+          role="dialog"
+          aria-modal="true"
+          aria-label="Asistente financiero"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
           transition={{ duration: 0.25 }}
-          className="pointer-events-auto"
+          className="glass-panel pointer-events-auto fixed bottom-28 right-6 z-50 flex w-[min(360px,calc(100vw-2rem))] flex-col gap-3 p-3 md:p-4"
         >
-          <Card
-            role="dialog"
-            aria-modal="true"
-            aria-label="Asistente financiero"
-            className="glass-panel fixed bottom-28 right-6 z-50 w-[min(360px,calc(100vw-2rem))] border-app-border-subtle"
-          >
-            <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <header className="glass-body rounded-lg p-3 md:p-4">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-lg">Asistente SalomónAI</CardTitle>
-                <p className="text-sm text-app-dim">
+                <h3 className="h3">Asistente SalomónAI</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Pregunta sobre tus finanzas, pagos o proyecciones.
                 </p>
               </div>
@@ -71,37 +67,38 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
               >
                 <Icon name="X" size="sm" />
               </Button>
-            </CardHeader>
-            <Separator className="bg-app-border-subtle" />
-            <CardContent className="space-y-4 pt-4">
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-app-border-subtle bg-app-surface-subtle p-3 text-sm text-app-dim">
-                  👋 Hola, soy tu asistente financiero. ¿En qué puedo ayudarte hoy?
-                </div>
+            </div>
+          </header>
+          <div className="glass-body max-h-[50vh] flex-1 overflow-y-auto rounded-lg p-3 md:p-4">
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-app-border-subtle bg-app-surface-subtle p-3 text-foreground">
+                👋 Hola, soy tu asistente financiero. ¿En qué puedo ayudarte hoy?
               </div>
-              <form className="space-y-3">
-                <label className="text-sm font-medium text-app-dim" htmlFor="assistant-message">
-                  Escribe tu mensaje
-                </label>
-                <Textarea
-                  id="assistant-message"
-                  name="assistant-message"
-                  rows={3}
-                  placeholder="Ej. ¿Cómo se ve mi flujo para el próximo mes?"
-                  className="resize-none border-app-border-subtle bg-app-card-subtle"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" onClick={onClose} className="rounded-full">
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="rounded-full">
-                    Enviar
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+          </div>
+          <footer className="glass-body rounded-lg p-3 md:p-4">
+            <form className="space-y-3">
+              <label className="text-sm font-medium text-muted-foreground" htmlFor="assistant-message">
+                Escribe tu mensaje
+              </label>
+              <Textarea
+                id="assistant-message"
+                name="assistant-message"
+                rows={3}
+                placeholder="Ej. ¿Cómo se ve mi flujo para el próximo mes?"
+                className="resize-none border-app-border-subtle bg-app-card-subtle"
+              />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={onClose} className="rounded-full">
+                  Cancelar
+                </Button>
+                <Button type="submit" className="rounded-full">
+                  Enviar
+                </Button>
+              </div>
+            </form>
+          </footer>
+        </motion.aside>
       ) : null}
     </AnimatePresence>
   )

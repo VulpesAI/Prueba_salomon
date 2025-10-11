@@ -95,14 +95,26 @@ export default function AnalyticsForecastsPage() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="4 4" />
-              <XAxis dataKey="label" minTickGap={24} />
-              <YAxis tickFormatter={(value) => formatCurrency(Number(value)).replace(/\$|CLP\s?/g, "")} />
+              <XAxis dataKey="label" minTickGap={24} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis
+                tickFormatter={(value) => formatCurrency(Number(value)).replace(/\$|CLP\s?/g, "")}
+                tick={{ fill: "hsl(var(--muted-foreground))" }}
+              />
               <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
                 labelFormatter={(label: string, payload) => {
                   const point = payload?.[0]?.payload;
                   return point ? new Date(point.date).toLocaleDateString("es-CL", { dateStyle: "full" }) : label;
                 }}
+                contentStyle={{
+                  background: "hsl(var(--card))",
+                  borderColor: "hsl(var(--border))",
+                  borderRadius: "0.75rem",
+                  color: "hsl(var(--foreground))",
+                }}
+                labelStyle={{ color: "hsl(var(--foreground))" }}
+                itemStyle={{ color: "hsl(var(--foreground))" }}
+                wrapperStyle={{ outline: "none" }}
               />
               <Line type="monotone" dataKey="value" stroke="hsl(221 83% 53%)" strokeWidth={2} dot={false} />
             </LineChart>

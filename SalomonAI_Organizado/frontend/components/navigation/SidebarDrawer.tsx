@@ -265,7 +265,7 @@ export function SidebarDrawer({
             aria-modal="true"
             aria-labelledby={dialogTitleId}
             id={drawerId}
-            className="fixed left-0 top-0 z-50 flex h-dvh w-[min(320px,88vw)] flex-col border-r border-app-border-subtle bg-app-card/98 px-4 pb-6 pt-4 text-app shadow-[0_0_0_1px_color-mix(in_srgb,var(--border-color)_55%,transparent)] focus:outline-none md:hidden"
+            className="glass-panel fixed left-0 top-0 z-50 flex h-dvh w-[min(320px,88vw)] flex-col gap-4 rounded-none p-4 safe-pb focus:outline-none md:hidden"
             style={{ x: motionX }}
             initial={{ x: -DRAWER_WIDTH }}
             animate={{ x: 0 }}
@@ -289,21 +289,25 @@ export function SidebarDrawer({
             }}
             tabIndex={-1}
           >
-            <div className="safe-pt pb-4">
-              <h2 id={dialogTitleId} className="h3 text-app">
+            <div className="glass-body safe-pt rounded-xl px-4 pb-4">
+              <h2 id={dialogTitleId} className="h3">
                 Navegación
               </h2>
             </div>
-            <div className="flex-1 overflow-y-auto pb-4">
-              {children}
+            <div className="glass-body flex-1 overflow-y-auto rounded-xl px-2 py-3">
+              <nav aria-labelledby={dialogTitleId} className="space-y-1">
+                {children}
+              </nav>
             </div>
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="touch-target touch-feedback mt-auto w-full rounded-2xl border border-transparent bg-app-surface-subtle py-3 text-sm font-medium text-app hover:border-app-border-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg"
-            >
-              Cerrar menú
-            </button>
+            <div className="glass-body rounded-xl p-3">
+              <button
+                type="button"
+                onClick={closeDrawer}
+                className="touch-target touch-feedback mt-auto w-full rounded-2xl border border-transparent bg-app-surface-subtle py-3 text-sm font-medium text-foreground hover:border-app-border-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg"
+              >
+                Cerrar menú
+              </button>
+            </div>
           </motion.aside>
         </>
       ) : null}

@@ -43,12 +43,13 @@ export default function CategoriesDonut({ data }: CategoriesDonutProps) {
             formatter={tooltipFormatter}
             cursor={{ fill: "transparent" }}
             contentStyle={{
+              background: "hsl(var(--card))",
+              borderColor: "hsl(var(--border))",
               borderRadius: "12px",
-              border: "1px solid color-mix(in srgb, var(--border-color) 60%, transparent)",
-              backgroundColor: "var(--card-surface)",
-              color: "var(--text)",
-              boxShadow: "0 20px 50px -30px color-mix(in srgb, var(--border-color) 40%, transparent)",
+              color: "hsl(var(--foreground))",
             }}
+            labelStyle={{ color: "hsl(var(--foreground))" }}
+            itemStyle={{ color: "hsl(var(--foreground))" }}
             wrapperStyle={{ outline: "none" }}
           />
         </PieChart>

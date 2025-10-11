@@ -1,5 +1,79 @@
 @tailwind utilities;
 
+/* ==== GLASS BASED ON EXISTING TOKENS (HSL vars) ==== */
+:root {
+  /* usar alpha sobre tus tokens existentes, sin color nuevo */
+  --glass-bg: hsl(var(--surface) / 0.8);
+  --glass-bg-strong: hsl(var(--surface) / 0.9);
+  --glass-border: hsl(var(--border) / 0.72);
+  --glass-text: hsl(var(--foreground));
+  --glass-text-dim: hsl(var(--muted-foreground));
+}
+
+.dark {
+  /* en dark, más opacidad para legibilidad */
+  --glass-bg: hsl(var(--surface) / 0.86);
+  --glass-bg-strong: hsl(var(--surface) / 0.92);
+  --glass-border: hsl(var(--border) / 0.78);
+}
+
+/* Panel glass (solo cromo: drawers, overlays, header/panel asistente) */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  border-radius: 1rem;
+  color: var(--glass-text);
+}
+
+.glass-panel.rounded-none {
+  border-radius: 0;
+}
+
+/* Capa de “tinta” sólida bajo el contenido (ink plate) para texto legible */
+.glass-body {
+  position: relative;
+}
+
+.glass-body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--glass-bg-strong);
+  border-radius: inherit;
+  z-index: 0;
+}
+
+.glass-body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tipografía y contraste dentro de glass (sin cambiar fuente) */
+.glass-panel .h1 {
+  font-weight: 600;
+}
+
+.glass-panel .h2 {
+  font-weight: 600;
+}
+
+.glass-panel .h3 {
+  font-weight: 500;
+}
+
+.glass-panel .text-dim {
+  color: var(--glass-text-dim);
+  opacity: 0.92;
+}
+
+/* Iconos siguen el color del texto (evita “lavado”) */
+.glass-panel svg {
+  color: currentColor;
+}
+
+/* Targets táctiles y safe areas (si no existen ya) */
 .safe-pt {
   padding-top: max(16px, env(safe-area-inset-top));
 }
@@ -23,6 +97,11 @@
     transform: scale(0.98);
     opacity: 0.96;
   }
+}
+
+/* Evita aplicar glass a contenido denso (usa esta clase para forzar sólido) */
+.no-glass {
+  background: hsl(var(--card));
 }
 
 .h1 {
