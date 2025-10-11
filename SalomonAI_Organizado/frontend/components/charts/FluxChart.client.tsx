@@ -46,18 +46,28 @@ function FluxTooltip(props: TooltipProps<number, string>) {
   const meta = payload.find((item) => item.payload?.model_type);
 
   return (
-    <div className="min-w-[220px] rounded-xl border border-app-border-subtle bg-app-card p-4 text-xs text-app shadow-sm">
-      <div className="text-sm font-semibold text-app">{formatDateCL(String(label))}</div>
+    <div
+      className="min-w-[220px] rounded-xl border p-4 text-xs shadow-sm"
+      style={{
+        background: "hsl(var(--card))",
+        borderColor: "hsl(var(--border))",
+        color: "hsl(var(--foreground))",
+      }}
+    >
+      <div className="text-sm font-semibold text-foreground">{formatDateCL(String(label))}</div>
       <ul className="mt-3 space-y-1.5">
         {payload.map((entry) => (
           <li key={entry.dataKey as string} className="flex items-center justify-between gap-4">
-            <span className="capitalize opacity-80">{entry.name}</span>
-            <span className="font-semibold text-app">{formatCurrencyCLP(Number(entry.value))}</span>
+            <span className="capitalize text-muted-foreground">{entry.name}</span>
+            <span className="font-semibold text-foreground">{formatCurrencyCLP(Number(entry.value))}</span>
           </li>
         ))}
       </ul>
       {meta?.payload?.model_type ? (
-        <div className="mt-3 space-y-1 border-t border-app-border-subtle pt-3 text-app-dim">
+        <div
+          className="mt-3 space-y-1 border-t pt-3 text-muted-foreground"
+          style={{ borderColor: "hsl(var(--border))" }}
+        >
           <div>Modelo: {meta.payload.model_type}</div>
           {meta.payload.calculated_at ? (
             <div>Calculado: {new Date(meta.payload.calculated_at).toLocaleString("es-CL")}</div>
@@ -115,8 +125,7 @@ export default function FluxChart({ data }: { data: FluxPoint[] }) {
           <XAxis
             dataKey="date"
             tickFormatter={formatDateLabel}
-            stroke={palette.dim}
-            fontSize={12}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
             tickLine={false}
             axisLine={false}
             dy={8}
@@ -125,8 +134,7 @@ export default function FluxChart({ data }: { data: FluxPoint[] }) {
             interval={0}
           />
           <YAxis
-            stroke={palette.dim}
-            fontSize={12}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
             tickFormatter={(value) => formatCurrencyCLP(Number(value))}
             tickLine={false}
             axisLine={false}
@@ -135,11 +143,20 @@ export default function FluxChart({ data }: { data: FluxPoint[] }) {
           <Tooltip
             cursor={{ strokeDasharray: "4 4", stroke: `color-mix(in srgb, ${palette.border} 60%, transparent)` }}
             content={<FluxTooltip />}
+            contentStyle={{
+              background: "hsl(var(--card))",
+              borderColor: "hsl(var(--border))",
+              borderRadius: "0.75rem",
+              color: "hsl(var(--foreground))",
+            }}
+            labelStyle={{ color: "hsl(var(--foreground))" }}
+            itemStyle={{ color: "hsl(var(--foreground))" }}
+            wrapperStyle={{ outline: "none" }}
           />
           <Legend
             formatter={(value) => value}
             iconType="circle"
-            wrapperStyle={{ paddingTop: 16, fontSize: 12, color: palette.dim }}
+            wrapperStyle={{ paddingTop: 16, fontSize: 12, color: "hsl(var(--muted-foreground))" }}
           />
           <Area
             type="monotone"

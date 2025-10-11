@@ -45,8 +45,15 @@ function BalancesTooltip({ active, payload, label, formatCurrency }: TooltipWith
   }
 
   return (
-    <div className="rounded-lg border border-border/60 bg-popover px-3 py-2 text-xs shadow-lg">
-      <div className="mb-2 font-medium text-foreground">{label}</div>
+    <div
+      className="rounded-lg border px-3 py-2 text-xs shadow-lg"
+      style={{
+        background: "hsl(var(--card))",
+        borderColor: "hsl(var(--border))",
+        color: "hsl(var(--foreground))",
+      }}
+    >
+      <div className="mb-2 font-medium">{label}</div>
       <div className="space-y-1 text-muted-foreground">
         {payload.map((item) => {
           const key = item.dataKey as keyof typeof ACCOUNT_COLOR_VARS;
@@ -102,17 +109,28 @@ export function HistoricalBalances({ data, formatCurrency, formatDateLabel }: Hi
               <CartesianGrid strokeDasharray="4 4" className="stroke-border/40" />
               <XAxis
                 dataKey="formattedDate"
-                tick={{ fill: "var(--muted-foreground)" }}
+                tick={{ fill: "hsl(var(--muted-foreground))" }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                tick={{ fill: "var(--muted-foreground)" }}
+                tick={{ fill: "hsl(var(--muted-foreground))" }}
                 tickFormatter={(value) => yAxisFormatter.format(Number(value))}
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip content={tooltipRenderer} />
+              <Tooltip
+                content={tooltipRenderer}
+                contentStyle={{
+                  background: "hsl(var(--card))",
+                  borderColor: "hsl(var(--border))",
+                  borderRadius: "0.75rem",
+                  color: "hsl(var(--foreground))",
+                }}
+                labelStyle={{ color: "hsl(var(--foreground))" }}
+                itemStyle={{ color: "hsl(var(--foreground))" }}
+                wrapperStyle={{ outline: "none" }}
+              />
               <Legend />
               <Area
                 type="monotone"

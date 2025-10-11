@@ -59,18 +59,29 @@ export default function ForecastChart({ data }: { data: ForecastResponse }) {
           <XAxis
             dataKey="label"
             minTickGap={24}
-            tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
-            tickLine={{ stroke: 'var(--chart-axis)', strokeWidth: 0.5 }}
-            axisLine={{ stroke: 'var(--chart-axis)', strokeWidth: 0.5 }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            tickLine={{ stroke: 'hsl(var(--border))', strokeWidth: 0.5 }}
+            axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 0.5 }}
           />
           <YAxis
             width={72}
             tickFormatter={(value) => value.toLocaleString('es-CL')}
-            tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
-            tickLine={{ stroke: 'var(--chart-axis)', strokeWidth: 0.5 }}
-            axisLine={{ stroke: 'var(--chart-axis)', strokeWidth: 0.5 }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            tickLine={{ stroke: 'hsl(var(--border))', strokeWidth: 0.5 }}
+            axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 0.5 }}
           />
-          <Tooltip content={<TooltipContent />} />
+          <Tooltip
+            content={<TooltipContent />}
+            contentStyle={{
+              background: "hsl(var(--card))",
+              borderColor: "hsl(var(--border))",
+              borderRadius: "0.75rem",
+              color: "hsl(var(--foreground))",
+            }}
+            labelStyle={{ color: "hsl(var(--foreground))" }}
+            itemStyle={{ color: "hsl(var(--foreground))" }}
+            wrapperStyle={{ outline: "none" }}
+          />
           <Area
             type="monotone"
             dataKey="lower"
@@ -125,13 +136,20 @@ function TooltipContent(props: TooltipProps<number, string>) {
   }
 
   return (
-    <div className="rounded-card border border-soft bg-gradient-card px-3 py-2 text-sm text-surface shadow-md backdrop-blur">
-      <div className="mb-1 text-xs font-medium text-muted">{label}</div>
+    <div
+      className="rounded-lg border px-3 py-2 text-sm shadow-md"
+      style={{
+        background: "hsl(var(--card))",
+        borderColor: "hsl(var(--border))",
+        color: "hsl(var(--foreground))",
+      }}
+    >
+      <div className="mb-1 text-xs font-medium text-muted-foreground">{label}</div>
       <ul className="space-y-1">
         {formatted.map((item) => (
-          <li key={item.key} className="flex items-center justify-between gap-4 text-surface">
-            <span className="capitalize text-muted">{item.name}</span>
-            <span className="font-medium tabular-nums text-surface">{item.value}</span>
+          <li key={item.key} className="flex items-center justify-between gap-4 text-foreground">
+            <span className="capitalize text-muted-foreground">{item.name}</span>
+            <span className="font-medium tabular-nums text-foreground">{item.value}</span>
           </li>
         ))}
       </ul>
