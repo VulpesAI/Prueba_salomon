@@ -70,7 +70,7 @@ interface KpiStripProps {
 
 export function KpiStrip({ kpis }: KpiStripProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {kpiConfig.map((item, index) => {
         const value = kpis[item.key]
         const delta = kpis[item.deltaKey]
@@ -83,10 +83,10 @@ export function KpiStrip({ kpis }: KpiStripProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
           >
-            <Card className="elevated-card border-app-border-subtle bg-app-card">
-              <CardContent className="space-y-4 pt-6">
+            <Card className="touch-feedback border-app-border-subtle bg-app-card">
+              <CardContent className="space-y-4 pt-5 md:pt-6">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-caption">
+                  <div className="flex items-center gap-2 text-caption text-app-dim">
                     <Icon name={item.icon} size="sm" aria-hidden />
                     {item.label}
                   </div>

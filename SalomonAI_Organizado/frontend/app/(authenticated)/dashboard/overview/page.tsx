@@ -23,14 +23,14 @@ export default function OverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="space-y-6 md:space-y-8">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <KpiSkeleton key={`kpi-skeleton-${index}`} />
           ))}
         </div>
         <ChartSkeleton />
-        <div className="grid gap-6 xl:grid-cols-12">
+        <div className="grid gap-6 md:gap-8 xl:grid-cols-12">
           <div className="xl:col-span-7">
             <DonutSkeleton />
           </div>
@@ -46,21 +46,21 @@ export default function OverviewPage() {
     return <ErrorState onRetry={() => void refetch()} />
   }
 
-  return (
-    <>
-      <div className="space-y-8" aria-busy={isFetching}>
-        <KpiStrip kpis={data.kpis} />
-        <CashflowChart data={data.flux} range={range} onRangeChange={setRange} />
-        <div className="grid gap-6 xl:grid-cols-12">
-          <div className="xl:col-span-7">
-            <TopCategoriesDonut data={categories} range={range} />
-          </div>
-          <div className="xl:col-span-5">
-            <InsightsList items={data.insights} />
+    return (
+      <>
+        <div className="space-y-8 md:space-y-10" aria-busy={isFetching}>
+          <KpiStrip kpis={data.kpis} />
+          <CashflowChart data={data.flux} range={range} onRangeChange={setRange} />
+          <div className="grid gap-6 md:gap-8 xl:grid-cols-12">
+            <div className="xl:col-span-7">
+              <TopCategoriesDonut data={categories} range={range} />
+            </div>
+            <div className="xl:col-span-5">
+              <InsightsList items={data.insights} />
+            </div>
           </div>
         </div>
-      </div>
-      <ChatFab />
-    </>
-  )
+        <ChatFab />
+      </>
+    )
 }

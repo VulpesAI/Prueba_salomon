@@ -1,36 +1,34 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/context/AuthContext"
-import { Brain, Menu, X } from "lucide-react"
 
-import { Breadcrumbs } from "./breadcrumbs"
 import Sidebar from "@/components/nav/Sidebar"
 import { TopbarActions } from "./topbar-actions"
 import { HeaderResumen } from "../HeaderResumen"
+import { AppHeader } from "@/components/navigation/AppHeader"
+import { SidebarDrawer } from "@/components/navigation/SidebarDrawer"
+import { NavigationRail } from "@/components/navigation/NavigationRail"
+import { Breadcrumbs } from "./breadcrumbs"
 
 const LoadingShell = () => (
   <div className="flex min-h-screen flex-col bg-app-bg text-app">
-    <header className="border-b border-app-border bg-app-surface px-4 md:px-6">
-      <div className="flex h-16 items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <div className="hidden flex-col gap-2 md:flex">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-5 w-48" />
-          </div>
+    <header className="border-b border-app-border bg-app-surface/95 px-4 md:px-6">
+      <div className="safe-pt safe-pb flex items-center justify-between gap-4">
+        <Skeleton className="h-11 w-11 rounded-2xl" />
+        <div className="flex-1">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="mt-2 h-6 w-48" />
         </div>
-        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton className="h-11 w-11 rounded-full" />
       </div>
     </header>
     <main className="flex-1 space-y-6 px-4 py-8 md:px-6">
       <Skeleton className="h-10 w-64" />
-      <Skeleton className="h-64 w-full" />
+      <Skeleton className="h-64 w-full rounded-2xl" />
     </main>
   </div>
 )
@@ -42,6 +40,9 @@ export function AuthenticatedShell({
 }) {
   const { user, logout, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const navigationId = React.useId()
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
 
   React.useEffect(() => {
@@ -50,73 +51,57 @@ export function AuthenticatedShell({
     }
   }, [isLoading, router, user])
 
+  React.useEffect(() => {
+    setIsSidebarOpen(false)
+  }, [pathname])
+
   if (isLoading || !user) {
     return <LoadingShell />
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-app-bg text-app">
-      <header className="sticky top-0 z-30 border-b border-app-border bg-app-surface">
-        <div className="flex h-16 items-center justify-between px-4 text-app md:px-6">
-          <div className="flex items-center gap-3">
-            <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={isSidebarOpen ? "Cerrar navegación" : "Abrir navegación"}
-                  className="group flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-app-border-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg"
-                >
-                  <div className="brand-gradient-bg rounded-xl p-2 text-primary-foreground shadow-sm ring-1 ring-primary/15">
-                    <Brain className="h-5 w-5 text-primary-foreground" aria-hidden />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold leading-tight brand-gradient-text">
-                      SalomonAI
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className="mt-0.5 w-fit border-primary/40 bg-primary/[0.06] px-2 py-0 text-[10px] uppercase tracking-wide text-primary"
-                    >
-                      Beta
-                    </Badge>
-                  </div>
-                  <span className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl border border-primary/40 bg-primary/[0.05] text-primary transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
-                    {isSidebarOpen ? (
-                      <X className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <Menu className="h-4 w-4" aria-hidden />
-                    )}
-                  </span>
-                </button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="w-72 border-app-border bg-app-bg p-0 text-app"
-              >
-                <Sidebar />
-              </SheetContent>
-            </Sheet>
-            <div className="hidden flex-col text-app-dim md:flex">
-              <span className="text-sm font-semibold text-app-dim">
-                Espacio financiero
-              </span>
-              <Breadcrumbs variant="inverted" />
-            </div>
+    <div className="flex min-h-dvh bg-app-bg text-app">
+      <SidebarDrawer
+        id={navigationId}
+        open={isSidebarOpen}
+        onOpenChange={setIsSidebarOpen}
+        triggerRef={triggerRef}
+      >
+        <Sidebar />
+      </SidebarDrawer>
+      <NavigationRail />
+      <aside className="hidden h-dvh w-[312px] flex-none border-r border-app-border-subtle bg-app-surface/70 px-4 py-6 lg:flex">
+        <div className="flex h-full w-full flex-col overflow-hidden">
+          <div className="px-2 text-xs font-semibold uppercase tracking-wide text-app-dim">
+            Navegación
           </div>
-          <div className="flex items-center gap-4 text-app">
-            <div className="hidden md:block">
-              <HeaderResumen />
-            </div>
-            <TopbarActions user={user} onLogout={logout} />
+          <div className="mt-4 flex-1 overflow-y-auto pr-1">
+            <Sidebar />
           </div>
         </div>
-      </header>
-      <main className="flex-1 px-4 py-8 md:px-6">
-        <div className="pb-6 pt-2 md:hidden">
-          <Breadcrumbs />
-        </div>
-        <div className="mx-auto w-full max-w-6xl space-y-8">{children}</div>
-      </main>
+      </aside>
+      <div className="flex min-h-dvh flex-1 flex-col">
+        <AppHeader
+          navigationOpen={isSidebarOpen}
+          onNavigationToggle={() => setIsSidebarOpen((open) => !open)}
+          navigationId={navigationId}
+          triggerRef={triggerRef}
+          actions={
+            <>
+              <div className="hidden xl:block">
+                <HeaderResumen />
+              </div>
+              <TopbarActions user={user} onLogout={logout} />
+            </>
+          }
+        />
+        <main className="flex-1 px-4 pb-12 pt-6 sm:px-6 lg:px-8 safe-pb">
+          <div className="pb-4 lg:hidden">
+            <Breadcrumbs />
+          </div>
+          <div className="mx-auto w-full max-w-6xl space-y-8 md:space-y-10">{children}</div>
+        </main>
+      </div>
     </div>
   )
 }
