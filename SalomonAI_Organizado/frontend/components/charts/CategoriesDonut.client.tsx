@@ -1,11 +1,14 @@
 "use client";
 
 import type { TooltipProps } from "recharts";
+import { useMemo } from "react";
+
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import type { CategoryItem } from "@/hooks/useDashboardOverview";
-import { formatCurrencyCLP } from "@/lib/formatters";
+import { formatCLP } from "@/lib/formatters";
 import { getCategoryColor } from "@/lib/ui/palette";
+import { getChartVars } from "@/lib/chartTheme";
 
 type CategoriesDonutProps = {
   data: CategoryItem[];
@@ -13,7 +16,7 @@ type CategoriesDonutProps = {
 
 const tooltipFormatter: TooltipProps<number, string>["formatter"] = (value, name) => {
   if (typeof value !== "number") return [value, name];
-  return [formatCurrencyCLP(value), name];
+  return [formatCLP(value), name];
 };
 
 export default function CategoriesDonut({ data }: CategoriesDonutProps) {
@@ -21,6 +24,7 @@ export default function CategoriesDonut({ data }: CategoriesDonutProps) {
     ...item,
     fill: getCategoryColor(item.name),
   }));
+  const vars = useMemo(() => getChartVars(), []);
 
   return (
     <div className="h-64 w-full">
@@ -32,7 +36,7 @@ export default function CategoriesDonut({ data }: CategoriesDonutProps) {
             nameKey="name"
             innerRadius="55%"
             outerRadius="85%"
-            stroke="var(--bg)"
+            stroke={vars.CARD}
             strokeWidth={2}
           >
             {pieData.map((entry) => (
@@ -43,13 +47,13 @@ export default function CategoriesDonut({ data }: CategoriesDonutProps) {
             formatter={tooltipFormatter}
             cursor={{ fill: "transparent" }}
             contentStyle={{
-              background: "hsl(var(--card))",
-              borderColor: "hsl(var(--border))",
+              background: vars.CARD,
+              borderColor: vars.BORDER,
               borderRadius: "12px",
-              color: "hsl(var(--foreground))",
+              color: vars.TEXT,
             }}
-            labelStyle={{ color: "hsl(var(--foreground))" }}
-            itemStyle={{ color: "hsl(var(--foreground))" }}
+            labelStyle={{ color: vars.TEXT }}
+            itemStyle={{ color: vars.TEXT }}
             wrapperStyle={{ outline: "none" }}
           />
         </PieChart>

@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon"
 import type { FluxPoint } from "@/hooks/useDashboardOverview"
 import { FluxChart } from "@/components/charts/FluxChart"
 import { formatDateCL } from "@/lib/formatters"
+import { cn } from "@/lib/utils"
 
 const RANGE_OPTIONS: Array<{ label: string; value: "7" | "30" | "90" }> = [
   { label: "7 días", value: "7" },
@@ -41,14 +42,16 @@ export function CashflowChart({ data, range, onRangeChange }: CashflowChartProps
 
   return (
     <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-      <Card className="elevated-card border-app-border-subtle bg-app-card">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Icon name="ChartLine" size="md" aria-hidden />
-              <CardTitle>Flujo + Proyección</CardTitle>
+      <Card className="no-glass">
+        <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-[hsl(var(--muted-foreground))]">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,hsl(var(--accent))_18%,transparent)] text-[hsl(var(--accent))]">
+                <Icon name="ChartLine" size="lg" />
+              </span>
+              <CardTitle className="h2 text-[hsl(var(--foreground))]">Flujo + Proyección</CardTitle>
             </div>
-            <p className="text-sm text-app-dim">
+            <p className="body text-[hsl(var(--muted-foreground))]">
               Histórico en área sólida, proyección punteada basada en IA financiera.
             </p>
             {projectionMeta?.calculatedAt ? (
@@ -63,11 +66,11 @@ export function CashflowChart({ data, range, onRangeChange }: CashflowChartProps
             ) : null}
           </div>
           <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-            <span className="text-caption">Rango</span>
+            <span className="caption text-[hsl(var(--muted-foreground))]">Rango</span>
             <div
               role="group"
               aria-label="Rango de días"
-              className="inline-flex items-center gap-1 rounded-full border border-app-border-subtle bg-app-surface-subtle p-1"
+              className="inline-flex items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,hsl(var(--border))_60%,transparent)] bg-[color:color-mix(in_srgb,hsl(var(--card))_82%,transparent)] p-1"
               ref={rangeGroupRef}
             >
               {RANGE_OPTIONS.map((option) => {
@@ -95,7 +98,12 @@ export function CashflowChart({ data, range, onRangeChange }: CashflowChartProps
                         onRangeChange(option.value)
                       }
                     }}
-                    className={isActive ? "shadow-none" : "text-app-dim hover:text-app"}
+                    className={cn(
+                      "touch-target",
+                      isActive
+                        ? "shadow-none"
+                        : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                    )}
                   >
                     {option.label}
                   </Button>
@@ -104,11 +112,12 @@ export function CashflowChart({ data, range, onRangeChange }: CashflowChartProps
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
           <FluxChart data={data} />
           {projectionMeta?.model ? (
-            <p className="mt-4 text-xs text-app-dim">
-              Proyección estimada con modelo <strong className="font-semibold text-app">{projectionMeta.model}</strong>.
+            <p className="mt-4 text-xs text-[hsl(var(--muted-foreground))]">
+              Proyección estimada con modelo{" "}
+              <strong className="font-semibold text-[hsl(var(--foreground))]">{projectionMeta.model}</strong>.
             </p>
           ) : null}
         </CardContent>

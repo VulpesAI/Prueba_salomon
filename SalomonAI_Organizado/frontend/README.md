@@ -53,6 +53,10 @@ Los componentes que dependen de `recharts` (`FluxChart` y `CategoriesDonut`) se 
 - Se incluyen estados de carga (`Skeletons`) y de error con opción de reintento.
 - El layout soporta modo claro/oscuro mediante clases de Tailwind (`bg-background`, `text-foreground`).
 
+## QA visual y tokens de color
+
+- Antes de aprobar cambios en el dashboard autenticado ejecutar `pnpm -C frontend lint` y revisar que el diff no introduzca clases `bg-(slate|gray|zinc|neutral)` ni valores `#hex`/`rgb`/`hsl()` directos. Los nuevos estilos deben apoyarse únicamente en los tokens existentes (`--background`, `--foreground`, `--card`, etc.).
+
 ## Pronósticos `/pronosticos`
 
 - La página consume `/api/forecasts?horizon=7|30|90`, implementado en `app/api/forecasts/route.ts`, que responde con `ForecastResponse` (definido en `types/forecasts.ts`).

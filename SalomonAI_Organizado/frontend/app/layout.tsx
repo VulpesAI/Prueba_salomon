@@ -34,7 +34,15 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-app text-app font-sans antialiased">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-[hsl(var(--card))] focus:px-4 focus:py-2 focus:text-[hsl(var(--foreground))] focus:shadow focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,hsl(var(--accent))_45%,transparent)] focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))]"
+          >
+            Saltar al contenido
+          </a>
+          <main id="main">{children}</main>
+        </AppProviders>
       </body>
     </html>
   );

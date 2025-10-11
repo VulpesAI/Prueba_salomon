@@ -51,7 +51,7 @@ function resolveTrend(delta: number, tone: TrendTone): TrendMeta {
   if (delta === 0) {
     return {
       icon: "ArrowRight",
-      className: "text-app-dim",
+      className: "text-[hsl(var(--muted-foreground))]",
     }
   }
 
@@ -60,7 +60,9 @@ function resolveTrend(delta: number, tone: TrendTone): TrendMeta {
 
   return {
     icon: success ? "ArrowUpRight" : "ArrowDownRight",
-    className: success ? "text-app-success" : "text-app-danger",
+    className: success
+      ? "text-[hsl(var(--success))]"
+      : "text-[color:color-mix(in_srgb,hsl(var(--danger))_92%,transparent)]",
   }
 }
 
@@ -83,22 +85,20 @@ export function KpiStrip({ kpis }: KpiStripProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
           >
-            <Card className="touch-feedback border-app-border-subtle bg-app-card">
-              <CardContent className="space-y-4 pt-5 md:pt-6">
+            <Card className="no-glass">
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-caption text-app-dim">
+                  <div className="flex items-center gap-2 caption text-[hsl(var(--muted-foreground))]">
                     <Icon name={item.icon} size="sm" aria-hidden />
                     {item.label}
                   </div>
                   <Badge variant="secondary">vs. periodo anterior</Badge>
                 </div>
                 <div className="flex items-end justify-between gap-4">
-                  <span className="text-display leading-none">
-                    {formatCurrencyCLP(value)}
-                  </span>
+                  <span className="h1 leading-none">{formatCurrencyCLP(value)}</span>
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full bg-app-surface-subtle px-3 py-1 text-sm font-semibold",
+                      "inline-flex items-center gap-1 rounded-full bg-[color:color-mix(in_srgb,hsl(var(--muted))_35%,transparent)] px-3 py-1 text-sm font-semibold",
                       trend.className
                     )}
                     aria-live="polite"

@@ -10,8 +10,10 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("es-CL", {
   year: "numeric",
 })
 
+export const formatCLP = (value: number): string => CLP_FORMATTER.format(value)
+
 export function formatCurrencyCLP(value: number): string {
-  return CLP_FORMATTER.format(value)
+  return formatCLP(value)
 }
 
 export function formatPercentDelta(delta: number): string {
@@ -19,7 +21,7 @@ export function formatPercentDelta(delta: number): string {
   return `${prefix}${Math.abs(delta).toFixed(1)}%`
 }
 
-export function formatDateCL(value: string | number | Date): string {
+export const formatDateCL = (value: string | number | Date): string => {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) {
     return String(value)

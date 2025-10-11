@@ -23,7 +23,7 @@ export default function OverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 md:space-y-8">
+      <div className="flex flex-col section-gap">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <KpiSkeleton key={`kpi-skeleton-${index}`} />
@@ -48,7 +48,7 @@ export default function OverviewPage() {
 
     return (
       <>
-        <div className="space-y-8 md:space-y-10" aria-busy={isFetching}>
+        <div className="flex flex-col section-gap" aria-busy={isFetching}>
           <KpiStrip kpis={data.kpis} />
           <CashflowChart data={data.flux} range={range} onRangeChange={setRange} />
           <div className="grid gap-6 md:gap-8 xl:grid-cols-12">

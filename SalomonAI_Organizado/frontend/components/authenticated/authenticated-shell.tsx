@@ -99,7 +99,7 @@ export function AuthenticatedShell({
           <div className="pb-4 lg:hidden">
             <Breadcrumbs />
           </div>
-          <div className="mx-auto w-full max-w-6xl space-y-8 md:space-y-10">{children}</div>
+          <div className="mx-auto flex w-full max-w-6xl flex-col section-gap">{children}</div>
         </main>
       </div>
     </div>
