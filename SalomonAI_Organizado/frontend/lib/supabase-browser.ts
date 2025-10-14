@@ -1,8 +1,8 @@
 "use client";
 import { createBrowserClient } from "@supabase/ssr";
-import { ENV, assertSupabaseEnv } from "./env";
+import { ENV, assertClientEnv } from "./env";
 
 export function supabaseBrowser() {
-  assertSupabaseEnv();
+  assertClientEnv();
   return createBrowserClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY);
 }

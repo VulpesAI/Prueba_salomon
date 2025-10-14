@@ -1,15 +1,11 @@
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
 
-import '@/styles/globals.css';
+import "@/styles/globals.css";
 
-import EnvGuard from '@/components/EnvGuard';
-import { AppProviders } from './providers';
+import EnvGuard from "@/components/EnvGuard";
+import { AppProviders } from "./providers";
 
-export const metadata: Metadata = {
-  title: 'SalomonAI - Tu Asistente Financiero Inteligente',
-  description:
-    'Inteligencia artificial que aprende de tus hábitos financieros y te ayuda a tomar mejores decisiones',
-};
+export const metadata: Metadata = { title: "SalomónAI" };
 
 export default function RootLayout({
   children,

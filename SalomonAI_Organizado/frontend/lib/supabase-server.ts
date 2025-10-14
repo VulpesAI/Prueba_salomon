@@ -1,24 +1,20 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { ENV, assertSupabaseEnv } from "./env";
+import { ENV, assertClientEnv } from "./env";
 
-export async function supabaseServer() {
-  assertSupabaseEnv();
-  const store = await cookies();
+export function supabaseServer() {
+  assertClientEnv();
+  const store = cookies() as unknown as Awaited<ReturnType<typeof cookies>>;
   return createServerClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
     cookies: {
-      get(name: string) {
-        return store.get(name)?.value;
+      getAll: () => {
+        const all = store.getAll();
+        return all?.map(({ name, value }) => ({ name, value })) ?? [];
       },
-      set(name: string, value: string, options: CookieOptions) {
-        store.set({ name, value, ...options });
-      },
-      remove(name: string, options: CookieOptions) {
-        if (typeof store.delete === "function") {
-          store.delete({ name, ...options });
-        } else {
-          store.set({ name, value: "", ...options, maxAge: 0 });
-        }
+      setAll: (cookieList) => {
+        cookieList.forEach(({ name, value, options }) => {
+          store.set({ name, value, ...options });
+        });
       },
     },
   });
