@@ -2,9 +2,9 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 
 import { GetMovementsQueryDto } from './dto/get-movements-query.dto';
 import { MovementsService } from './movements.service';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SupabaseJwtGuard } from '../auth/supabase.guard';
 
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseJwtGuard)
 @Controller('movements')
 export class MovementsController {
   constructor(private readonly movementsService: MovementsService) {}

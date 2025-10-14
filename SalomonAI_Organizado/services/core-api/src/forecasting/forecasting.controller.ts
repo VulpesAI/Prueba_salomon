@@ -7,12 +7,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SupabaseJwtGuard } from '../auth/supabase.guard';
 import { ForecastingOrchestratorService } from '../recommendations/forecasting-orchestrator.service';
 import type { ForecastingResponseDto } from './forecasting.types';
 import { ForecastingTriggerQueryDto } from './dto/forecasting-trigger-query.dto';
 
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseJwtGuard)
 @Controller('forecasting')
 export class ForecastingController {
   constructor(private readonly forecastingService: ForecastingOrchestratorService) {}

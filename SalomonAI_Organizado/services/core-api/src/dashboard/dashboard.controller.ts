@@ -1,21 +1,20 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 
 import { DashboardService } from './dashboard.service';
-import { DashboardResumenQueryDto } from './dto/dashboard-resumen-query.dto';
 import { DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
 import { DashboardProjectionQueryDto } from './dto/dashboard-projection-query.dto';
 import { DashboardRecommendationsQueryDto } from './dto/dashboard-recommendations-query.dto';
 import { DashboardRecommendationFeedbackDto } from './dto/dashboard-recommendation-feedback.dto';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SupabaseJwtGuard } from '../auth/supabase.guard';
 
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseJwtGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('resumen')
-  getResumen(@Query() query: DashboardResumenQueryDto) {
-    return this.dashboardService.getResumen(query);
+  resumen(@Req() req: { user: { sub: string } }) {
+    return this.dashboardService.getResumenForUser(req.user.sub);
   }
 
   @Get('summary')

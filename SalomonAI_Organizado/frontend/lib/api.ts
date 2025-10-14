@@ -1,46 +1,54 @@
-const PUBLIC_API = process.env.NEXT_PUBLIC_API_BASE_URL;
-export const API_BASE =
-  typeof window !== "undefined" && !PUBLIC_API ? "" : PUBLIC_API ?? "";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+export const USE_INTERNAL = process.env.NEXT_PUBLIC_FRONTEND_USE_INTERNAL_API === 'true';
 
-export async function authHeader() {
-  if (typeof window === "undefined") {
-    return {} as Record<string, string>;
+export function apiUrl(path: string) {
+  return USE_INTERNAL ? `/api${path}` : `${API_BASE}${path}`;
+}
+
+async function getAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') {
+    return null;
   }
+  const { supabase } = await import('./supabase');
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
 
-  const token = sessionStorage.getItem("jwt") ?? "";
+export async function authHeader(): Promise<Record<string, string>> {
+  const token = await getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      ...(await authHeader()),
-    },
-    cache: "no-store",
+export async function getJSON<T>(path: string, opts: RequestInit = {}): Promise<T> {
+  const token = await getAccessToken();
+  const headers: HeadersInit = {
+    ...(opts.headers ?? {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const res = await fetch(apiUrl(path), {
+    ...opts,
+    headers,
+    credentials: 'include',
   });
-
   if (!res.ok) {
-    throw new Error(`${res.status}`);
+    throw new Error(`HTTP ${res.status}`);
   }
-
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(await authHeader()),
-    },
+export async function apiGet<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return getJSON<T>(path, { ...init, method: init.method ?? 'GET', cache: init.cache ?? 'no-store' });
+}
+
+export async function apiPost<T>(path: string, body: unknown, init: RequestInit = {}): Promise<T> {
+  return getJSON<T>(path, {
+    ...init,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
     body: JSON.stringify(body),
   });
-
-  if (!res.ok) {
-    throw new Error(`${res.status}`);
-  }
-
-  return res.json();
 }
 
 export type PaginatedResponse<T> = {

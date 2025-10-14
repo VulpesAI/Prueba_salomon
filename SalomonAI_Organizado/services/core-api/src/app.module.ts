@@ -13,6 +13,7 @@ import { ResultsConnectorModule } from './connectors/results/results-connector.m
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { ForecastingModule } from './forecasting/forecasting.module';
 import { AiModule } from './ai/ai.module';
+import { ConversationModule } from './conversation/conversation.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AiModule } from './ai/ai.module';
     RecommendationsModule,
     ForecastingModule,
     AiModule,
+    ConversationModule,
   ],
 })
 export class AppModule {}

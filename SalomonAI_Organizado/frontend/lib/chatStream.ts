@@ -1,4 +1,4 @@
-import { API_BASE, authHeader } from "@/lib/api";
+import { API_BASE, apiUrl, authHeader } from "@/lib/api";
 
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
@@ -41,7 +41,7 @@ export async function streamSSE(
   }, timeoutMs);
 
   try {
-    const res = await fetch(`${API_BASE}/conversation/stream-sse`, {
+    const res = await fetch(apiUrl('/conversation/stream-sse'), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
