@@ -4,7 +4,7 @@ import LoginForm from "./ui";
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  const supabase = supabaseServer();
+  const supabase = await supabaseServer();
   const { data } = await supabase.auth.getUser();
   if (data.user) {
     return <meta httpEquiv="refresh" content="0; url=/dashboard" />;
