@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { ENV } from '@/config/env';
-
 import {
   IS_DEMO_MODE,
   useDemoFinancialData,
@@ -24,7 +22,7 @@ export function useFinancialSummary(sessionId: string) {
   const [error, setError] = useState<string | null>(null);
 
   const baseUrl = useMemo(() => {
-    return ENV.NEXT_PUBLIC_CONVERSATION_ENGINE_URL || 'http://localhost:8002';
+    return process.env.NEXT_PUBLIC_CONVERSATION_ENGINE_URL ?? 'http://localhost:8002';
   }, []);
 
   const fetchSummary = useCallback(async () => {

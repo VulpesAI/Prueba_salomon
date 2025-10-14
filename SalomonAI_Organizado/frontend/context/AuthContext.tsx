@@ -15,6 +15,8 @@ import type {
   User,
 } from "@supabase/supabase-js"
 
+import { supabase } from "@/lib/supabase"
+
 type AuthUser = {
   id: string
   email: string | null
@@ -32,9 +34,10 @@ type AuthContextType = {
     password: string,
     displayName?: string
   ) => Promise<AuthResponse>
-  resetPassword: (email: string) => Promise<AuthResponse>
+  resetPassword: (
+    email: string
+  ) => ReturnType<typeof supabase.auth.resetPasswordForEmail>
   logout: () => Promise<void>
-  refreshSession: () => Promise<Session | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -67,42 +70,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const refreshSession = useCallback(async () => {
-    try {
-      const response = await fetch("/api/auth/session", {
-        method: "GET",
-        cache: "no-store",
-      })
-
-      if (!response.ok) {
-        setSession(null)
-        setUser(null)
-        return null
-      }
-
-      const payload = (await response.json()) as {
-        session: Session | null
-      }
-
-      const nextSession = payload.session ?? null
-      setSession(nextSession)
-      setUser(mapSupabaseUser(nextSession?.user ?? null))
-
-      return nextSession
-    } catch (error) {
-      console.error("Failed to refresh Supabase session", error)
-      setSession(null)
-      setUser(null)
-      return null
-    }
-  }, [])
-
   useEffect(() => {
     let isMounted = true
 
-    const bootstrap = async () => {
+    const syncSession = async () => {
       try {
-        await refreshSession()
+        const { data, error } = await supabase.auth.getSession()
+        if (error) {
+          throw error
+        }
+
+        if (!isMounted) return
+
+        setSession(data.session)
+        setUser(mapSupabaseUser(data.session?.user ?? null))
+      } catch (error) {
+        console.error("Failed to retrieve Supabase session", error)
+        if (!isMounted) return
+        setSession(null)
+        setUser(null)
       } finally {
         if (isMounted) {
           setIsLoading(false)
@@ -110,108 +96,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    void bootstrap()
+    void syncSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (!isMounted) return
+
+      setSession(currentSession)
+      setUser(mapSupabaseUser(currentSession?.user ?? null))
+      setIsLoading(false)
+    })
 
     return () => {
       isMounted = false
+      subscription.unsubscribe()
     }
-  }, [refreshSession])
+  }, [])
 
   const login = useCallback<AuthContextType["login"]>(async (email, password) => {
-    const response = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+    const response = await supabase.auth.signInWithPassword({
+      email,
+      password,
     })
 
-    const payload = (await response.json()) as AuthTokenResponse & {
-      error?: string
+    if (response.error) {
+      throw response.error
     }
 
-    if (!response.ok || payload.error) {
-      throw new Error(
-        payload.error ?? "No pudimos iniciar sesión. Inténtalo nuevamente."
-      )
-    }
-
-    const nextSession = payload.data.session ?? null
-    setSession(nextSession)
-    setUser(mapSupabaseUser(payload.data.user ?? null))
-
-    return payload
+    return response
   }, [])
 
   const signup = useCallback<AuthContextType["signup"]>(
     async (email, password, displayName) => {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, displayName }),
+      const response = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: displayName ? { full_name: displayName } : undefined,
+        },
       })
 
-      const payload = (await response.json()) as AuthResponse & {
-        error?: string
+      if (response.error) {
+        throw response.error
       }
 
-      if (!response.ok || payload.error) {
-        throw new Error(
-          payload.error ?? "No pudimos crear la cuenta. Inténtalo nuevamente."
-        )
-      }
-
-      const nextSession = payload.data.session ?? null
-      setSession(nextSession)
-      setUser(mapSupabaseUser(payload.data.user ?? null))
-
-      return payload
+      return response
     },
     []
   )
 
   const resetPassword = useCallback<AuthContextType["resetPassword"]>(
     async (email) => {
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/reset-password`
-          : undefined
-
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, redirectTo }),
+      const response = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/reset-password`
+            : undefined,
       })
 
-      const payload = (await response.json()) as AuthResponse & {
-        error?: string
+      if (response.error) {
+        throw response.error
       }
 
-      if (!response.ok || payload.error) {
-        throw new Error(
-          payload.error ??
-            "No pudimos enviar el correo de recuperación. Inténtalo nuevamente."
-        )
-      }
-
-      return payload
+      return response
     },
     []
   )
 
   const logout = useCallback(async () => {
-    const response = await fetch("/api/auth/session", {
-      method: "DELETE",
-    })
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string
-      }
-
-      throw new Error(payload.error ?? "No pudimos cerrar sesión")
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      throw error
     }
-
-    setSession(null)
-    setUser(null)
   }, [])
 
   const value = useMemo<AuthContextType>(
@@ -223,9 +180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signup,
       resetPassword,
       logout,
-      refreshSession,
     }),
-    [isLoading, login, logout, refreshSession, resetPassword, session, signup, user]
+    [isLoading, login, logout, resetPassword, session, signup, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

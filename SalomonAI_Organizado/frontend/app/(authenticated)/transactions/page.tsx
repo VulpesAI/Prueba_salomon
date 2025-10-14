@@ -26,9 +26,6 @@ export default function TransactionsPage() {
   );
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return undefined;
-    }
     const onScroll = () => {
       if (
         window.innerHeight + window.scrollY >= document.body.offsetHeight - 160 &&

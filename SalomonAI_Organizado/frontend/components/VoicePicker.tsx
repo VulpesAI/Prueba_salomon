@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { synthesizeSpeech } from '@/utils/voiceLoop';
-import { ENV } from '@/config/env';
 
 interface VoiceSupports {
   tts: boolean;
@@ -41,7 +40,7 @@ export function VoicePicker({ current, onChange }: VoicePickerProps) {
   const selectedRef = useRef<string | undefined>(current);
 
   const restUrl = useMemo(() => {
-    return ENV.NEXT_PUBLIC_VOICE_GATEWAY_URL || 'http://localhost:8100';
+    return process.env.NEXT_PUBLIC_VOICE_GATEWAY_URL ?? 'http://localhost:8100';
   }, []);
 
   useEffect(() => {

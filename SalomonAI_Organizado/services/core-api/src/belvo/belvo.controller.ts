@@ -3,9 +3,9 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { GenerateBelvoLinkTokenDto } from './dto/generate-link-token.dto';
 import { TriggerBelvoSyncDto } from './dto/trigger-sync.dto';
 import { BelvoService } from './belvo.service';
-import { SupabaseJwtGuard } from '../auth/supabase.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
-@UseGuards(SupabaseJwtGuard)
+@UseGuards(SupabaseAuthGuard)
 @Controller('belvo')
 export class BelvoController {
   constructor(private readonly belvoService: BelvoService) {}

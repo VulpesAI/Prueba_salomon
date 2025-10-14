@@ -2,8 +2,6 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { ENV } from '@/config/env';
-
 type Role = 'assistant' | 'user' | 'system';
 
 export interface ConversationMessage {
@@ -77,7 +75,7 @@ export function useConversationEngine({ sessionId, onSummary }: UseConversationO
   const assistantMessageId = useRef<string | null>(null);
 
   const baseUrl = useMemo(() => {
-    return ENV.NEXT_PUBLIC_CONVERSATION_ENGINE_URL || 'http://localhost:8002';
+    return process.env.NEXT_PUBLIC_CONVERSATION_ENGINE_URL ?? 'http://localhost:8002';
   }, []);
 
   const appendAssistantToken = useCallback((token: string) => {
