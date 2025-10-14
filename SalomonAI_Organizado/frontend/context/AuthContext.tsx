@@ -15,7 +15,9 @@ import type {
   User,
 } from "@supabase/supabase-js"
 
-import { supabase } from "@/lib/supabase"
+import { supabaseBrowser } from "@/lib/supabase-browser"
+
+const supabase = supabaseBrowser()
 
 type AuthUser = {
   id: string

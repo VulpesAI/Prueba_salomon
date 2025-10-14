@@ -1,25 +1,14 @@
 "use client";
-
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   return (
-    <main className="flex min-h-96 flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Ocurrió un error en la interfaz</h1>
-      <pre className="rounded-md bg-muted p-4 text-sm whitespace-pre-wrap">
-        {error.message}
-      </pre>
-      <button
-        type="button"
-        className="inline-flex w-fit items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
-        onClick={() => reset()}
-      >
-        Reintentar
-      </button>
+    <main className="min-h-screen grid place-items-center p-6">
+      <div className="max-w-xl">
+        <h1 className="text-2xl font-semibold mb-2">Ocurrió un error en la interfaz</h1>
+        <pre className="text-sm whitespace-pre-wrap p-3 rounded bg-slate-100">{error.message}</pre>
+        <button className="mt-4 px-4 py-2 rounded bg-blue-600 text-white" onClick={() => reset()}>
+          Reintentar
+        </button>
+      </div>
     </main>
   );
 }

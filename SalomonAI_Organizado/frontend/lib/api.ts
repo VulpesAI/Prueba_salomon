@@ -11,7 +11,8 @@ async function getAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') {
     return null;
   }
-  const { supabase } = await import('./supabase');
+  const { supabaseBrowser } = await import('./supabase-browser');
+  const supabase = supabaseBrowser();
   const {
     data: { session },
   } = await supabase.auth.getSession();
