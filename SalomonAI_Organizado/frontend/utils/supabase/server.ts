@@ -1,20 +1,32 @@
 import { createServerClient } from '@supabase/ssr'
 import type { CookieOptions } from '@supabase/ssr'
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  'https://yyfyhjxjofgrfywawlme.supabase.co'
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+const isValidUrl = (value: string | undefined): value is string => {
+  if (!value) {
+    return false
+  }
+
+  try {
+    void new URL(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const FALLBACK_SUPABASE_URL = 'https://yyfyhjxjofgrfywawlme.supabase.co'
+const FALLBACK_SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5Znloanhqb2ZncmZ5d2F3bG1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNTUyNjcsImV4cCI6MjA3NDkzMTI2N30.Pw_AxMp8YOYXhHOUJlRN_wTmRjHSh6Tfa22BsIJwTj0'
 
-if (!supabaseUrl) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
-}
+const supabaseUrl = isValidUrl(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  ? process.env.NEXT_PUBLIC_SUPABASE_URL!
+  : FALLBACK_SUPABASE_URL
 
-if (!supabaseAnonKey) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
-}
+const supabaseAnonKey =
+  typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === 'string' &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
+    ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    : FALLBACK_SUPABASE_ANON_KEY
 
 type CookieStore = {
   get: (name: string) => { value: string } | undefined

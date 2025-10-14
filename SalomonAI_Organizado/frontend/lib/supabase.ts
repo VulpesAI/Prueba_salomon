@@ -1,7 +1,42 @@
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: true, autoRefreshToken: true } },
-);
+const isValidUrl = (value: string | undefined): value is string => {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    void new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const createMissingEnvClient = (): SupabaseClient => {
+  const error = new Error(
+    'Supabase environment variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be configured.'
+  );
+
+  return new Proxy(
+    {},
+    {
+      get() {
+        throw error;
+      },
+    }
+  ) as SupabaseClient;
+};
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const hasValidConfig =
+  isValidUrl(supabaseUrl) && typeof supabaseAnonKey === 'string' && supabaseAnonKey.length > 0;
+
+export const supabase: SupabaseClient = hasValidConfig
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    })
+  : createMissingEnvClient();
