@@ -31,6 +31,12 @@ __pycache__/
 .venv/
 ENV/
 env/
+!/frontend/app/api/debug/env/
+!/frontend/app/api/debug/env/**
+!/frontend/app/api/debug/env/route.ts
+!/frontend/app/debug/env/
+!/frontend/app/debug/env/**
+!/frontend/app/debug/env/page.tsx
 venv/
 
 # Secrets directory contents (examples allowed via explicit tracking)

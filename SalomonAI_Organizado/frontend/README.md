@@ -23,17 +23,17 @@ En Vercel o producción asegúrate de definir `NEXT_PUBLIC_API_BASE` (puede ser 
 - **Variables sólo servidor**: `SUPABASE_SERVICE_ROLE_KEY`, `SB_PUBLISHABLE_KEY` y `SB_SECRET_KEY`. No deben importarse en componentes cliente.
 - **Dónde encontrarlas**: en tu proyecto de Supabase ve a **Settings → API** y copia el **Project URL**, la **anon public key**, la **service role key** y el resto de claves de tu integración.
 - **Entorno local**: copia `.env.local.example` a `.env.local` y rellena tus valores antes de ejecutar la app.
-- **Validación**: el helper `lib/env.ts` expone `assertClientEnv()` que evita renderizados si faltan las variables públicas y `EnvGuard` muestra una pantalla de error amable mientras no se configuren.
+- **Validación**: el helper `lib/env.ts` expone `hasClientEnv()` que permite verificar si las variables públicas están presentes y `EnvGuard` muestra una pantalla de error amable mientras no se configuren.
 
 ### Configurar Supabase & Vercel
 
 En Vercel, dentro de **Settings → Environment Variables**, define las siguientes variables en los entornos **Production** y **Preview**:
 
-- `NEXT_PUBLIC_SUPABASE_URL` = `https://yyfyhjxjofgrfywawlme.supabase.co`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5Znloanhqb2ZncmZ5d2F3bG1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNTUyNjcsImV4cCI6MjA3NDkzMTI2N30.Pw_AxMp8YOYXhHOUJlRN_wTmRjHSh6Tfa22BsIJwTj0`
-- `SUPABASE_SERVICE_ROLE_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5Znloanhqb2ZncmZ5d2F3bG1lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTM1NTI2NywiZXhwIjoyMDc0OTMxMjY3fQ.-hW4cLj7HZzZ-rzALeH42-EpJa6Ox9V5-a6KyKN69wA`
-- `SB_PUBLISHABLE_KEY` = `sb_publishable_kyomZIE2U1WJImljfwzCXQ_fnWzZryI`
-- `SB_SECRET_KEY` = `sb_secret_-t7Uks4wtRBdwGDpWpw5gA_ObFOqCMH`
+- `NEXT_PUBLIC_SUPABASE_URL` = URL del proyecto Supabase (por ejemplo, `https://<project>.supabase.co`).
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = clave **anon public**.
+- `SUPABASE_SERVICE_ROLE_KEY` = clave **service role** (no exponer en el cliente).
+- `SB_PUBLISHABLE_KEY` = clave publicable de Stripe (u otro proveedor si aplica).
+- `SB_SECRET_KEY` = clave secreta del proveedor correspondiente.
 
 Después de guardarlas, ejecuta un redeploy para que el cliente tome los `NEXT_PUBLIC_*`.
 
