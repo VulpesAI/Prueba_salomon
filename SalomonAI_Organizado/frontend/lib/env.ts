@@ -6,7 +6,3 @@ export const ENV = {
   SB_PUBLISHABLE_KEY: process.env.SB_PUBLISHABLE_KEY ?? "",
   SB_SECRET_KEY: process.env.SB_SECRET_KEY ?? "",
 };
-
-export function hasClientEnv() {
-  return Boolean(ENV.SUPABASE_URL && ENV.SUPABASE_ANON_KEY);
-}

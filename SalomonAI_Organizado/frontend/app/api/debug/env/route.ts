@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { ENV } from "@/lib/env";
 
 export async function GET() {
-  return NextResponse.json({
-    serverSees: Boolean(ENV.SUPABASE_URL && ENV.SUPABASE_ANON_KEY),
-    urlLen: ENV.SUPABASE_URL?.length ?? 0,
-    anonKeyLen: ENV.SUPABASE_ANON_KEY?.length ?? 0,
-  });
+  const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const hasAnon = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return NextResponse.json({ serverSeesEnv: hasUrl && hasAnon });
 }
