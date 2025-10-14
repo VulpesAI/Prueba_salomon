@@ -1,9 +1,8 @@
 "use client";
-import { ENV } from "@/lib/env";
+import { hasClientEnv } from "@/lib/env";
 
 export default function EnvGuard({ children }: { children: React.ReactNode }) {
-  const ok = Boolean(ENV.SUPABASE_URL && ENV.SUPABASE_ANON_KEY);
-  if (!ok) {
+  if (!hasClientEnv()) {
     return (
       <main className="min-h-screen grid place-items-center bg-slate-900 text-slate-100 p-6">
         <div className="max-w-lg text-center space-y-4">
