@@ -3,9 +3,9 @@ import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/co
 import { AiService } from './ai.service';
 import { ResolveIntentDto } from './dto/resolve-intent.dto';
 import { AiSummaryQueryDto } from './dto/ai-summary-query.dto';
-import { SupabaseJwtGuard } from '../auth/supabase.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
-@UseGuards(SupabaseJwtGuard)
+@UseGuards(SupabaseAuthGuard)
 @Controller('ai')
 export class AiController {
   constructor(private readonly aiService: AiService) {}

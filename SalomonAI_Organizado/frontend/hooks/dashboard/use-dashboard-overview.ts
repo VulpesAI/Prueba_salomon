@@ -3,7 +3,6 @@
 import { useMemo } from "react"
 
 import { queryKeys } from "@/config/query-keys"
-import { ENV } from "@/config/env"
 import { useApiQuery } from "@/hooks/use-api"
 import { getDashboardOverview } from "@/services/dashboard"
 import type { DashboardOverviewResponse } from "@/types/dashboard"
@@ -20,7 +19,7 @@ export const useDashboardOverview = () => {
   const isDemoMode = IS_DEMO_MODE
 
   const apiBaseUrl = useMemo(
-    () => ENV.NEXT_PUBLIC_API_URL || "http://localhost:3000",
+    () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
     []
   )
 

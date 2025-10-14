@@ -10,9 +10,8 @@
     "start:dev": "nest start --watch",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "test": "jest --config jest.config.ts --passWithNoTests",
-    "test:e2e": "vitest run test/*.e2e.spec.ts",
-    "env:check": "ts-node -r tsconfig-paths/register scripts/env-check.ts",
-    "db:migrate": "psql postgresql://$PG_USER:$PG_PASSWORD@$PG_HOST:$PG_PORT/$PG_DB -f prisma/migrations/000_init/ddl.sql"
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "env:check": "ts-node -r tsconfig-paths/register scripts/env-check.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.10",
@@ -22,13 +21,11 @@
     "@nestjs/microservices": "^10.3.10",
     "@nestjs/platform-express": "^10.3.10",
     "@supabase/supabase-js": "^2.47.5",
-    "jose": "^5.9.2",
     "kafkajs": "^2.2.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "joi": "^17.13.1",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.0",
     "undici": "^6.19.4",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"
@@ -41,7 +38,6 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/pg": "^8.11.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^20.11.30",
     "@types/supertest": "^6.0.3",
@@ -60,7 +56,6 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "~5.5.4",
-    "vitest": "^1.6.0"
+    "typescript": "~5.5.4"
   }
 }

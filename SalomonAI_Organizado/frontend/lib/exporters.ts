@@ -1,11 +1,9 @@
 "use client"
 
-import { ENV } from "@/config/env"
-
 import { formatDate } from "./intl"
 import type { NormalizedStatement } from "./statements/parser"
 
-const demoFlag = ENV.NEXT_PUBLIC_DEMO_MODE.trim().toLowerCase()
+const demoFlag = process.env.NEXT_PUBLIC_DEMO_MODE?.toLowerCase()
 const isDemoEnvironment =
   demoFlag === "true" ||
   demoFlag === "1" ||

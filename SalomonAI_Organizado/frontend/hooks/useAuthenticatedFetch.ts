@@ -3,23 +3,33 @@
 import { useMemo } from "react"
 
 import { useAuth } from "@/context/AuthContext"
+import { supabase } from "@/lib/supabase"
 
 export const useAuthenticatedFetch = () => {
-  const { session, refreshSession } = useAuth()
+  const { session } = useAuth()
 
   return useMemo(() => {
     const getAuthHeaders = async (): Promise<Record<string, string>> => {
       const headers: Record<string, string> = {}
 
-      let activeSession = session
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (error) {
+          throw error
+        }
 
-      if (!activeSession) {
-        activeSession = await refreshSession()
-      }
+        const activeSession = data.session ?? session
 
-      if (activeSession?.access_token) {
-        const tokenType = activeSession.token_type ?? "Bearer"
-        headers.Authorization = `${tokenType} ${activeSession.access_token}`
+        if (activeSession?.access_token) {
+          const tokenType = activeSession.token_type ?? "Bearer"
+          headers.Authorization = `${tokenType} ${activeSession.access_token}`
+        }
+      } catch (error) {
+        console.error("Unable to retrieve Supabase session", error)
+        if (session?.access_token) {
+          const tokenType = session.token_type ?? "Bearer"
+          headers.Authorization = `${tokenType} ${session.access_token}`
+        }
       }
 
       return headers
@@ -40,5 +50,5 @@ export const useAuthenticatedFetch = () => {
     }
 
     return { fetch: authenticatedFetch, getAuthHeaders }
-  }, [refreshSession, session])
+  }, [session])
 }

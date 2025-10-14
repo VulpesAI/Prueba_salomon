@@ -4,10 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Brain, TrendingUp, Shield, Zap } from "lucide-react";
 
-import { ENV } from "@/config/env";
-
 const Hero = () => {
-  const demoModeEnabled = ENV.NEXT_PUBLIC_DEMO_MODE.trim().toLowerCase() === 'true';
+  const demoModeEnabled = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   return (
     <section className="relative min-h-screen flex items-center justify-center bg-gradient-hero overflow-hidden">
@@ -52,10 +50,7 @@ const Hero = () => {
           <Button
             size="lg"
             className="text-lg px-8 py-3"
-            onClick={() => {
-              if (typeof document === 'undefined') return;
-              document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
           >
             <Zap className="w-5 h-5 mr-2" />
             Comenzar Ahora

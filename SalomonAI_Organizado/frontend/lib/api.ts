@@ -1,67 +1,46 @@
-import { ENV } from '@/config/env';
+const PUBLIC_API = process.env.NEXT_PUBLIC_API_BASE_URL;
+export const API_BASE =
+  typeof window !== "undefined" && !PUBLIC_API ? "" : PUBLIC_API ?? "";
 
-export const API_BASE = ENV.NEXT_PUBLIC_API_BASE_URL || '';
-export const USE_INTERNAL = ENV.NEXT_PUBLIC_FRONTEND_USE_INTERNAL_API === 'true';
-
-export function apiUrl(path: string) {
-  return USE_INTERNAL ? `/api${path}` : `${API_BASE}${path}`;
-}
-
-async function getAccessToken(): Promise<string | null> {
-  if (typeof window === 'undefined') {
-    return null;
+export async function authHeader() {
+  if (typeof window === "undefined") {
+    return {} as Record<string, string>;
   }
 
-  try {
-    const response = await fetch('/api/auth/session', { cache: 'no-store' });
-    if (!response.ok) {
-      return null;
-    }
-
-    const payload = (await response.json()) as {
-      session: { access_token?: string } | null;
-    };
-
-    return payload.session?.access_token ?? null;
-  } catch (error) {
-    console.error('Unable to retrieve Supabase session token', error);
-    return null;
-  }
-}
-
-export async function authHeader(): Promise<Record<string, string>> {
-  const token = await getAccessToken();
+  const token = sessionStorage.getItem("jwt") ?? "";
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function getJSON<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const token = await getAccessToken();
-  const headers: HeadersInit = {
-    ...(opts.headers ?? {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-  const res = await fetch(apiUrl(path), {
-    ...opts,
-    headers,
-    credentials: 'include',
+export async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      ...(await authHeader()),
+    },
+    cache: "no-store",
   });
+
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`${res.status}`);
   }
-  return res.json() as Promise<T>;
+
+  return res.json();
 }
 
-export async function apiGet<T>(path: string, init: RequestInit = {}): Promise<T> {
-  return getJSON<T>(path, { ...init, method: init.method ?? 'GET', cache: init.cache ?? 'no-store' });
-}
-
-export async function apiPost<T>(path: string, body: unknown, init: RequestInit = {}): Promise<T> {
-  return getJSON<T>(path, {
-    ...init,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeader()),
+    },
     body: JSON.stringify(body),
   });
+
+  if (!res.ok) {
+    throw new Error(`${res.status}`);
+  }
+
+  return res.json();
 }
 
 export type PaginatedResponse<T> = {

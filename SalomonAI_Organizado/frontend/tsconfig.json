@@ -16,7 +16,6 @@
     "baseUrl": ".",
     "paths": {
       "@/styles/*": ["./src/styles/*"],
-      "@/config/*": ["./config/*", "./src/config/*"],
       "@/*": ["./*"]
     },
     "plugins": [
