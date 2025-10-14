@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   useCallback,
@@ -60,17 +60,27 @@ export function SidebarDrawer({
   useEffect(() => {
     if (open) {
       setShouldRender(true)
-    } else {
-      const timeout = window.setTimeout(() => {
-        setShouldRender(false)
-        motionX.set(-DRAWER_WIDTH)
-      }, 220)
-      return () => window.clearTimeout(timeout)
+      return undefined
     }
-    return undefined
+
+    if (typeof window === "undefined") {
+      setShouldRender(false)
+      motionX.set(-DRAWER_WIDTH)
+      return undefined
+    }
+
+    const timeout = window.setTimeout(() => {
+      setShouldRender(false)
+      motionX.set(-DRAWER_WIDTH)
+    }, 220)
+    return () => window.clearTimeout(timeout)
   }, [open, motionX])
 
   useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined") {
+      return undefined
+    }
+
     if (!open) {
       const target = triggerRef?.current ?? lastFocusedElement.current
       if (target) {
@@ -195,6 +205,9 @@ export function SidebarDrawer({
   }, [motionX, onOpenChange])
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined
+    }
     const handleTouchStart = (event: TouchEvent) => {
       if (open || event.touches.length !== 1) return
       const touch = event.touches[0]

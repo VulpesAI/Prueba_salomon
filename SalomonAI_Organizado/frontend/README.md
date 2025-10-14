@@ -58,3 +58,18 @@ Los componentes que dependen de `recharts` (`FluxChart` y `CategoriesDonut`) se 
 - La página consume `/api/forecasts?horizon=7|30|90`, implementado en `app/api/forecasts/route.ts`, que responde con `ForecastResponse` (definido en `types/forecasts.ts`).
 - El adaptador `lib/adapters/forecasts.ts` genera una serie histórica de 90 días más el horizonte solicitado, incluyendo bandas de incertidumbre (`lo`/`hi`) para los puntos proyectados.
 - La UI obtiene los datos mediante `useForecast` (`lib/hooks/useForecast.ts`) usando React Query. Para conectar el backend real basta con actualizar el route handler para que proxyee el endpoint definitivo o sustituir la implementación de `getForecast`; los componentes de `app/pronosticos` no requieren cambios.
+
+## Informe de estabilización (abril 2025)
+
+- **Causa de la excepción**: varios componentes del App Router dependientes de estado y efectos se renderizaban como Server Components (faltaba la directiva `"use client"`) y accedían a APIs del navegador (`window`, `document`, `localStorage`) durante el render SSR, lo que generaba `ReferenceError` en producción.
+- **Acciones aplicadas**:
+  - Se etiquetaron como cliente todos los componentes interactivos (`app/ui/*`, `components/ui/*`, formularios y tablas).
+  - Se aislaron las referencias a `window`/`document` con guardas en `useEffect` y handlers (sidebar, scroll infinito, drawer táctil, CTA del héroe).
+  - Se centralizó el acceso a variables públicas en `src/config/env.ts` y se sustituyeron los `process.env.NEXT_PUBLIC_*` directos en hooks/servicios.
+  - Se añadieron los error boundaries de App Router (`app/error.tsx`, `app/global-error.tsx`) y se habilitaron `productionBrowserSourceMaps`.
+- **Archivos clave actualizados**: componentes de UI (`app/ui/*`, `components/ui/*`), navegación (`components/navigation/SidebarDrawer.tsx`), hooks (`hooks/use-*`), servicios (`lib/api-client.ts`, `lib/hooks-statements.ts`, `lib/supabase.ts`), configuración (`next.config.js`, `tsconfig.json`) y nuevo `src/config/env.ts`.
+- **Validación local**:
+  1. `pnpm install`
+  2. `pnpm build`
+  3. `pnpm start` y revisar `http://localhost:3000`
+- **Despliegue**: con estas correcciones el build es determinista y la UI hidrata sin excepciones; tras aplicar los cambios se puede redeplegar en Vercel apuntando a `SalomonAI_Organizado/frontend` con los `NEXT_PUBLIC_*` configurados.
