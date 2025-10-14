@@ -17,6 +17,24 @@ NEXT_PUBLIC_API_BASE=https://api-demo.local
 
 En Vercel o producción asegúrate de definir `NEXT_PUBLIC_API_BASE` (puede ser una URL dummy durante las demos) para evitar errores de compilación.
 
+## Supabase ENV
+
+- **Variables requeridas (cliente)**: `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- **Dónde encontrarlas**: en tu proyecto de Supabase ve a **Settings → API** y copia el **Project URL** y la **anon public key**.
+- **Vercel**: en **Project → Settings → Environment Variables** añade ambas variables en los entornos **Production** y **Preview**. Después de guardarlas ejecuta un redeploy para que el runtime las cargue.
+- **Entorno local**: copia `.env.local.example` a `.env.local` y rellena tus valores antes de ejecutar la app.
+
+### Prueba local en modo producción
+
+```bash
+cd SalomonAI_Organizado/frontend
+cp .env.local.example .env.local   # completa tus valores
+pnpm i
+pnpm build
+pnpm start
+# abrir http://localhost:3000 (no debe verse la pantalla de "Algo falló")
+```
+
 ## Scripts útiles
 
 Los comandos deben ejecutarse desde la raíz del repositorio utilizando PNPM con la opción `-C frontend`:
