@@ -1,12 +1,13 @@
 "use client";
 
 import { useFormState } from "react-dom";
-import { signInAction } from "./actions";
+import { signInAction, type SignInState } from "./actions";
 
-const initial: { ok: boolean; message: string } = { ok: true, message: "" };
+const initial: SignInState = { ok: true, message: "" };
 
 export default function LoginForm() {
   const [state, action] = useFormState(signInAction, initial);
+  const currentState = state ?? initial;
 
   return (
     <main className="min-h-screen grid place-items-center bg-slate-900 text-slate-100 p-6">
@@ -26,8 +27,8 @@ export default function LoginForm() {
           className="w-full rounded p-2 text-slate-900"
           required
         />
-        {!state.ok && (
-          <p className="text-sm bg-red-900/50 border border-red-500 rounded p-2">{state.message}</p>
+        {!currentState.ok && (
+          <p className="text-sm bg-red-900/50 border border-red-500 rounded p-2">{currentState.message}</p>
         )}
         <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 rounded p-2">
           Ingresar

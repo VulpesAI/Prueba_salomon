@@ -1,19 +1,23 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export function supabaseServer() {
+export async function supabaseServer() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   if (!url || !anon) throw new Error("Faltan NEXT_PUBLIC_SUPABASE_URL/ANON_KEY en el servidor");
 
-  const store = cookies();
+  const store = await cookies();
   return createServerClient(url, anon, {
     cookies: {
-      get: (name: string) => store.get(name)?.value,
-      set: (name: string, value: string, options: CookieOptions) =>
-        store.set({ name, value, ...options }),
-      remove: (name: string, options: CookieOptions) =>
-        store.set({ name, value: "", ...options, maxAge: 0 }),
+      getAll: () =>
+        store
+          .getAll()
+          .map((cookie) => ({ name: cookie.name, value: cookie.value })),
+      setAll: (cookiesWithOptions) => {
+        cookiesWithOptions.forEach(({ name, value, options }) => {
+          store.set({ name, value, ...(options ?? {}) });
+        });
+      },
     },
   });
 }
