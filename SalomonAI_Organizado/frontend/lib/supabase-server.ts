@@ -1,11 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { ENV, hasClientEnv } from "./env";
 
 export async function supabaseServer() {
-  if (!hasClientEnv()) throw new Error("Missing public Supabase ENV");
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  if (!url || !anon) throw new Error("Supabase ENV faltantes en el servidor");
+
   const store = await cookies();
-  return createServerClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
+  return createServerClient(url, anon, {
     cookies: {
       getAll: () =>
         store

@@ -1,131 +1,63 @@
-import { createCipheriv, createHash, randomBytes } from "crypto"
+import { NextResponse } from "next/server"
 
-import { NextRequest, NextResponse } from "next/server"
+import { supabaseServer } from "@/lib/supabase-server"
 
-export const runtime = "nodejs"
-
-const TOKEN_COOKIE_NAME = "token"
-const REFRESH_COOKIE_NAME = "refreshToken"
-
-const isProduction = process.env.NODE_ENV === "production"
-
-const deriveEncryptionKey = () => {
-  const secret = process.env.REFRESH_TOKEN_COOKIE_SECRET
-  if (!secret) {
-    return null
-  }
-
-  const hash = createHash("sha256").update(secret).digest()
-  return hash.subarray(0, 32)
-}
-
-const encryptRefreshToken = (refreshToken: string) => {
-  const key = deriveEncryptionKey()
-  if (!key) {
-    return null
-  }
-
-  const iv = randomBytes(12)
-  const cipher = createCipheriv("aes-256-gcm", key, iv)
-  const encrypted = Buffer.concat([
-    cipher.update(refreshToken, "utf8"),
-    cipher.final(),
-  ])
-  const authTag = cipher.getAuthTag()
-
-  return Buffer.concat([iv, authTag, encrypted]).toString("base64url")
-}
-
-const resolveExpiration = (expiresAt?: unknown): Date | undefined => {
-  if (!expiresAt) {
-    return undefined
-  }
-
-  if (typeof expiresAt === "number") {
-    return new Date(expiresAt)
-  }
-
-  if (typeof expiresAt === "string") {
-    const timestamp = Date.parse(expiresAt)
-    if (!Number.isNaN(timestamp)) {
-      return new Date(timestamp)
-    }
-  }
-
-  return undefined
-}
-
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const { token, refreshToken, expiresAt } = (await request.json()) as {
-      token?: string
-      refreshToken?: string
-      expiresAt?: unknown
+    const supabase = await supabaseServer()
+    const { data, error } = await supabase.auth.getSession()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    if (!token) {
+    return NextResponse.json({ session: data.session ?? null })
+  } catch (error) {
+    console.error("Failed to retrieve Supabase session", error)
+    return NextResponse.json({ error: "Unable to retrieve session" }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { email, password } = (await request.json()) as {
+      email?: string
+      password?: string
+    }
+
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "Token is required" },
+        { error: "Email y contraseña son requeridos" },
         { status: 400 }
       )
     }
 
-    const response = NextResponse.json({ ok: true })
-    const expirationDate = resolveExpiration(expiresAt)
+    const supabase = await supabaseServer()
+    const result = await supabase.auth.signInWithPassword({ email, password })
 
-    response.cookies.set({
-      name: TOKEN_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProduction,
-      path: "/",
-      ...(expirationDate ? { expires: expirationDate } : { maxAge: 60 * 15 }),
-    })
-
-    if (refreshToken) {
-      const encryptedRefreshToken = encryptRefreshToken(refreshToken) ?? refreshToken
-
-      response.cookies.set({
-        name: REFRESH_COOKIE_NAME,
-        value: encryptedRefreshToken,
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isProduction,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      })
+    if (result.error) {
+      return NextResponse.json({ error: result.error.message }, { status: 400 })
     }
 
-    return response
+    return NextResponse.json(result)
   } catch (error) {
-    console.error("Failed to persist authentication session", error)
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+    console.error("Failed to sign in with Supabase", error)
+    return NextResponse.json({ error: "No pudimos iniciar sesión" }, { status: 500 })
   }
 }
 
 export async function DELETE() {
-  const response = NextResponse.json({ ok: true })
+  try {
+    const supabase = await supabaseServer()
+    const { error } = await supabase.auth.signOut()
 
-  response.cookies.set({
-    name: TOKEN_COOKIE_NAME,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProduction,
-    path: "/",
-    maxAge: 0,
-  })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
 
-  response.cookies.set({
-    name: REFRESH_COOKIE_NAME,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProduction,
-    path: "/",
-    maxAge: 0,
-  })
-
-  return response
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error("Failed to sign out from Supabase", error)
+    return NextResponse.json({ error: "No pudimos cerrar sesión" }, { status: 500 })
+  }
 }

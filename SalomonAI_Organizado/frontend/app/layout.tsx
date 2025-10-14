@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import "@/styles/globals.css";
 
-import EnvGuard from "@/components/EnvGuard";
 import { AppProviders } from "./providers";
 
 export const metadata: Metadata = { title: "SalomónAI" };
@@ -31,9 +30,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-app text-app font-sans antialiased">
-        <EnvGuard>
-          <AppProviders>{children}</AppProviders>
-        </EnvGuard>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

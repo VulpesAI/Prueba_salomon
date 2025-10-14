@@ -11,12 +11,22 @@ async function getAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') {
     return null;
   }
-  const { supabaseBrowser } = await import('./supabase-browser');
-  const supabase = supabaseBrowser();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
+
+  try {
+    const response = await fetch('/api/auth/session', { cache: 'no-store' });
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      session: { access_token?: string } | null;
+    };
+
+    return payload.session?.access_token ?? null;
+  } catch (error) {
+    console.error('Unable to retrieve Supabase session token', error);
+    return null;
+  }
 }
 
 export async function authHeader(): Promise<Record<string, string>> {

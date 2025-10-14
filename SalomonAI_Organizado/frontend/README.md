@@ -9,33 +9,27 @@ Este paquete contiene la aplicación Next.js (v15) que sirve el dashboard de Sal
 
 ## Variables de entorno
 
-La aplicación valida las variables de entorno mediante `zod` en `env.ts`. Para entornos locales puedes definir un archivo `.env` con:
+La aplicación valida las variables mediante `zod` en `env.ts`. Para desarrollo local copia el archivo `.env.local.example`:
 
 ```bash
-NEXT_PUBLIC_API_BASE=https://api-demo.local
+cp .env.local.example .env.local
 ```
 
-En Vercel o producción asegúrate de definir `NEXT_PUBLIC_API_BASE` (puede ser una URL dummy durante las demos) para evitar errores de compilación.
+Los valores de Supabase ya están precargados en el ejemplo para que puedas ejecutar la app sin modificar componentes cliente.
 
-## Supabase ENV
+## Supabase
 
-- **Variables requeridas (cliente)**: `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- **Variables sólo servidor**: `SUPABASE_SERVICE_ROLE_KEY`, `SB_PUBLISHABLE_KEY` y `SB_SECRET_KEY`. No deben importarse en componentes cliente.
-- **Dónde encontrarlas**: en tu proyecto de Supabase ve a **Settings → API** y copia el **Project URL**, la **anon public key**, la **service role key** y el resto de claves de tu integración.
-- **Entorno local**: copia `.env.local.example` a `.env.local` y rellena tus valores antes de ejecutar la app.
-- **Validación**: el helper `lib/env.ts` expone `hasClientEnv()` que permite verificar si las variables públicas están presentes y `EnvGuard` muestra una pantalla de error amable mientras no se configuren.
+- Supabase se consume exclusivamente en el servidor mediante `lib/supabase-server.ts`. Los componentes cliente reciben los datos como props.
+- Variables requeridas: `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- Diagnóstico: `GET /api/debug/env` responde `{ "serverSeesEnv": true }` cuando el runtime accede a las variables.
 
-### Configurar Supabase & Vercel
+### Despliegue rápido en Vercel
 
-En Vercel, dentro de **Settings → Environment Variables**, define las siguientes variables en los entornos **Production** y **Preview**:
-
-- `NEXT_PUBLIC_SUPABASE_URL` = URL del proyecto Supabase (por ejemplo, `https://<project>.supabase.co`).
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = clave **anon public**.
-- `SUPABASE_SERVICE_ROLE_KEY` = clave **service role** (no exponer en el cliente).
-- `SB_PUBLISHABLE_KEY` = clave publicable de Stripe (u otro proveedor si aplica).
-- `SB_SECRET_KEY` = clave secreta del proveedor correspondiente.
-
-Después de guardarlas, ejecuta un redeploy para que el cliente tome los `NEXT_PUBLIC_*`.
+- **Root Directory**: `SalomonAI_Organizado/frontend`.
+- **Environment Variables** (Production y Preview):
+  - `NEXT_PUBLIC_SUPABASE_URL = https://yyfyhjxjofgrfywawlme.supabase.co`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5Znloanhqb2ZncmZ5d2F3bG1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNTUyNjcsImV4cCI6MjA3NDkzMTI2N30.Pw_AxMp8YOYXhHOUJlRN_wTmRjHSh6Tfa22BsIJwTj0
+- Tras actualizar las variables haz **Redeploy → Clear build cache** para que los cambios se apliquen.
 
 ### Prueba local en modo producción
 
