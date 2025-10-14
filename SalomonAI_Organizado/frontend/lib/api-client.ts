@@ -1,7 +1,9 @@
 import axios, { type AxiosInstance } from "axios"
 
+import { ENV } from "@/config/env"
+
 const api: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: ENV.NEXT_PUBLIC_API_URL || undefined,
   withCredentials: true,
 })
 

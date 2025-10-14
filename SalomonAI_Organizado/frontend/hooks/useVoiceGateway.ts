@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ENV } from '@/config/env';
+
 export type VoiceStatus = 'idle' | 'connecting' | 'listening' | 'stopped' | 'error';
 
 interface VoiceGatewayOptions {
@@ -33,7 +35,7 @@ export function useVoiceGateway({
   const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const restUrl = useMemo(() => {
-    return process.env.NEXT_PUBLIC_VOICE_GATEWAY_URL ?? 'http://localhost:8100';
+    return ENV.NEXT_PUBLIC_VOICE_GATEWAY_URL || 'http://localhost:8100';
   }, []);
 
   const wsUrl = useMemo(() => {

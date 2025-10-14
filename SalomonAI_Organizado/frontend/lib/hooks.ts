@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { ENV } from "@/config/env";
+
 import { apiGet, apiPost } from "@/lib/api";
 import {
   ChatReply,
@@ -40,7 +42,7 @@ export function useMovimientos(params: {
           Object.entries(params).filter(([, value]) => value != null && value !== ""),
         ),
         page: String(pageParam),
-        limit: process.env.NEXT_PUBLIC_PAGE_SIZE ?? "50",
+        limit: ENV.NEXT_PUBLIC_PAGE_SIZE || "50",
       });
       return MovimientosPage.parse(await apiGet(`/movimientos?${query.toString()}`));
     },

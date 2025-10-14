@@ -5,6 +5,7 @@ import { Loader2, UploadCloud, CheckCircle2, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/config/query-keys";
+import { ENV } from "@/config/env";
 import { useUploadStatement, pollStatementUntilDone } from "@/lib/hooks-statements";
 import { cn } from "@/lib/utils";
 import {
@@ -46,8 +47,8 @@ type StatementUploaderProps = {
   className?: string;
 };
 
-const defaultAllowed = process.env.NEXT_PUBLIC_UPLOAD_ALLOWED ?? ".pdf,.csv,.xlsx,.ofx,.qif";
-const maxSize = process.env.NEXT_PUBLIC_UPLOAD_MAX_MB ?? "15";
+const defaultAllowed = ENV.NEXT_PUBLIC_UPLOAD_ALLOWED || ".pdf,.csv,.xlsx,.ofx,.qif";
+const maxSize = ENV.NEXT_PUBLIC_UPLOAD_MAX_MB || "15";
 
 export default function StatementUploader({ className }: StatementUploaderProps) {
   const [fileName, setFileName] = useState<string>("");

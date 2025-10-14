@@ -1,6 +1,6 @@
 "use client";
 
-export default function GlobalError({
+export default function Error({
   error,
   reset,
 }: {
@@ -8,18 +8,18 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="es">
-      <body className="min-h-screen bg-background p-6 text-foreground">
-        <h1 className="text-xl font-semibold">Ocurrió un error</h1>
-        <p className="mt-2 text-sm opacity-80">{error.message}</p>
-        <button
-          type="button"
-          className="mt-4 rounded bg-blue-600 px-3 py-2 text-white"
-          onClick={() => reset()}
-        >
-          Reintentar
-        </button>
-      </body>
-    </html>
+    <main className="flex min-h-96 flex-col gap-4 p-6">
+      <h1 className="text-xl font-semibold">Ocurrió un error en la interfaz</h1>
+      <pre className="rounded-md bg-muted p-4 text-sm whitespace-pre-wrap">
+        {error.message}
+      </pre>
+      <button
+        type="button"
+        className="inline-flex w-fit items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+        onClick={() => reset()}
+      >
+        Reintentar
+      </button>
+    </main>
   );
 }

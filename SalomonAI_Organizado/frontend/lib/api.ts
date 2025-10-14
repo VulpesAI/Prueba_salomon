@@ -1,5 +1,7 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-export const USE_INTERNAL = process.env.NEXT_PUBLIC_FRONTEND_USE_INTERNAL_API === 'true';
+import { ENV } from '@/config/env';
+
+export const API_BASE = ENV.NEXT_PUBLIC_API_BASE_URL || '';
+export const USE_INTERNAL = ENV.NEXT_PUBLIC_FRONTEND_USE_INTERNAL_API === 'true';
 
 export function apiUrl(path: string) {
   return USE_INTERNAL ? `/api${path}` : `${API_BASE}${path}`;

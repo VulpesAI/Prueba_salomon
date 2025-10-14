@@ -1,4 +1,5 @@
 import { API_BASE, apiUrl, authHeader } from "@/lib/api";
+import { ENV } from "@/config/env";
 
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
@@ -15,7 +16,7 @@ type ChatEvent =
   | { type: "done" }
   | Record<string, unknown>;
 
-const timeoutMs = Number(process.env.NEXT_PUBLIC_SSE_TIMEOUT_MS ?? "60000");
+const timeoutMs = Number(ENV.NEXT_PUBLIC_SSE_TIMEOUT_MS || "60000");
 
 export async function streamSSE(
   payload: StreamPayload,

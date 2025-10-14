@@ -57,6 +57,7 @@ const shouldExport = process.env.NEXT_SHOULD_EXPORT === "true";
 const nextConfig = {
   output: shouldExport ? "export" : "standalone",
   reactStrictMode: true,
+  productionBrowserSourceMaps: true,
   experimental: {
     typedRoutes: true,
   },

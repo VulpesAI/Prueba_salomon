@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '@/config/query-keys'
+import { ENV } from '@/config/env'
 import {
   CATEGORY_COLOR_VALUES,
   getCategoryColor,
@@ -33,7 +34,7 @@ import type { NormalizedStatement } from '@/lib/statements/parser'
 
 import { CHILE_DEMO_STATEMENT } from './demo-statement.fixture'
 
-const demoModeFlag = process.env.NEXT_PUBLIC_DEMO_MODE?.toLowerCase()
+const demoModeFlag = ENV.NEXT_PUBLIC_DEMO_MODE.trim().toLowerCase()
 export const IS_DEMO_MODE =
   demoModeFlag === 'true' ||
   demoModeFlag === '1' ||

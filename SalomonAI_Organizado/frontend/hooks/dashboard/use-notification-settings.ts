@@ -5,6 +5,7 @@ import { useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/config/query-keys"
+import { ENV } from "@/config/env"
 import { useApiMutation, useApiQuery } from "@/hooks/use-api"
 import {
   getNotificationSettings,
@@ -28,7 +29,7 @@ export const useNotificationSettings = () => {
   const queryClient = useQueryClient()
 
   const apiBaseUrl = useMemo(
-    () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
+    () => ENV.NEXT_PUBLIC_API_URL || "http://localhost:3000",
     []
   )
 

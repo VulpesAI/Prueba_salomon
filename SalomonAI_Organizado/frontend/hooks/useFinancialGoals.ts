@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { ENV } from '@/config/env';
+
 import {
   IS_DEMO_MODE,
   useDemoFinancialData,
@@ -95,7 +97,7 @@ export function useFinancialGoals(token?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const baseUrl = useMemo(() => {
-    return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+    return ENV.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
   }, []);
 
   const fetchGoals = useCallback(async () => {

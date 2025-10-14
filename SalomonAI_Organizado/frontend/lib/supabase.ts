@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { ENV } from '@/config/env';
+
 const isValidUrl = (value: string | undefined): value is string => {
   if (!value) {
     return false;
@@ -29,8 +31,8 @@ const createMissingEnvClient = (): SupabaseClient => {
   ) as SupabaseClient;
 };
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = ENV.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const hasValidConfig =
   isValidUrl(supabaseUrl) && typeof supabaseAnonKey === 'string' && supabaseAnonKey.length > 0;

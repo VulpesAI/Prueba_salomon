@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/config/query-keys"
+import { ENV } from "@/config/env"
 import { useApiMutation, useApiQuery } from "@/hooks/use-api"
 import { getUserSessions, revokeUserSession } from "@/services/auth"
 import type { UserSession, UserSessionsResponse } from "@/types/auth"
@@ -16,7 +17,7 @@ export const useUserSessions = () => {
   const [activeRevocation, setActiveRevocation] = useState<string | null>(null)
 
   const apiBaseUrl = useMemo(
-    () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
+    () => ENV.NEXT_PUBLIC_API_URL || "http://localhost:3000",
     []
   )
 
