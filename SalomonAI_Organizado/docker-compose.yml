@@ -152,6 +152,26 @@ services:
       timeout: 10s
       retries: 3
 
+  simulation-engine:
+    build:
+      context: ./services/simulation-engine
+      dockerfile: Dockerfile
+    ports:
+      - "8010:8010"
+    env_file:
+      - .env
+    networks:
+      - salomon-net
+    depends_on:
+      core-api:
+        condition: service_started
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8010
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   forecasting-engine:
     build:
       context: ./services/forecasting-engine
