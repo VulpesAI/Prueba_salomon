@@ -4,7 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { SupabaseAuthGuard } from './supabase-auth.guard';
+import { SupabaseJwtGuard } from './supabase.guard';
 import { SupabaseService } from './supabase.service';
 
 @Module({
@@ -22,7 +22,7 @@ import { SupabaseService } from './supabase.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, SupabaseService, SupabaseAuthGuard],
-  exports: [AuthService, SupabaseService, SupabaseAuthGuard, JwtModule],
+  providers: [AuthService, SupabaseService, SupabaseJwtGuard],
+  exports: [AuthService, SupabaseService, SupabaseJwtGuard, JwtModule],
 })
 export class AuthModule {}

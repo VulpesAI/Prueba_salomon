@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { withUser } from '../db/pg.provider';
 
 import {
   SupabaseForecastResultRecord,
@@ -139,6 +140,26 @@ export class DashboardService {
     private readonly forecastingGateway: DashboardForecastingGatewayService,
     private readonly recommendationsGateway: DashboardRecommendationsGatewayService,
   ) {}
+
+  async getResumenForUser(userId: string) {
+    return withUser(userId, async (db) => {
+      const { rows: inc } = await db.query(
+        "select coalesce(sum(amount),0)::numeric as v from transactions where user_id = app.current_user_id() and type='income'",
+      );
+      const { rows: exp } = await db.query(
+        "select coalesce(sum(amount),0)::numeric as v from transactions where user_id = app.current_user_id() and type='expense'",
+      );
+      const incomes = Number(inc[0]?.v ?? 0);
+      const expenses = Math.abs(Number(exp[0]?.v ?? 0));
+      return {
+        incomes,
+        expenses,
+        net: incomes - expenses,
+        period: new Date().toISOString().slice(0, 7),
+        deltaPct: { incomes: 0, expenses: 0, net: 0 },
+      };
+    });
+  }
 
   async getProjection(query: DashboardProjectionQueryDto) {
     return this.forecastingGateway.fetchForecast(query.userId, {
