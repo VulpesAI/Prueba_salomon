@@ -20,6 +20,7 @@ export const NAV_SECTIONS_BASE: NavSection[] = [
       { id: "accounts-overview", label: "Resumen de cuentas", href: "/accounts" },
       { id: "accounts-balances", label: "Saldos", href: "/accounts/balances" },
       { id: "accounts-sync", label: "Sincronización", href: "/accounts/synchronization" },
+      { id: "accounts-statements", label: "Cartolas bancarias", href: "/statements" },
     ],
   },
   {
@@ -82,6 +83,7 @@ export const NAV_ALIASES: Partial<Record<Route, string>> = {
   "/accounts": "Resumen de cuentas",
   "/accounts/balances": "Saldos",
   "/accounts/synchronization": "Sincronización",
+  "/statements": "Cartolas bancarias",
   "/transactions": "Movimientos",
   "/alerts/preferences": "Preferencias",
   "/settings/profile": "Perfil",
